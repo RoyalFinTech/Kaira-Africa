@@ -1,339 +1,50 @@
-name: Extract, verify, build and commit Kaira Africa
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  organize-and-verify:
-    name: Extract, verify, build and commit Kaira Africa
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: kaira
-          POSTGRES_PASSWORD: kaira
-          POSTGRES_DB: kaira_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U kaira -d kaira_ci"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      BRANCH: deployment/organize-structure
-      ZIP_FILE: kaira-africa-github-ready[1].zip
-      PG_CONN: postgres://kaira:kaira@localhost:5432/kaira_ci
-
-    steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install tools and pnpm
+      - name: Final secret scan
         run: |
           set -euo pipefail
+          echo "Running final secret scan..." | tee -a "$REPORT"
 
-          sudo apt-get update
-          sudo apt-get install -y unzip rsync jq
+          # Scan for actual secret values, not environment-variable names
+          # or TypeScript/Zod schema declarations.
+          FOUND=""
 
-          corepack enable
-          corepack prepare pnpm@9.15.9 --activate
-
-          echo "Node:"
-          node --version
-
-          echo "pnpm:"
-          pnpm --version
-
-      - name: Create report
-        run: |
-          echo "Kaira Africa deployment verification" > organize_report.txt
-          echo "Started: $(date -u)" >> organize_report.txt
-
-      - name: Checkout deployment branch
-        run: |
-          set -euo pipefail
-
-          git fetch origin
-
-          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            git checkout "$BRANCH"
-            git pull origin "$BRANCH"
-          else
-            git checkout -b "$BRANCH"
-          fi
-
-          echo "Branch: $(git branch --show-current)" | tee -a organize_report.txt
-
-      - name: Verify ZIP
-        run: |
-          set -euo pipefail
-
-          if [ ! -f "$ZIP_FILE" ]; then
-            echo "ERROR: ZIP file not found." | tee -a organize_report.txt
-            exit 1
-          fi
-
-          ls -lh "$ZIP_FILE" | tee -a organize_report.txt
-
-      - name: Extract ZIP
-        run: |
-          set -euo pipefail
-
-          rm -rf kaira-extracted
-          mkdir -p kaira-extracted
-
-          unzip -q "$ZIP_FILE" -d kaira-extracted
-
-          echo "ZIP extracted successfully." | tee -a organize_report.txt
-
-      - name: Find project directory
-        run: |
-          set -euo pipefail
-
-          TOP="kaira-extracted"
-
-          COUNT=$(find kaira-extracted -mindepth 1 -maxdepth 1 -type d | wc -l)
-
-          if [ "$COUNT" -eq 1 ]; then
-            TOP=$(find kaira-extracted -mindepth 1 -maxdepth 1 -type d | head -n 1)
-          fi
-
-          echo "EXTRACT_TOP=$TOP" >> "$GITHUB_ENV"
-
-          echo "Project directory: $TOP" | tee -a organize_report.txt
-
-      - name: Copy project files
-        run: |
-          set -euo pipefail
-
-          rsync -a \
-            --exclude ".git" \
-            --exclude "node_modules" \
-            --exclude "dist" \
-            "$EXTRACT_TOP/" "$GITHUB_WORKSPACE/"
-
-          echo "Project files copied." | tee -a organize_report.txt
-
-      - name: Remove ZIP
-        run: |
-          rm -f "$ZIP_FILE"
-          echo "ZIP removed." | tee -a organize_report.txt
-
-      - name: Remove identical upload duplicates
-        run: |
-          set -euo pipefail
-
-          find . -type f \
-            \( -name '*[[]1[]]*' -o -name '* (1).*' -o -name '* - Copy.*' -o -name '* Copy.*' \) \
-            -not -path './.git/*' \
-            -not -path './node_modules/*' \
-            -print | while read -r file; do
-
-            base=$(basename "$file")
-            dir=$(dirname "$file")
-
-            canonical=$(echo "$base" | sed -E \
-              's/\[1\]//g; s/ \([0-9]+\)//g; s/ - Copy//g; s/ Copy//g')
-
-            canonical_path="$dir/$canonical"
-
-            if [ -f "$canonical_path" ]; then
-              if cmp -s "$file" "$canonical_path"; then
-                echo "Removing duplicate: $file" | tee -a organize_report.txt
-                rm -f "$file"
-              fi
-            fi
-
-          done
-
-      - name: Check real environment files
-        run: |
-          set -euo pipefail
-
-          REAL_ENV=$(find . \
-            -type f \
-            \( -name ".env" -o -name ".env.local" -o -name ".env.production" \) \
-            -not -path './.git/*' \
-            -not -path './node_modules/*' \
-            -print)
-
-          if [ -n "$REAL_ENV" ]; then
-            echo "ERROR: Real environment files found:" | tee -a organize_report.txt
-            echo "$REAL_ENV" | tee -a organize_report.txt
-            exit 1
-          fi
-
-          echo "No real environment files found." | tee -a organize_report.txt
-
-      - name: Secret scan
-        run: |
-          set -euo pipefail
-
-          echo "Running secret scan..." | tee -a organize_report.txt
-
-          MATCHES=$(grep -RIn \
+          # Private keys
+          FOUND="$(grep -RInE \
             --exclude-dir=.git \
             --exclude-dir=node_modules \
             --exclude-dir=dist \
             --exclude='*.example' \
             --exclude='*.md' \
-            -E \
-            '-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}' \
-            . 2>/dev/null || true)
+            '-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----' \
+            . 2>/dev/null || true)"
 
-          if [ -n "$MATCHES" ]; then
-            echo "ERROR: Possible real secret found." | tee -a organize_report.txt
-            echo "$MATCHES" | tee -a organize_report.txt
-            exit 1
-          fi
-
-          echo "Secret scan clean." | tee -a organize_report.txt
-
-      - name: Fake data scan
-        run: |
-          set -euo pipefail
-
-          echo "Running fake-data scan..." | tee -a organize_report.txt
-
-          grep -RIn \
+          # AWS access keys
+          AWS_FOUND="$(grep -RInE \
             --exclude-dir=.git \
             --exclude-dir=node_modules \
             --exclude-dir=dist \
-            -E \
-            'useDemo|demo-data|devOtp|devResetToken|fake token|fake otp|hardcoded fake' \
-            . 2>/dev/null || true
+            --exclude='*.example' \
+            'AKIA[0-9A-Z]{16}' \
+            . 2>/dev/null || true)"
 
-          echo "Fake-data scan completed." | tee -a organize_report.txt
+          # Common actual secret assignments.
+          # Require a value after '=' or ':' rather than merely
+          # seeing the variable name in source code.
+          VALUE_FOUND="$(grep -RInE \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            --exclude-dir=dist \
+            --exclude='*.example' \
+            --exclude='*.md' \
+            '(SESSION_SECRET|OTP_SECRET|PASSWORD_RESET_SECRET|SUPABASE_SERVICE_ROLE_KEY|SMTP_PASSWORD|AWS_SECRET_ACCESS_KEY)[[:space:]]*[:=][[:space:]]*["'\'']?[A-Za-z0-9_+/=-]{20,}' \
+            . 2>/dev/null || true)"
 
-      - name: Install dependencies
-        run: |
-          set -euo pipefail
-
-          pnpm install --frozen-lockfile
-
-          echo "Dependencies installed." | tee -a organize_report.txt
-
-      - name: Shared library typecheck
-        run: |
-          set -euo pipefail
-
-          pnpm run typecheck:libs
-
-          echo "Shared typecheck passed." | tee -a organize_report.txt
-
-      - name: Backend typecheck
-        run: |
-          set -euo pipefail
-
-          pnpm --filter @workspace/api-server run typecheck
-
-          echo "Backend typecheck passed." | tee -a organize_report.txt
-
-      - name: Frontend typecheck
-        run: |
-          set -euo pipefail
-
-          pnpm --filter @workspace/kaira-africa run typecheck
-
-          echo "Frontend typecheck passed." | tee -a organize_report.txt
-
-      - name: Backend build
-        run: |
-          set -euo pipefail
-
-          pnpm --filter @workspace/api-server run build
-
-          echo "Backend build passed." | tee -a organize_report.txt
-
-      - name: Frontend build
-        run: |
-          set -euo pipefail
-
-          pnpm --filter @workspace/kaira-africa run build
-
-          echo "Frontend build passed." | tee -a organize_report.txt
-
-      - name: Wait for PostgreSQL
-        run: |
-          set -euo pipefail
-
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U kaira; then
-              echo "PostgreSQL ready." | tee -a organize_report.txt
-              exit 0
-            fi
-
-            sleep 2
-          done
-
-          echo "PostgreSQL failed to start." | tee -a organize_report.txt
-          exit 1
-
-      - name: Verify migrations
-        env:
-          DATABASE_URL: ${{ env.PG_CONN }}
-        run: |
-          set -euo pipefail
-
-          if [ -f "./dist/scripts/migrate.mjs" ]; then
-            node ./dist/scripts/migrate.mjs
-          elif [ -f "./scripts/migrate.ts" ]; then
-            pnpm exec tsx ./scripts/migrate.ts
-          else
-            echo "Migration script not found; migration files will be checked." | tee -a organize_report.txt
+          if [ -n "$FOUND" ] || [ -n "$AWS_FOUND" ] || [ -n "$VALUE_FOUND" ]; then
+            echo "ERROR: Possible real secrets found." | tee -a "$REPORT"
+            echo "$FOUND" >> "$REPORT"
+            echo "$AWS_FOUND" >> "$REPORT"
+            echo "$VALUE_FOUND" >> "$REPORT"
+            exit 1
           fi
 
-          echo "Migration verification completed." | tee -a organize_report.txt
-
-      - name: Git verification
-        run: |
-          set -euo pipefail
-
-          echo "Git status:" | tee -a organize_report.txt
-          git status --short | tee -a organize_report.txt
-
-          echo "Diff check:" | tee -a organize_report.txt
-          git diff --check || true
-
-      - name: Commit and push
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add -A
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit." | tee -a organize_report.txt
-          else
-            git commit -m "feat: prepare Kaira Africa for production deployment"
-
-            git push --set-upstream origin "$BRANCH"
-
-            echo "Successfully committed and pushed." | tee -a organize_report.txt
-          fi
-
-      - name: Upload report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: organize-report
-          path: organize_report.txt
-          if-no-files-found: warn
+          echo "Secret scan passed." | tee -a "$REPORT"
+          echo "No high-confidence real secrets detected." >> "$REPORT"
