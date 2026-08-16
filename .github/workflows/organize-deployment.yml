@@ -44,7 +44,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install system tools and pnpm
+      - name: Install tools and pnpm
         run: |
           set -euo pipefail
 
@@ -54,13 +54,13 @@ jobs:
           corepack enable
           corepack prepare pnpm@9.15.9 --activate
 
-          echo "Node version:"
+          echo "Node:"
           node --version
 
-          echo "pnpm version:"
+          echo "pnpm:"
           pnpm --version
 
-      - name: Create working report
+      - name: Create report
         run: |
           echo "Kaira Africa deployment verification" > organize_report.txt
           echo "Started: $(date -u)" >> organize_report.txt
@@ -80,16 +80,15 @@ jobs:
 
           echo "Branch: $(git branch --show-current)" | tee -a organize_report.txt
 
-      - name: Verify ZIP exists
+      - name: Verify ZIP
         run: |
           set -euo pipefail
 
           if [ ! -f "$ZIP_FILE" ]; then
-            echo "ERROR: $ZIP_FILE was not found." | tee -a organize_report.txt
+            echo "ERROR: ZIP file not found." | tee -a organize_report.txt
             exit 1
           fi
 
-          echo "ZIP found:" | tee -a organize_report.txt
           ls -lh "$ZIP_FILE" | tee -a organize_report.txt
 
       - name: Extract ZIP
@@ -103,30 +102,25 @@ jobs:
 
           echo "ZIP extracted successfully." | tee -a organize_report.txt
 
-          echo "Extracted structure:" >> organize_report.txt
-          find kaira-extracted -maxdepth 3 -type f | sort >> organize_report.txt
-
-      - name: Detect extracted project root
+      - name: Find project directory
         run: |
           set -euo pipefail
 
-          TOP_DIR="kaira-extracted"
+          TOP="kaira-extracted"
 
           COUNT=$(find kaira-extracted -mindepth 1 -maxdepth 1 -type d | wc -l)
 
           if [ "$COUNT" -eq 1 ]; then
-            TOP_DIR=$(find kaira-extracted -mindepth 1 -maxdepth 1 -type d | head -n 1)
+            TOP=$(find kaira-extracted -mindepth 1 -maxdepth 1 -type d | head -n 1)
           fi
 
-          echo "EXTRACT_TOP=$TOP_DIR" >> "$GITHUB_ENV"
+          echo "EXTRACT_TOP=$TOP" >> "$GITHUB_ENV"
 
-          echo "Project root: $TOP_DIR" | tee -a organize_report.txt
+          echo "Project directory: $TOP" | tee -a organize_report.txt
 
-      - name: Copy packaged project
+      - name: Copy project files
         run: |
           set -euo pipefail
-
-          echo "Copying packaged project into repository..." | tee -a organize_report.txt
 
           rsync -a \
             --exclude ".git" \
@@ -134,21 +128,16 @@ jobs:
             --exclude "dist" \
             "$EXTRACT_TOP/" "$GITHUB_WORKSPACE/"
 
-          echo "Project copied successfully." | tee -a organize_report.txt
+          echo "Project files copied." | tee -a organize_report.txt
 
-      - name: Remove ZIP archive
+      - name: Remove ZIP
         run: |
-          set -euo pipefail
-
           rm -f "$ZIP_FILE"
+          echo "ZIP removed." | tee -a organize_report.txt
 
-          echo "ZIP archive removed from repository." | tee -a organize_report.txt
-
-      - name: Remove upload duplicates
+      - name: Remove identical upload duplicates
         run: |
           set -euo pipefail
-
-          echo "Checking upload-artifact duplicates..." | tee -a organize_report.txt
 
           find . -type f \
             \( -name '*[[]1[]]*' -o -name '* (1).*' -o -name '* - Copy.*' -o -name '* Copy.*' \) \
@@ -156,29 +145,26 @@ jobs:
             -not -path './node_modules/*' \
             -print | while read -r file; do
 
-              base=$(basename "$file")
-              dir=$(dirname "$file")
+            base=$(basename "$file")
+            dir=$(dirname "$file")
 
-              canonical=$(echo "$base" | sed -E \
-                's/\[1\]//g; s/ \([0-9]+\)//g; s/ - Copy//g; s/ Copy//g')
+            canonical=$(echo "$base" | sed -E \
+              's/\[1\]//g; s/ \([0-9]+\)//g; s/ - Copy//g; s/ Copy//g')
 
-              canonical_path="$dir/$canonical"
+            canonical_path="$dir/$canonical"
 
-              if [ -f "$canonical_path" ]; then
-                if cmp -s "$file" "$canonical_path"; then
-                  echo "Removing identical duplicate: $file" | tee -a organize_report.txt
-                  rm -f "$file"
-                else
-                  echo "WARNING: Different duplicate found: $file" | tee -a organize_report.txt
-                fi
+            if [ -f "$canonical_path" ]; then
+              if cmp -s "$file" "$canonical_path"; then
+                echo "Removing duplicate: $file" | tee -a organize_report.txt
+                rm -f "$file"
               fi
-            done
+            fi
 
-      - name: Check for real environment files
+          done
+
+      - name: Check real environment files
         run: |
           set -euo pipefail
-
-          echo "Checking for real .env files..." | tee -a organize_report.txt
 
           REAL_ENV=$(find . \
             -type f \
@@ -208,11 +194,11 @@ jobs:
             --exclude='*.example' \
             --exclude='*.md' \
             -E \
-            'BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY|SUPABASE_SERVICE_ROLE_KEY|AWS_SECRET_ACCESS_KEY|AKIA[0-9A-Z]{16}' \
+            '-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}' \
             . 2>/dev/null || true)
 
           if [ -n "$MATCHES" ]; then
-            echo "ERROR: Possible real secrets found." | tee -a organize_report.txt
+            echo "ERROR: Possible real secret found." | tee -a organize_report.txt
             echo "$MATCHES" | tee -a organize_report.txt
             exit 1
           fi
@@ -241,17 +227,17 @@ jobs:
 
           pnpm install --frozen-lockfile
 
-          echo "Dependencies installed successfully." | tee -a organize_report.txt
+          echo "Dependencies installed." | tee -a organize_report.txt
 
-      - name: Run shared library typecheck
+      - name: Shared library typecheck
         run: |
           set -euo pipefail
 
           pnpm run typecheck:libs
 
-          echo "Shared library typecheck passed." | tee -a organize_report.txt
+          echo "Shared typecheck passed." | tee -a organize_report.txt
 
-      - name: Run backend typecheck
+      - name: Backend typecheck
         run: |
           set -euo pipefail
 
@@ -259,7 +245,7 @@ jobs:
 
           echo "Backend typecheck passed." | tee -a organize_report.txt
 
-      - name: Run frontend typecheck
+      - name: Frontend typecheck
         run: |
           set -euo pipefail
 
@@ -267,21 +253,21 @@ jobs:
 
           echo "Frontend typecheck passed." | tee -a organize_report.txt
 
-      - name: Build backend
+      - name: Backend build
         run: |
           set -euo pipefail
 
           pnpm --filter @workspace/api-server run build
 
-          echo "Backend production build passed." | tee -a organize_report.txt
+          echo "Backend build passed." | tee -a organize_report.txt
 
-      - name: Build frontend
+      - name: Frontend build
         run: |
           set -euo pipefail
 
           pnpm --filter @workspace/kaira-africa run build
 
-          echo "Frontend production build passed." | tee -a organize_report.txt
+          echo "Frontend build passed." | tee -a organize_report.txt
 
       - name: Wait for PostgreSQL
         run: |
@@ -289,14 +275,14 @@ jobs:
 
           for i in {1..30}; do
             if pg_isready -h localhost -p 5432 -U kaira; then
-              echo "PostgreSQL is ready." | tee -a organize_report.txt
+              echo "PostgreSQL ready." | tee -a organize_report.txt
               exit 0
             fi
 
             sleep 2
           done
 
-          echo "PostgreSQL did not become ready." | tee -a organize_report.txt
+          echo "PostgreSQL failed to start." | tee -a organize_report.txt
           exit 1
 
       - name: Verify migrations
@@ -310,12 +296,12 @@ jobs:
           elif [ -f "./scripts/migrate.ts" ]; then
             pnpm exec tsx ./scripts/migrate.ts
           else
-            echo "Migration script not found; checking migration files instead." | tee -a organize_report.txt
+            echo "Migration script not found; migration files will be checked." | tee -a organize_report.txt
           fi
 
           echo "Migration verification completed." | tee -a organize_report.txt
 
-      - name: Check Git status
+      - name: Git verification
         run: |
           set -euo pipefail
 
@@ -325,7 +311,7 @@ jobs:
           echo "Diff check:" | tee -a organize_report.txt
           git diff --check || true
 
-      - name: Commit changes
+      - name: Commit and push
         run: |
           set -euo pipefail
 
@@ -341,10 +327,10 @@ jobs:
 
             git push --set-upstream origin "$BRANCH"
 
-            echo "Changes committed and pushed successfully." | tee -a organize_report.txt
+            echo "Successfully committed and pushed." | tee -a organize_report.txt
           fi
 
-      - name: Upload organize report
+      - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
