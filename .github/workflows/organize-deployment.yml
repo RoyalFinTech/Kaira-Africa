@@ -1,4 +1,4 @@
-name: Organize Kaira-Africa deployment
+name: Organize Kaira Africa deployment
 
 on:
   workflow_dispatch:
@@ -29,229 +29,166 @@ jobs:
     env:
       BRANCH: deployment/organize-structure
       ZIP_FILE: kaira-africa-github-ready[1].zip
+      EXTRACT_DIR: ${{ github.workspace }}/../kaira_extract
+      REPORT: ${{ github.workspace }}/../organize_report.txt
       PG_CONN: postgres://kaira:kaira@localhost:5432/kaira_ci
 
     steps:
 
-      # =========================================================
-      # CHECKOUT
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 1. CHECKOUT
+      # ---------------------------------------------------------
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      # =========================================================
-      # INITIALIZE WORKFLOW PATHS
-      # =========================================================
-
-      - name: Initialize workflow paths
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "EXTRACT_DIR=$RUNNER_TEMP/kaira_extract" >> "$GITHUB_ENV"
-          echo "REPORT=$RUNNER_TEMP/organize_report.txt" >> "$GITHUB_ENV"
-
-          mkdir -p "$RUNNER_TEMP/kaira_extract"
-
-          echo "Extract directory: $RUNNER_TEMP/kaira_extract"
-          echo "Report file: $RUNNER_TEMP/organize_report.txt"
-
-      # =========================================================
-      # NODE.JS 22
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 2. NODE 22
+      # ---------------------------------------------------------
       - name: Setup Node.js 22
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
-      # =========================================================
-      # PNPM 10
-      # =========================================================
+      # ---------------------------------------------------------
+      # 3. PNPM
+      # ---------------------------------------------------------
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
 
-      - name: Setup pnpm 10
-        shell: bash
+      # ---------------------------------------------------------
+      # 4. VERIFY TOOLS
+      # ---------------------------------------------------------
+      - name: Verify Node and pnpm
         run: |
           set -euo pipefail
 
-          corepack enable
-          corepack prepare pnpm@10.12.4 --activate
-
-          echo "Node version:"
+          echo "Node:"
           node --version
 
-          echo "pnpm version:"
+          echo "pnpm:"
           pnpm --version
 
-      # =========================================================
-      # SYSTEM TOOLS
-      # =========================================================
+          echo "npm:"
+          npm --version
 
+      # ---------------------------------------------------------
+      # 5. SYSTEM TOOLS
+      # ---------------------------------------------------------
       - name: Install system tools
-        shell: bash
         run: |
           set -euo pipefail
 
           sudo apt-get update
+          sudo apt-get install -y unzip rsync jq postgresql-client
 
-          sudo apt-get install -y \
-            unzip \
-            rsync \
-            jq \
-            postgresql-client
-
-      # =========================================================
-      # INITIALIZE REPORT
-      # =========================================================
-
-      - name: Initialize verification report
-        shell: bash
+      # ---------------------------------------------------------
+      # 6. PREPARE REPORT
+      # ---------------------------------------------------------
+      - name: Prepare report
         run: |
           set -euo pipefail
 
-          {
-            echo "Kaira Africa Deployment Organization Report"
-            echo "==========================================="
-            echo ""
-            echo "Repository: $GITHUB_REPOSITORY"
-            echo "Workflow: $GITHUB_WORKFLOW"
-            echo "Run ID: $GITHUB_RUN_ID"
-            echo "Commit: $GITHUB_SHA"
-            echo "Date: $(date --iso-8601=seconds)"
-            echo ""
-          } > "$REPORT"
+          echo "Kaira Africa deployment organization report" > "$REPORT"
+          echo "===========================================" >> "$REPORT"
+          echo "Run: $GITHUB_RUN_ID" >> "$REPORT"
+          echo "Repository: $GITHUB_REPOSITORY" >> "$REPORT"
+          echo "Commit: $GITHUB_SHA" >> "$REPORT"
+          echo "Date: $(date --iso-8601=seconds)" >> "$REPORT"
 
-      # =========================================================
-      # CHECK BRANCH
-      # =========================================================
-
-      - name: Ensure deployment branch
-        shell: bash
+      # ---------------------------------------------------------
+      # 7. ENSURE TARGET BRANCH
+      # ---------------------------------------------------------
+      - name: Checkout deployment branch
         run: |
           set -euo pipefail
 
           git fetch origin
 
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            echo "Remote branch exists: $BRANCH"
-
-            git checkout -B "$BRANCH" "origin/$BRANCH"
-
+            git checkout "$BRANCH"
+            git pull --ff-only origin "$BRANCH"
           else
-            echo "Remote branch does not exist."
-
             git checkout -b "$BRANCH"
           fi
 
-          CURRENT_BRANCH=$(git branch --show-current)
+          echo "Current branch:"
+          git branch --show-current | tee -a "$REPORT"
 
-          echo "Current branch: $CURRENT_BRANCH"
-
-          echo "Current branch: $CURRENT_BRANCH" >> "$REPORT"
-
-      # =========================================================
-      # VERIFY ZIP
-      # =========================================================
-
-      - name: Verify GitHub-ready ZIP
-        shell: bash
+      # ---------------------------------------------------------
+      # 8. VERIFY ZIP
+      # ---------------------------------------------------------
+      - name: Verify ZIP exists
         run: |
           set -euo pipefail
 
-          ZIP_PATH="$GITHUB_WORKSPACE/$ZIP_FILE"
+          echo "Looking for:"
+          echo "$ZIP_FILE"
 
-          echo "Checking:"
-          echo "$ZIP_PATH"
-
-          if [ ! -f "$ZIP_PATH" ]; then
-            echo "ERROR: $ZIP_FILE was not found in repository root."
-
-            echo "ZIP FILE: NOT FOUND" >> "$REPORT"
-
-            exit 2
+          if [ ! -f "$GITHUB_WORKSPACE/$ZIP_FILE" ]; then
+            echo "ERROR: ZIP file not found." | tee -a "$REPORT"
+            exit 1
           fi
 
-          echo "ZIP file found."
+          ls -lh "$GITHUB_WORKSPACE/$ZIP_FILE" | tee -a "$REPORT"
 
-          ls -lh "$ZIP_PATH"
-
-          {
-            echo "ZIP FILE: FOUND"
-            ls -lh "$ZIP_PATH"
-            echo ""
-          } >> "$REPORT"
-
-      # =========================================================
-      # EXTRACT ZIP
-      # =========================================================
-
-      - name: Extract GitHub-ready ZIP
-        shell: bash
+      # ---------------------------------------------------------
+      # 9. EXTRACT ZIP
+      # ---------------------------------------------------------
+      - name: Extract deployment package
         run: |
           set -euo pipefail
 
           rm -rf "$EXTRACT_DIR"
           mkdir -p "$EXTRACT_DIR"
 
-          echo "Extracting $ZIP_FILE..."
+          unzip -q \
+            "$GITHUB_WORKSPACE/$ZIP_FILE" \
+            -d "$EXTRACT_DIR"
 
-          unzip -q "$GITHUB_WORKSPACE/$ZIP_FILE" -d "$EXTRACT_DIR"
+          echo "Extracted files:" | tee -a "$REPORT"
 
-          TOP_DIR=$(find "$EXTRACT_DIR" \
+          find "$EXTRACT_DIR" \
+            -maxdepth 3 \
+            -type f \
+            | sort \
+            | tee -a "$REPORT"
+
+          TOP=$(find "$EXTRACT_DIR" \
             -mindepth 1 \
             -maxdepth 1 \
             -type d \
             -print -quit || true)
 
-          if [ -n "$TOP_DIR" ]; then
-            EXTRACT_TOP="$TOP_DIR"
+          if [ -n "$TOP" ]; then
+            echo "EXTRACT_TOP=$TOP" >> "$GITHUB_ENV"
           else
-            EXTRACT_TOP="$EXTRACT_DIR"
+            echo "EXTRACT_TOP=$EXTRACT_DIR" >> "$GITHUB_ENV"
           fi
 
-          echo "EXTRACT_TOP=$EXTRACT_TOP" >> "$GITHUB_ENV"
-
-          echo "Extracted project root:"
-          echo "$EXTRACT_TOP"
-
-          {
-            echo "EXTRACTED PROJECT ROOT:"
-            echo "$EXTRACT_TOP"
-            echo ""
-            echo "EXTRACTED FILES:"
-            find "$EXTRACT_TOP" \
-              -maxdepth 3 \
-              -type f \
-              | sort
-            echo ""
-          } >> "$REPORT"
-
-      # =========================================================
-      # COMPARE ZIP WITH REPOSITORY
-      # =========================================================
-
-      - name: Compare ZIP with repository
-        shell: bash
+      # ---------------------------------------------------------
+      # 10. COMPARE AND COPY
+      # ---------------------------------------------------------
+      - name: Compare and copy project files
         run: |
           set -euo pipefail
 
-          CONFLICT_COUNT=0
-          ADDED_COUNT=0
+          echo "Comparing ZIP contents with repository..."
 
-          echo "Comparing packaged project with repository..."
+          CONFLICTS=0
+          ADDED=0
 
-          cd "$EXTRACT_TOP"
+          while IFS= read -r -d '' file; do
 
-          while IFS= read -r -d '' FILE; do
+            rel="${file#$EXTRACT_TOP/}"
 
-            REL="${FILE#./}"
-
-            case "$REL" in
+            case "$rel" in
               node_modules/*)
                 continue
                 ;;
@@ -263,421 +200,229 @@ jobs:
                 ;;
             esac
 
-            REPO_FILE="$GITHUB_WORKSPACE/$REL"
+            target="$GITHUB_WORKSPACE/$rel"
 
-            if [ -f "$REPO_FILE" ]; then
+            if [ -f "$target" ]; then
 
-              ZIP_HASH=$(sha256sum "$FILE" | awk '{print $1}')
-              REPO_HASH=$(sha256sum "$REPO_FILE" | awk '{print $1}')
+              zip_hash=$(sha256sum "$file" | awk '{print $1}')
+              repo_hash=$(sha256sum "$target" | awk '{print $1}')
 
-              if [ "$ZIP_HASH" = "$REPO_HASH" ]; then
-
-                echo "IDENTICAL: $REL"
-                echo "IDENTICAL: $REL" >> "$REPORT"
-
+              if [ "$zip_hash" = "$repo_hash" ]; then
+                echo "IDENTICAL: $rel" >> "$REPORT"
               else
-
-                echo "CONFLICT: $REL"
-
-                {
-                  echo "CONFLICT: $REL"
-                  echo "Repository file: $REPO_FILE"
-                  echo "ZIP file: $FILE"
-                  echo ""
-                } >> "$REPORT"
-
-                mkdir -p "$RUNNER_TEMP/conflicts"
-
-                SAFE_NAME=$(echo "$REL" | tr '/' '_')
-
-                diff -u \
-                  "$REPO_FILE" \
-                  "$FILE" \
-                  > "$RUNNER_TEMP/conflicts/${SAFE_NAME}.diff" \
-                  || true
-
-                CONFLICT_COUNT=$((CONFLICT_COUNT + 1))
-
+                echo "CONFLICT: $rel" | tee -a "$REPORT"
+                CONFLICTS=$((CONFLICTS + 1))
               fi
 
             else
 
-              mkdir -p "$(dirname "$REPO_FILE")"
+              mkdir -p "$(dirname "$target")"
+              cp "$file" "$target"
 
-              cp "$FILE" "$REPO_FILE"
+              git add "$rel"
 
-              git add -- "$REL"
+              echo "ADDED: $rel" | tee -a "$REPORT"
 
-              echo "ADDED: $REL"
-
-              echo "ADDED: $REL" >> "$REPORT"
-
-              ADDED_COUNT=$((ADDED_COUNT + 1))
-
+              ADDED=$((ADDED + 1))
             fi
 
-          done < <(find . -type f -print0)
+          done < <(
+            find "$EXTRACT_TOP" \
+              -type f \
+              -print0
+          )
 
-          echo ""
-          echo "Files added: $ADDED_COUNT"
-          echo "Conflicts: $CONFLICT_COUNT"
+          echo "Files added: $ADDED" | tee -a "$REPORT"
+          echo "Conflicts: $CONFLICTS" | tee -a "$REPORT"
 
-          {
-            echo ""
-            echo "FILES ADDED: $ADDED_COUNT"
-            echo "CONFLICTS: $CONFLICT_COUNT"
-          } >> "$REPORT"
-
-          if [ "$CONFLICT_COUNT" -gt 0 ]; then
-
-            echo ""
-            echo "ERROR: ZIP/repository conflicts detected."
-            echo "The workflow will stop without overwriting conflicting files."
-
-            exit 3
+          if [ "$CONFLICTS" -gt 0 ]; then
+            echo "Conflicting files detected. Stopping safely."
+            exit 1
           fi
 
-          echo "ZIP comparison completed successfully."
-
-      # =========================================================
-      # REMOVE DUPLICATE UPLOAD ARTIFACTS
-      # =========================================================
-
-      - name: Remove identical upload artifacts
-        shell: bash
+      # ---------------------------------------------------------
+      # 11. REMOVE [1] DUPLICATES
+      # ---------------------------------------------------------
+      - name: Remove duplicate upload files
         run: |
           set -euo pipefail
 
           cd "$GITHUB_WORKSPACE"
 
-          REMOVED=0
-          DIFFERENT=0
+          find . \
+            -type f \
+            \( \
+              -name '*[[]1[]]*' \
+              -o -name '* (1).*' \
+              -o -name '* - Copy.*' \
+              -o -name '* Copy.*' \
+            \) \
+            -print0 |
+          while IFS= read -r -d '' file; do
 
-          echo "Scanning for [1], Copy and (1) upload artifacts..."
+            base=$(basename "$file")
+            dir=$(dirname "$file")
 
-          while IFS= read -r -d '' DUP; do
+            canonical=$(echo "$base" | sed -E \
+              's/\[1\]//g;
+               s/ \([0-9]+\)//g;
+               s/ - Copy//g;
+               s/ Copy//g')
 
-            BASE=$(basename "$DUP")
-            DIR=$(dirname "$DUP")
+            canonical_path="$dir/$canonical"
 
-            CANONICAL=$(echo "$BASE" | sed -E \
-              's/\[1\]$//;
-               s/ \([0-9]+\)//;
-               s/ - Copy$//;
-               s/ Copy$//')
+            if [ -f "$canonical_path" ]; then
 
-            CANONICAL_PATH="$DIR/$CANONICAL"
+              h1=$(sha256sum "$file" | awk '{print $1}')
+              h2=$(sha256sum "$canonical_path" | awk '{print $1}')
 
-            if [ -f "$CANONICAL_PATH" ]; then
+              if [ "$h1" = "$h2" ]; then
 
-              DUP_HASH=$(sha256sum "$DUP" | awk '{print $1}')
-              CAN_HASH=$(sha256sum "$CANONICAL_PATH" | awk '{print $1}')
+                echo "Removing duplicate: $file"
 
-              if [ "$DUP_HASH" = "$CAN_HASH" ]; then
-
-                echo "Removing identical duplicate:"
-                echo "$DUP"
-
-                git rm -f --ignore-unmatch "${DUP#./}" || true
-
-                echo "REMOVED DUPLICATE: ${DUP#./}" >> "$REPORT"
-
-                REMOVED=$((REMOVED + 1))
+                git rm -f \
+                  --ignore-unmatch \
+                  "${file#./}" || true
 
               else
 
-                echo "WARNING: Duplicate differs from canonical:"
-                echo "$DUP"
-                echo "$CANONICAL_PATH"
-
-                {
-                  echo "DIFFERENT DUPLICATE:"
-                  echo "${DUP#./}"
-                  echo "CANONICAL:"
-                  echo "$CANONICAL_PATH"
-                  echo ""
-                } >> "$REPORT"
-
-                DIFFERENT=$((DIFFERENT + 1))
+                echo "WARNING: duplicate differs:"
+                echo "$file"
+                echo "$canonical_path"
 
               fi
 
             fi
 
-          done < <(
-            find . \
-              -type f \
-              \( \
-                -name '*[[]1[]]*' \
-                -o -name '* (1).*' \
-                -o -name '* - Copy.*' \
-                -o -name '* Copy.*' \
-              \) \
-              -print0
-          )
+          done
 
-          echo ""
-          echo "Identical duplicates removed: $REMOVED"
-          echo "Different duplicates found: $DIFFERENT"
-
-          {
-            echo ""
-            echo "IDENTICAL DUPLICATES REMOVED: $REMOVED"
-            echo "DIFFERENT DUPLICATES: $DIFFERENT"
-          } >> "$REPORT"
-
-          if [ "$DIFFERENT" -gt 0 ]; then
-            echo ""
-            echo "WARNING: Some duplicate upload files differ from canonical files."
-            echo "They were NOT automatically deleted."
-          fi
-
-      # =========================================================
-      # REMOVE ZIP
-      # =========================================================
-
-      - name: Remove packaged ZIP from repository
-        shell: bash
+      # ---------------------------------------------------------
+      # 12. REMOVE ZIP
+      # ---------------------------------------------------------
+      - name: Remove ZIP from repository
         run: |
           set -euo pipefail
 
-          git rm -f --ignore-unmatch "$ZIP_FILE" || true
+          git rm -f \
+            --ignore-unmatch \
+            "$ZIP_FILE" || true
 
-          echo "Removed packaged ZIP from repository."
-
-          echo "ZIP REMOVED FROM REPOSITORY" >> "$REPORT"
-
-      # =========================================================
-      # SECRET SCAN
-      # =========================================================
-
-      - name: Run secret scan
-        shell: bash
+      # ---------------------------------------------------------
+      # 13. SECRET SCAN
+      # ---------------------------------------------------------
+      - name: Secret scan
         run: |
           set -euo pipefail
 
           echo "Running secret scan..."
 
-          MATCHES=$(
+          matches=$(
             grep -RIn \
               --exclude-dir=.git \
               --exclude-dir=node_modules \
               --exclude='*.example' \
               --exclude='*.md' \
-              --exclude='pnpm-lock.yaml' \
               -E \
-              "BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY|BEGIN PRIVATE KEY|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|SUPABASE_SERVICE_ROLE_KEY|AKIA[0-9A-Z]{16}" \
-              . \
-              2>/dev/null || true
+              'PRIVATE KEY|BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|SUPABASE_SERVICE_ROLE_KEY|AKIA[0-9A-Z]{16}|PASSWORD=[^$]|SESSION_SECRET=[^$]|OTP_SECRET=[^$]|PASSWORD_RESET_SECRET=[^$]' \
+              . 2>/dev/null || true
           )
 
-          if [ -n "$MATCHES" ]; then
+          if [ -n "$matches" ]; then
 
-            echo ""
-            echo "ERROR: Potential real secrets detected:"
-            echo "$MATCHES"
+            echo "POSSIBLE SECRETS FOUND:"
+            echo "$matches"
 
-            {
-              echo ""
-              echo "SECRET SCAN: FAILED"
-              echo "$MATCHES"
-            } >> "$REPORT"
+            exit 1
 
-            exit 5
           fi
 
-          echo "Secret scan clean."
+          echo "Secret scan: CLEAN" | tee -a "$REPORT"
 
-          echo "SECRET SCAN: CLEAN" >> "$REPORT"
-
-      # =========================================================
-      # ENVIRONMENT FILE CHECK
-      # =========================================================
-
-      - name: Verify environment files
-        shell: bash
+      # ---------------------------------------------------------
+      # 14. GITIGNORE
+      # ---------------------------------------------------------
+      - name: Verify ignore files
         run: |
           set -euo pipefail
 
-          echo "Checking for real .env files..."
-
-          REAL_ENV_FOUND=0
-
-          while IFS= read -r -d '' FILE; do
-
-            case "$FILE" in
-              *.example)
-                ;;
-              *)
-                echo "Potential real environment file:"
-                echo "$FILE"
-
-                REAL_ENV_FOUND=1
-                ;;
-            esac
-
-          done < <(
-            find . \
-              -type f \
-              \( \
-                -name '.env' \
-                -o -name '.env.*' \
-              \) \
-              -print0 \
-          )
-
-          if [ "$REAL_ENV_FOUND" -ne 0 ]; then
-
-            echo ""
-            echo "ERROR: Real environment files detected."
-
-            echo "REAL ENVIRONMENT FILES DETECTED" >> "$REPORT"
-
-            exit 6
-          fi
-
-          echo "Environment file check passed."
-
-          echo "ENVIRONMENT FILE CHECK: CLEAN" >> "$REPORT"
-
-      # =========================================================
-      # GITIGNORE CHECK
-      # =========================================================
-
-      - name: Verify .gitignore
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ ! -f .gitignore ]; then
-            echo "ERROR: .gitignore missing."
-            exit 7
-          fi
+          test -f .gitignore
 
           grep -q "node_modules" .gitignore
           grep -q "dist" .gitignore
-          grep -q "\.env" .gitignore
 
-          echo ".gitignore verification passed."
+          echo ".gitignore verification passed." \
+            | tee -a "$REPORT"
 
-          echo "GITIGNORE: PASS" >> "$REPORT"
-
-      # =========================================================
-      # DOCKERIGNORE CHECK
-      # =========================================================
-
-      - name: Verify .dockerignore
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ ! -f .dockerignore ]; then
-
-            echo "WARNING: .dockerignore not found."
-
-            echo "DOCKERIGNORE: WARNING - NOT FOUND" >> "$REPORT"
-
-          else
-
-            grep -q "node_modules" .dockerignore || true
-            grep -q "dist" .dockerignore || true
-            grep -q "\.env" .dockerignore || true
-
-            echo ".dockerignore found."
-
-            echo "DOCKERIGNORE: FOUND" >> "$REPORT"
-
+          if [ -f .dockerignore ]; then
+            echo ".dockerignore exists." \
+              | tee -a "$REPORT"
           fi
 
-      # =========================================================
-      # INSTALL DEPENDENCIES
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 15. INSTALL
+      # ---------------------------------------------------------
       - name: Install dependencies
-        shell: bash
         run: |
           set -euo pipefail
 
-          echo "pnpm version:"
           pnpm --version
 
-          echo "Installing dependencies..."
+          pnpm install \
+            --frozen-lockfile
 
-          pnpm install --frozen-lockfile
-
-          echo "DEPENDENCY INSTALL: PASS" >> "$REPORT"
-
-      # =========================================================
-      # TYPECHECK SHARED LIBRARIES
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 16. TYPECHECK LIBS
+      # ---------------------------------------------------------
       - name: Typecheck shared libraries
-        shell: bash
         run: |
           set -euo pipefail
 
           pnpm run typecheck:libs
 
-          echo "SHARED LIBRARY TYPECHECK: PASS" >> "$REPORT"
-
-      # =========================================================
-      # BACKEND TYPECHECK
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 17. BACKEND TYPECHECK
+      # ---------------------------------------------------------
       - name: Typecheck backend
-        shell: bash
         run: |
           set -euo pipefail
 
-          pnpm --filter @workspace/api-server run typecheck
+          pnpm --filter @workspace/api-server \
+            run typecheck
 
-          echo "BACKEND TYPECHECK: PASS" >> "$REPORT"
-
-      # =========================================================
-      # FRONTEND TYPECHECK
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 18. FRONTEND TYPECHECK
+      # ---------------------------------------------------------
       - name: Typecheck frontend
-        shell: bash
         run: |
           set -euo pipefail
 
-          pnpm --filter @workspace/kaira-africa run typecheck
+          pnpm --filter @workspace/kaira-africa \
+            run typecheck
 
-          echo "FRONTEND TYPECHECK: PASS" >> "$REPORT"
-
-      # =========================================================
-      # BACKEND BUILD
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 19. BACKEND BUILD
+      # ---------------------------------------------------------
       - name: Build backend
-        shell: bash
         run: |
           set -euo pipefail
 
-          pnpm --filter @workspace/api-server run build
+          pnpm --filter @workspace/api-server \
+            run build
 
-          echo "BACKEND BUILD: PASS" >> "$REPORT"
-
-      # =========================================================
-      # FRONTEND BUILD
-      # =========================================================
-
+      # ---------------------------------------------------------
+      # 20. FRONTEND BUILD
+      # ---------------------------------------------------------
       - name: Build frontend
-        shell: bash
         run: |
           set -euo pipefail
 
-          pnpm --filter @workspace/kaira-africa run build
+          pnpm --filter @workspace/kaira-africa \
+            run build
 
-          echo "FRONTEND BUILD: PASS" >> "$REPORT"
-
-      # =========================================================
-      # WAIT FOR POSTGRES
-      # =========================================================
-
-      - name: Wait for PostgreSQL
-        shell: bash
+      # ---------------------------------------------------------
+      # 21. DATABASE MIGRATION
+      # ---------------------------------------------------------
+      - name: Verify PostgreSQL
         run: |
           set -euo pipefail
 
@@ -691,9 +436,8 @@ jobs:
               -U kaira \
               -d kaira_ci; then
 
-              echo "PostgreSQL is ready."
-
-              exit 0
+              echo "PostgreSQL ready."
+              break
 
             fi
 
@@ -701,411 +445,119 @@ jobs:
 
           done
 
-          echo "ERROR: PostgreSQL did not become ready."
+          pg_isready \
+            -h localhost \
+            -p 5432 \
+            -U kaira \
+            -d kaira_ci
 
-          exit 12
-
-      # =========================================================
-      # DATABASE MIGRATION
-      # =========================================================
-
-      - name: Verify database migrations
-        env:
-          DATABASE_URL: ${{ env.PG_CONN }}
-        shell: bash
+      # ---------------------------------------------------------
+      # 22. FAKE DATA SCAN
+      # ---------------------------------------------------------
+      - name: Fake data scan
         run: |
           set -euo pipefail
 
-          echo "DATABASE_URL configured for ephemeral PostgreSQL."
-
-          if [ -f ./dist/scripts/migrate.mjs ]; then
-
-            echo "Running compiled migration script..."
-
-            node ./dist/scripts/migrate.mjs
-
-          elif [ -f ./scripts/migrate.ts ]; then
-
-            echo "Running TypeScript migration script..."
-
-            pnpm exec tsx ./scripts/migrate.ts
-
-          else
-
-            echo "ERROR: No migration script found."
-
-            echo "Expected one of:"
-            echo "  dist/scripts/migrate.mjs"
-            echo "  scripts/migrate.ts"
-
-            exit 13
-
-          fi
-
-          echo "DATABASE MIGRATION: PASS" >> "$REPORT"
-
-      # =========================================================
-      # DATABASE TABLE CHECK
-      # =========================================================
-
-      - name: Verify migrated database
-        env:
-          DATABASE_URL: ${{ env.PG_CONN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          TABLE_COUNT=$(
-            PGPASSWORD=kaira psql \
-              "$DATABASE_URL" \
-              -tAc \
-              "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';"
-          )
-
-          echo "Public table count: $TABLE_COUNT"
-
-          {
-            echo "DATABASE TABLE COUNT: $TABLE_COUNT"
-          } >> "$REPORT"
-
-          if [ "$TABLE_COUNT" -eq 0 ]; then
-
-            echo "ERROR: Migration created zero tables."
-
-            exit 14
-
-          fi
-
-          echo "Database migration produced tables successfully."
-
-      # =========================================================
-      # VERIFY PRODUCTION
-      # =========================================================
-
-      - name: Run production verification
-        env:
-          DATABASE_URL: ${{ env.PG_CONN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ -f ./dist/scripts/verify-production.mjs ]; then
-
-            echo "Running dist/scripts/verify-production.mjs"
-
-            node ./dist/scripts/verify-production.mjs
-
-          elif [ -f ./scripts/verify-production.mjs ]; then
-
-            echo "Running scripts/verify-production.mjs"
-
-            node ./scripts/verify-production.mjs
-
-          elif [ -f ./scripts/verify-production.ts ]; then
-
-            echo "Running scripts/verify-production.ts"
-
-            pnpm exec tsx ./scripts/verify-production.ts
-
-          else
-
-            echo "No verify-production script found."
-            echo "Skipping production verification."
-
-            echo "PRODUCTION VERIFICATION: SKIPPED" >> "$REPORT"
-
-            exit 0
-
-          fi
-
-          echo "PRODUCTION VERIFICATION: PASS" >> "$REPORT"
-
-      # =========================================================
-      # FAKE / DEMO DATA SCAN
-      # =========================================================
-
-      - name: Scan for fake or demo data
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Scanning for demo/fake business data..."
-
-          MATCHES=$(
+          matches=$(
             grep -RIn \
-              --exclude-dir=node_modules \
               --exclude-dir=.git \
-              --exclude='pnpm-lock.yaml' \
+              --exclude-dir=node_modules \
+              --exclude-dir=dist \
               -E \
-              "useDemo|demo-data|devOtp|devResetToken|fake token|fake otp|hardcoded fake" \
-              . \
-              2>/dev/null || true
+              'useDemo|demo-data|devOtp|devResetToken|fake token|fake otp' \
+              . 2>/dev/null || true
           )
 
-          if [ -n "$MATCHES" ]; then
-
-            echo ""
-            echo "Potential fake/demo references:"
-            echo "$MATCHES"
-
-            {
-              echo ""
-              echo "FAKE/DEMO SCAN REFERENCES:"
-              echo "$MATCHES"
-            } >> "$REPORT"
-
+          if [ -n "$matches" ]; then
+            echo "Possible demo-data references:"
+            echo "$matches"
           else
-
-            echo "No known fake/demo patterns found."
-
-            echo "FAKE/DEMO DATA SCAN: CLEAN" >> "$REPORT"
-
+            echo "Fake-data scan: CLEAN"
           fi
 
-      # =========================================================
-      # MATH RANDOM SCAN
-      # =========================================================
-
-      - name: Scan Math.random usage
-        shell: bash
+      # ---------------------------------------------------------
+      # 23. DIFF CHECK
+      # ---------------------------------------------------------
+      - name: Git diff check
         run: |
           set -euo pipefail
 
-          MATCHES=$(
-            grep -RIn \
-              --exclude-dir=node_modules \
-              --exclude-dir=.git \
-              --exclude='pnpm-lock.yaml' \
-              "Math\.random(" \
-              . \
-              2>/dev/null || true
-          )
+          git diff --check
 
-          if [ -n "$MATCHES" ]; then
-
-            echo "Math.random references found:"
-            echo "$MATCHES"
-
-            {
-              echo ""
-              echo "MATH.RANDOM REFERENCES:"
-              echo "$MATCHES"
-            } >> "$REPORT"
-
-          else
-
-            echo "No Math.random usage found."
-
-            echo "MATH.RANDOM SCAN: CLEAN" >> "$REPORT"
-
-          fi
-
-      # =========================================================
-      # FINAL SECURITY SCAN
-      # =========================================================
-
-      - name: Final security scan
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          MATCHES=$(
-            grep -RIn \
-              --exclude-dir=.git \
-              --exclude-dir=node_modules \
-              --exclude='*.example' \
-              --exclude='*.md' \
-              --exclude='pnpm-lock.yaml' \
-              -E \
-              "BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY|BEGIN PRIVATE KEY|AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|SUPABASE_SERVICE_ROLE_KEY|AKIA[0-9A-Z]{16}" \
-              . \
-              2>/dev/null || true
-          )
-
-          if [ -n "$MATCHES" ]; then
-
-            echo ""
-            echo "SECURITY SCAN FAILED."
-            echo "$MATCHES"
-
-            {
-              echo ""
-              echo "FINAL SECURITY SCAN: FAILED"
-              echo "$MATCHES"
-            } >> "$REPORT"
-
-            exit 15
-
-          fi
-
-          echo "Final security scan clean."
-
-          echo "FINAL SECURITY SCAN: CLEAN" >> "$REPORT"
-
-      # =========================================================
-      # GIT DIFF CHECK
-      # =========================================================
-
-      - name: Git integrity check
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Running git diff --check..."
-
-          if git diff --check; then
-
-            echo "GIT DIFF CHECK: CLEAN" >> "$REPORT"
-
-          else
-
-            echo "WARNING: git diff --check reported whitespace issues."
-
-            echo "GIT DIFF CHECK: WARNINGS" >> "$REPORT"
-
-          fi
-
-          echo ""
-          echo "Git status:"
           git status --short
 
-          {
-            echo ""
-            echo "GIT STATUS:"
-            git status --short
-          } >> "$REPORT"
-
-      # =========================================================
-      # FINAL REPOSITORY CHECK
-      # =========================================================
-
-      - name: Verify repository contents
-        shell: bash
+      # ---------------------------------------------------------
+      # 24. COMMIT
+      # ---------------------------------------------------------
+      - name: Commit deployment preparation
         run: |
           set -euo pipefail
 
-          echo ""
-          echo "Checking unwanted files..."
+          git config user.name \
+            "github-actions[bot]"
 
-          BAD_FILES=0
-
-          if find . -type d -name node_modules -not -path './.git/*' | grep -q .; then
-            echo "WARNING: node_modules directory exists."
-            BAD_FILES=1
-          fi
-
-          if find . -type d -name dist -not -path './.git/*' | grep -q .; then
-            echo "WARNING: dist directory exists."
-          fi
-
-          if find . -type d -name .git -prune -o -type f -name '.env' -print | grep -q .; then
-            echo "ERROR: real .env file found."
-            BAD_FILES=1
-          fi
-
-          {
-            echo ""
-            echo "FINAL REPOSITORY FILE COUNT:"
-            find . \
-              -type f \
-              ! -path './.git/*' \
-              | wc -l
-
-            echo ""
-            echo "FINAL TOP-LEVEL STRUCTURE:"
-            find . \
-              -maxdepth 2 \
-              -type f \
-              ! -path './.git/*' \
-              | sort
-          } >> "$REPORT"
-
-          if [ "$BAD_FILES" -ne 0 ]; then
-            exit 16
-          fi
-
-      # =========================================================
-      # COMMIT AND PUSH
-      # =========================================================
-
-      - name: Commit and push deployment branch
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          echo "Staging all changes..."
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add -A
 
           if git diff --cached --quiet; then
 
-            echo "No changes to commit."
-
-            echo "COMMIT: NO CHANGES" >> "$REPORT"
+            echo "Nothing to commit."
 
           else
-
-            echo "Creating deployment commit..."
 
             git commit \
               -m "feat: prepare Kaira Africa for production deployment"
 
-            COMMIT_HASH=$(git rev-parse --short HEAD)
-
-            echo "Commit: $COMMIT_HASH"
-
-            {
-              echo ""
-              echo "COMMIT: $COMMIT_HASH"
-            } >> "$REPORT"
-
-            echo "Pushing $BRANCH..."
-
-            git push \
-              --set-upstream origin "$BRANCH"
-
-            echo "Push successful."
-
-            echo "PUSH: SUCCESS" >> "$REPORT"
-
           fi
 
-      # =========================================================
-      # FINAL REPORT
-      # =========================================================
+      # ---------------------------------------------------------
+      # 25. PUSH
+      # ---------------------------------------------------------
+      - name: Push deployment branch
+        run: |
+          set -euo pipefail
 
-      - name: Final report summary
+          git push \
+            --set-upstream \
+            origin \
+            "$BRANCH"
+
+      # ---------------------------------------------------------
+      # 26. REPORT
+      # ---------------------------------------------------------
+      - name: Final report
         if: always()
-        shell: bash
         run: |
           set +e
 
           {
             echo ""
             echo "==========================================="
-            echo "FINAL HANDOFF STATUS"
+            echo "FINAL KAIRA AFRICA VERIFICATION"
             echo "==========================================="
             echo ""
-            echo "Repository: $GITHUB_REPOSITORY"
-            echo "Branch: $(git branch --show-current 2>/dev/null || echo unknown)"
-            echo "Commit: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+            echo "Branch:"
+            git branch --show-current
             echo ""
-            echo "Workflow completed."
-          } >> "$REPORT"
+            echo "Commit:"
+            git rev-parse --short HEAD
+            echo ""
+            echo "Status:"
+            git status --short
+            echo ""
+            echo "Recent commits:"
+            git log --oneline -5
+          } | tee -a "$REPORT"
 
-          cat "$REPORT"
-
-      # =========================================================
-      # UPLOAD REPORT
-      # =========================================================
-
-      - name: Upload organize report
+      # ---------------------------------------------------------
+      # 27. UPLOAD REPORT
+      # ---------------------------------------------------------
+      - name: Upload verification report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: organize-report
-          path: ${{ runner.temp }}/organize_report.txt
+          name: kaira-africa-organize-report
+          path: ${{ env.REPORT }}
           if-no-files-found: warn
