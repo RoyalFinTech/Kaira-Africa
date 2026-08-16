@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
+    {
+      "src": "artifacts/api-server/api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["lib/db/migrations/**"]
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "artifacts/api-server/api/index.ts"
+    }
+  ],
+  "buildCommand": "pnpm run typecheck:libs",
+  "installCommand": "pnpm install --frozen-lockfile"
+}

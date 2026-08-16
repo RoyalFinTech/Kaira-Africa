@@ -1,0 +1,31 @@
+# Applies to the Docker build context for both Dockerfile and
+# Dockerfile.dev, run from the repo root (see docker-compose.yml).
+
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+
+.git
+.gitignore
+
+# Local env files — never bake real secrets into an image.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Design/asset directories not needed to build or run the API server.
+attached_assets
+artifacts/mockup-sandbox
+artifacts/kaira-africa/dist
+
+# Editor/OS noise.
+.vscode
+.idea
+.DS_Store
+*.log
+
+# This project's own scratch/verification files, if present.
+verify*.sh
+/tmp

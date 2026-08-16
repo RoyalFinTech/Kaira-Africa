@@ -1,0 +1,65 @@
+# Kaira Africa API Server — environment variables
+# Copy to .env and fill in real values. Never commit a real .env file.
+# See .env.development.example / .env.production.example for
+# environment-specific guidance on which of these are required.
+
+# ── Core ─────────────────────────────────────────────────────────────
+NODE_ENV=development
+PORT=3000
+
+# ── Database (Postgres — Supabase provides the Postgres infrastructure) ──
+# DATABASE_URL is used for normal app queries (can be a pooled
+# connection, e.g. Supabase's PgBouncer pooler on port 6543).
+DATABASE_URL=postgres://user:password@localhost:5432/kaira_africa
+# DIRECT_URL is optional: set it to a non-pooled connection string if
+# DATABASE_URL is pooled — Drizzle migrations need a direct connection.
+DIRECT_URL=
+
+# ── URLs ─────────────────────────────────────────────────────────────
+API_BASE_URL=http://localhost:3000
+WEB_BASE_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
+BACKEND_URL=http://localhost:3000
+
+# ── Secrets (generate with: openssl rand -hex 32) ───────────────────
+# Not used to sign JWTs (this API uses revocable, DB-backed session
+# tokens, not JWTs) — these pepper the session/OTP/reset-token hashes.
+JWT_SECRET=
+SESSION_SECRET=
+OTP_SECRET=
+PASSWORD_RESET_SECRET=
+
+# ── Admin seed account (used by scripts/seed-admin.ts) ──────────────
+ADMIN_SEED_EMAIL=
+ADMIN_SEED_PASSWORD=
+
+# ── Rate limiting (global default limiter — auth endpoints have their
+#    own, stricter, per-endpoint limits defined in code) ─────────────
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=120
+
+# ── Redis (rate limiting store) ──────────────────────────────────────
+REDIS_URL=redis://localhost:6379
+
+# ── Email (SMTP — password reset / admin notifications) ─────────────
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM="Kaira Africa <no-reply@kairaafrica.com>"
+
+# ── SMS (OTP delivery) ────────────────────────────────────────────────
+# SMS_PROVIDER: mock | africastalking | twilio
+SMS_PROVIDER=mock
+SMS_API_KEY=
+SMS_SENDER_ID=KairaAfrica
+
+# ── Supabase (only needed if calling the Supabase client SDK directly —
+#    not required for the API server to boot; DATABASE_URL above is
+#    what actually connects the app to Supabase's Postgres) ──────────
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# ── Logging ──────────────────────────────────────────────────────────
+LOG_LEVEL=info

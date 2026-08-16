@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kaira
+      POSTGRES_PASSWORD: kaira
+      POSTGRES_DB: kaira_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - kaira_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaira -d kaira_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-server:
+    build:
+      context: .
+      dockerfile: artifacts/api-server/Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgres://kaira:kaira@postgres:5432/kaira_dev
+      REDIS_URL: redis://redis:6379
+      API_BASE_URL: http://localhost:3000
+      WEB_BASE_URL: http://localhost:5173
+      FRONTEND_URL: http://localhost:5173
+      BACKEND_URL: http://localhost:3000
+      # Dev-only fallback pepper values — see .env.development.example.
+      SESSION_SECRET: dev-only-session-secret-change-me-32chars
+      OTP_SECRET: dev-only-otp-secret
+      PASSWORD_RESET_SECRET: dev-only-reset-secret
+      ADMIN_SEED_EMAIL: admin@kairaafrica.test
+      ADMIN_SEED_PASSWORD: "Kaira#Admin2026!"
+      RATE_LIMIT_WINDOW_MS: 60000
+      RATE_LIMIT_MAX_REQUESTS: 300
+      SMS_PROVIDER: mock
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Mount the whole repo for hot reload (tsx watch — see
+      # Dockerfile.dev)...
+      - .:/repo
+      # ...but keep node_modules inside the container (anonymous
+      # volumes below), rather than the host's — otherwise native
+      # binaries built for the host OS/arch (argon2) would leak into
+      # the container and fail to load.
+      - /repo/node_modules
+      - /repo/artifacts/api-server/node_modules
+      - /repo/lib/db/node_modules
+      - /repo/lib/api-zod/node_modules
+      - /repo/lib/api-client-react/node_modules
+      - /repo/lib/api-spec/node_modules
+
+volumes:
+  kaira_postgres_data:

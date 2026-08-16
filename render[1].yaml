@@ -1,0 +1,85 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy via Render's "New > Blueprint" pointed at this repo.
+
+services:
+  - type: web
+    name: kaira-africa-api
+    runtime: docker
+    dockerfilePath: artifacts/api-server/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /ready
+    # Runs once per deploy, before the new instance takes traffic —
+    # exactly the "one-off, not on every boot" pattern the migration
+    # script is designed for (see scripts/migrate.ts).
+    preDeployCommand: node dist/scripts/migrate.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kaira-africa-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: kaira-africa-redis
+          property: connectionString
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: kaira-africa-api
+          property: hostport
+      # Set these in the Render dashboard rather than committing real
+      # values here (Render lets you mark envVars as `sync: false` to
+      # require manual entry, which is the appropriate choice for
+      # secrets):
+      - key: JWT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: OTP_SECRET
+        sync: false
+      - key: PASSWORD_RESET_SECRET
+        sync: false
+      - key: ADMIN_SEED_EMAIL
+        sync: false
+      - key: ADMIN_SEED_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMS_PROVIDER
+        value: africastalking
+      - key: SMS_API_KEY
+        sync: false
+      - key: SMS_SENDER_ID
+        sync: false
+      - key: WEB_BASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+
+  - type: keyvalue
+    name: kaira-africa-redis
+    plan: starter
+    region: frankfurt
+    ipAllowList: []
+
+databases:
+  - name: kaira-africa-db
+    plan: starter
+    region: frankfurt
+    postgresMajorVersion: "16"
