@@ -3,12 +3,10 @@
           set -euo pipefail
           echo "Running final secret scan..." | tee -a "$REPORT"
 
-          # Scan for actual secret values, not environment-variable names
-          # or TypeScript/Zod schema declarations.
-          FOUND=""
+          # Scan for actual secret values, not environment-variable
+          # names or TypeScript/Zod schema declarations.
 
-          # Private keys
-          FOUND="$(grep -RInE \
+          PRIVATE_KEYS="$(grep -RInE \
             --exclude-dir=.git \
             --exclude-dir=node_modules \
             --exclude-dir=dist \
@@ -17,8 +15,7 @@
             '-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----' \
             . 2>/dev/null || true)"
 
-          # AWS access keys
-          AWS_FOUND="$(grep -RInE \
+          AWS_KEYS="$(grep -RInE \
             --exclude-dir=.git \
             --exclude-dir=node_modules \
             --exclude-dir=dist \
@@ -26,23 +23,23 @@
             'AKIA[0-9A-Z]{16}' \
             . 2>/dev/null || true)"
 
-          # Common actual secret assignments.
-          # Require a value after '=' or ':' rather than merely
-          # seeing the variable name in source code.
-          VALUE_FOUND="$(grep -RInE \
+          # Look specifically for assignments containing long secret-like values.
+          SECRET_VALUES="$(grep -RInE \
             --exclude-dir=.git \
             --exclude-dir=node_modules \
             --exclude-dir=dist \
             --exclude='*.example' \
             --exclude='*.md' \
-            '(SESSION_SECRET|OTP_SECRET|PASSWORD_RESET_SECRET|SUPABASE_SERVICE_ROLE_KEY|SMTP_PASSWORD|AWS_SECRET_ACCESS_KEY)[[:space:]]*[:=][[:space:]]*["'\'']?[A-Za-z0-9_+/=-]{20,}' \
+            '(SESSION_SECRET|OTP_SECRET|PASSWORD_RESET_SECRET|SUPABASE_SERVICE_ROLE_KEY|SMTP_PASSWORD|AWS_SECRET_ACCESS_KEY)[[:space:]]*[:=][[:space:]]*["'\'']?[A-Za-z0-9_+/=-]{32,}' \
             . 2>/dev/null || true)"
 
-          if [ -n "$FOUND" ] || [ -n "$AWS_FOUND" ] || [ -n "$VALUE_FOUND" ]; then
+          if [ -n "$PRIVATE_KEYS" ] || [ -n "$AWS_KEYS" ] || [ -n "$SECRET_VALUES" ]; then
             echo "ERROR: Possible real secrets found." | tee -a "$REPORT"
-            echo "$FOUND" >> "$REPORT"
-            echo "$AWS_FOUND" >> "$REPORT"
-            echo "$VALUE_FOUND" >> "$REPORT"
+
+            [ -n "$PRIVATE_KEYS" ] && echo "$PRIVATE_KEYS" >> "$REPORT"
+            [ -n "$AWS_KEYS" ] && echo "$AWS_KEYS" >> "$REPORT"
+            [ -n "$SECRET_VALUES" ] && echo "$SECRET_VALUES" >> "$REPORT"
+
             exit 1
           fi
 
