@@ -1,21 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "builds": [
-    {
-      "src": "artifacts/api-server/api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["lib/db/migrations/**"]
-      }
-    }
-  ],
+  "framework": "vite",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "PORT=5173 BASE_PATH=/ pnpm --filter @workspace/kaira-africa run build",
+  "outputDirectory": "artifacts/kaira-africa/dist/public",
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "artifacts/api-server/api/index.ts"
+      "destination": "/index.html"
     }
-  ],
-  "buildCommand": "pnpm run typecheck:libs",
-  "installCommand": "pnpm install --frozen-lockfile"
+  ]
 }
