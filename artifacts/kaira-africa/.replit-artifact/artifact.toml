@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Kaira Africa"
+version = "1.0.0"
+id = "artifacts/kaira-africa"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24252
+
+[services.development]
+run = "pnpm --filter @workspace/kaira-africa run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kaira-africa", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/kaira-africa/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24252"
+BASE_PATH = "/"
