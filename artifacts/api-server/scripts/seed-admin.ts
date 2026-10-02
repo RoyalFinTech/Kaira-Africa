@@ -11,8 +11,13 @@ import argon2 from "argon2";
 import { db, adminUsers } from "@workspace/db";
 
 async function main() {
-  const email = process.env.SEED_ADMIN_EMAIL ?? "admin@kairaafrica.test";
-  const password = process.env.SEED_ADMIN_PASSWORD ?? "Kaira#Admin2026!";
+  const email = process.env.ADMIN_SEED_EMAIL;
+  const password = process.env.ADMIN_SEED_PASSWORD;
+
+  if (!email || !password) {
+    throw new Error("ADMIN_SEED_EMAIL and ADMIN_SEED_PASSWORD are required.");
+  }
+
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
 
   const [admin] = await db
@@ -30,7 +35,6 @@ async function main() {
   console.log("Admin seed complete.");
   console.log("adminId:", admin.id);
   console.log("email:", admin.email);
-  console.log("password (dev/test only):", password);
 }
 
 main()
