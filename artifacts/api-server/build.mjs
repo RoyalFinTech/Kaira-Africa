@@ -2,13 +2,21 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
-import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
 
-// Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
+// Keep the runtime logger external. In production the application does not
+// use pino-pretty, and bundling pino with esbuild's pino plugin can bake an
+// absolute build-time path to thread-stream-worker.mjs into the bundle.
+// That path does not exist in the pruned Docker runtime image.
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+
+const runtimeExternals = [
+  "pino",
+  "pino-http",
+  "thread-stream",
+];
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
@@ -22,12 +30,8 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
-    // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
-    // Examples of unbundleable packages:
-    // - uses native modules and loads them dynamically (e.g. sharp)
-    // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
+      ...runtimeExternals,
       "*.node",
       "sharp",
       "better-sqlite3",
@@ -102,11 +106,6 @@ async function buildAll() {
       "electron",
     ],
     sourcemap: "linked",
-    plugins: [
-      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
-      esbuildPluginPino({ transports: ["pino-pretty"] })
-    ],
-    // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';
@@ -139,17 +138,14 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
       outdir: path.resolve(distDir, "scripts"),
       outExtension: { ".js": ".mjs" },
       logLevel: "info",
-      external: ["pg-native", ...externalExtra],
+      external: ["pg-native", ...runtimeExternals, ...externalExtra],
       sourcemap: "linked",
-      plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
       banner: scriptBanner,
     });
   }
 
-  // Separate bundles for standalone scripts (migration runner,
-  // production verification) so they can run in the pruned production
-  // image via plain `node`, without needing tsx or drizzle-kit present
-  // at runtime.
+  // Separate bundles for standalone scripts so they can run in the pruned
+  // production image via plain `node`, without needing tsx or drizzle-kit.
   await buildScript("scripts/migrate.ts");
   await buildScript("scripts/verify-production.ts", ["nodemailer"]);
 }
