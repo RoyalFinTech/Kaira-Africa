@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { useVerifyOtp, useRequestOtp } from '@workspace/api-client-react';
 import { setToken } from '@/lib/api-client';
 
-const IS_DEV = import.meta.env.DEV;
+// Render builds the frontend as a production bundle even while the backend is in development mode.
+// This explicit flag keeps the development OTP visible during the current testing phase.
+const IS_DEV = import.meta.env.VITE_AUTH_DEV_MODE === 'true';
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 30; // seconds
 
