@@ -19,9 +19,9 @@ export function normalizeGambianPhone(raw: string): {
         ? stripped.slice(3)
         : stripped;
 
-  if (!/^87\d{7}$/.test(withoutCountryCode)) {
+  if (!/^(?:87|83|86)\d{7}$/.test(withoutCountryCode) && !/^9\d{6}$/.test(withoutCountryCode)) {
     throw new BadRequestError(
-      "Enter a valid Gambian phone number beginning with 87 and followed by 7 digits, e.g. +220 87 XXXXXXX",
+      "Enter a valid Gambian mobile number: 87 Africell, 83 QCell, 86 Comium, or a 7-digit Gamcel number",
     );
   }
 
