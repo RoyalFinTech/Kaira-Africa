@@ -19,12 +19,12 @@ import {
 import { BRAND } from '@/lib/brand';
 import { useRequestOtp } from '@workspace/api-client-react';
 
-// Gambian phone validation: +220 followed by 7 digits (e.g. 2201234567)
+// Gambian phone validation: +220 87 followed by 7 digits (9 digits total)
 const phoneSchema = z.object({
   phone: z
     .string()
     .min(1, 'Phone number is required')
-    .regex(/^\d{7}$/, 'Enter a valid 7-digit Gambian phone number'),
+    .regex(/^\d{7}$/, 'Enter the 7 digits after the 87 prefix'),
 });
 
 type PhoneForm = z.infer<typeof phoneSchema>;
@@ -60,7 +60,7 @@ export default function PhoneAuthPage() {
 
   const onSubmit = (data: PhoneForm) => {
     setFormError(null);
-    requestOtp.mutate({ data: { phoneNumber: `+220${data.phone}` } });
+    requestOtp.mutate({ data: { phoneNumber: `+22087${data.phone}` } });
   };
 
   return (
@@ -173,15 +173,16 @@ export default function PhoneAuthPage() {
                       <FormLabel>Gambian Phone Number</FormLabel>
                       <FormControl>
                         <div className="flex">
-                          {/* Country prefix — fixed */}
+                          {/* Country + operator prefix — fixed; the 87 is visually subdued and not editable */}
                           <div className="flex items-center gap-2 px-3 border border-r-0 border-input rounded-l-md bg-muted text-sm font-medium text-foreground whitespace-nowrap select-none">
                             <span className="text-base">🇬🇲</span>
                             <span className="text-muted-foreground">+220</span>
+                            <span className="text-muted-foreground/50 font-mono tracking-wider">87</span>
                           </div>
                           <Input
                             type="tel"
                             inputMode="numeric"
-                            placeholder="XXX XXXX"
+                            placeholder="XX XXXXXXX"
                             maxLength={7}
                             className="rounded-l-none flex-1"
                             autoComplete="tel-national"
@@ -197,7 +198,7 @@ export default function PhoneAuthPage() {
                       </FormControl>
                       <FormMessage />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Format: 7 digits after +220
+                        Format: +220 87 XXXXXXX (9 digits total)
                       </p>
                     </FormItem>
                   )}
