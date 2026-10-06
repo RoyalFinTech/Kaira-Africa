@@ -20,7 +20,7 @@ import {
 import { BRAND } from '@/lib/brand';
 import { useRequestOtp } from '@workspace/api-client-react';
 
-// Gambian phone validation: +220 87 followed by 7 digits (9 digits total)
+// Gambian mobile validation: selected operator prefix + 7 subscriber digits
 const phoneSchema = z.object({
   phone: z
     .string()
@@ -201,22 +201,6 @@ export default function PhoneAuthPage() {
                             className="rounded-l-none flex-1 tracking-[0.3em] font-semibold"
                             autoComplete="tel-national" autoFocus {...field}
                             onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 7))} />
-                        </div>
-                          <Input
-                            type="tel"
-                            inputMode="numeric"
-                            placeholder="XX XXXXXXX"
-                            maxLength={7}
-                            className="rounded-l-none flex-1"
-                            autoComplete="tel-national"
-                            autoFocus
-                            {...field}
-                            onChange={(e) => {
-                              // Only allow digits
-                              const digits = e.target.value.replace(/\D/g, '').slice(0, 7);
-                              field.onChange(digits);
-                            }}
-                          />
                         </div>
                       </FormControl>
                       <FormMessage />
