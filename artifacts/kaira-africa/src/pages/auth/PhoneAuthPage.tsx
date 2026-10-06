@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocation, Link } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,6 +33,13 @@ type PhoneForm = z.infer<typeof phoneSchema>;
 export default function PhoneAuthPage() {
   const [, setLocation] = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
+  const [networkPrefix, setNetworkPrefix] = useState('87');
+  const networks = [
+    { prefix: '87', name: 'Africell' },
+    { prefix: '83', name: 'QCell' },
+    { prefix: '86', name: 'Comium' },
+    { prefix: '', name: 'Gamcel (no new prefix)' },
+  ];
 
   const form = useForm<PhoneForm>({
     resolver: zodResolver(phoneSchema),
@@ -60,7 +68,7 @@ export default function PhoneAuthPage() {
 
   const onSubmit = (data: PhoneForm) => {
     setFormError(null);
-    requestOtp.mutate({ data: { phoneNumber: `+22087${data.phone}` } });
+    requestOtp.mutate({ data: { phoneNumber: `+220${networkPrefix}${data.phone}` } });
   };
 
   return (
@@ -173,12 +181,27 @@ export default function PhoneAuthPage() {
                       <FormLabel>Gambian Phone Number</FormLabel>
                       <FormControl>
                         <div className="flex">
-                          {/* Country + operator prefix — fixed; the 87 is visually subdued and not editable */}
-                          <div className="flex items-center gap-2 px-3 border border-r-0 border-input rounded-l-md bg-muted text-sm font-medium text-foreground whitespace-nowrap select-none">
+                          <div className="flex items-center gap-2 px-2 border border-r-0 border-input rounded-l-md bg-muted text-sm font-medium whitespace-nowrap">
                             <span className="text-base">🇬🇲</span>
                             <span className="text-muted-foreground">+220</span>
-                            <span className="text-muted-foreground/50 font-mono tracking-wider">87</span>
+                            <Select value={networkPrefix || 'none'} onValueChange={(value) => setNetworkPrefix(value === 'none' ? '' : value)}>
+                              <SelectTrigger className="h-9 w-[116px] border-0 bg-transparent px-1 font-bold focus:ring-0">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {networks.map((network) => (
+                                  <SelectItem key={network.prefix || 'none'} value={network.prefix || 'none'}>
+                                    {network.name} {network.prefix ? `(${network.prefix})` : '(7 digits)'}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
+                          <Input type="tel" inputMode="numeric" placeholder="*******" maxLength={7}
+                            className="rounded-l-none flex-1 tracking-[0.3em] font-semibold"
+                            autoComplete="tel-national" autoFocus {...field}
+                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 7))} />
+                        </div>
                           <Input
                             type="tel"
                             inputMode="numeric"
@@ -198,7 +221,7 @@ export default function PhoneAuthPage() {
                       </FormControl>
                       <FormMessage />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Format: +220 87 XXXXXXX (9 digits total)
+                        Select your network, then enter your 7-digit number. Gamcel keeps its existing 7-digit format.
                       </p>
                     </FormItem>
                   )}
