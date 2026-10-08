@@ -25,7 +25,7 @@ const phoneSchema = z.object({
   phone: z
     .string()
     .min(1, 'Phone number is required')
-    .regex(/^\d{7}$/, 'Enter the 7 digits after the 87 prefix'),
+    .regex(/^\d{7}$/, 'Enter the 7 digits after the selected operator prefix'),
 });
 
 type PhoneForm = z.infer<typeof phoneSchema>;
@@ -238,15 +238,23 @@ export default function PhoneAuthPage() {
 
                 <p className="text-center text-xs text-muted-foreground">
                   By continuing, you agree to Kaira Africa's{' '}
-                  <span className="text-primary hover:underline cursor-pointer">Terms of Service</span>
+                  <Link href="/legal/terms" className="text-primary hover:underline">Terms of Service</Link>
                   {' '}and{' '}
-                  <span className="text-primary hover:underline cursor-pointer">Privacy Policy</span>.
+                  <Link href="/legal/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
                 </p>
               </form>
             </Form>
 
+            <div className="mt-8 pt-6 border-t border-border text-center space-y-2">
+              <p className="text-xs text-muted-foreground">Customer Support</p>
+              <div className="flex items-center justify-center gap-4 text-sm">
+                <a href="tel:+220874071510" className="text-primary hover:underline">Call +220 87 407 1510</a>
+                <a href="https://wa.me/220874071510" target="_blank" rel="noreferrer" className="text-primary hover:underline">WhatsApp</a>
+              </div>
+            </div>
+
             {/* Admin separator */}
-            <div className="mt-10 pt-6 border-t border-border">
+            <div className="mt-8 pt-6 border-t border-border">
               <Link href="/admin">
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer group">
                   <Shield className="h-4 w-4 text-muted-foreground/60 group-hover:text-primary transition-colors" />
@@ -255,8 +263,7 @@ export default function PhoneAuthPage() {
               </Link>
             </div>
           </motion.div>
-        
-            <p className="text-xs text-muted-foreground mt-4 text-center">By continuing, you agree to our <Link href="/legal/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/legal/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</p>
+
 </div>
       </div>
     </div>
