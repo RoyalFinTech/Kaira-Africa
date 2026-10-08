@@ -88,8 +88,18 @@ export default function OnboardingFlow() {
             className="w-full max-w-4xl"
           >
             {currentSlide === 0 && (
-              <div className={`${slide.bg} rounded-3xl p-12 md:p-16 text-center relative overflow-hidden`}>
-                {/* African pattern SVG background */}
+              <div className={`${slide.bg} rounded-3xl p-8 md:p-16 text-center relative overflow-hidden`}>
+                {/* Real-world business team photography with Kaira brand overlays */}
+                <div className="absolute inset-0">
+                  <img
+                    src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1600&q=85"
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="eager"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#082b20]/95 via-[#082b20]/75 to-[#98751e]/45" />
+                </div>
+                {/* African pattern SVG background */
                 <div className="absolute inset-0 opacity-10">
                   <svg className="w-full h-full" viewBox="0 0 400 400">
                     <pattern id="pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
@@ -119,20 +129,49 @@ export default function OnboardingFlow() {
                 <p className="text-lg text-muted-foreground mb-12 max-w-2xl mx-auto">
                   {slide.description}
                 </p>
-                <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
+                <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
                   {slide.features.map((feature, idx) => (
                     <motion.div
                       key={idx}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.1 }}
-                      className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow"
+                      className="bg-card/95 backdrop-blur border border-border rounded-xl p-5 md:p-6 hover:shadow-lg transition-shadow"
                     >
                       <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-3">
                         <feature.icon className="h-6 w-6 text-primary" />
                       </div>
                       <p className="font-semibold text-foreground">{feature.label}</p>
                     </motion.div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto mt-8 text-left">
+                  {[
+                    {
+                      src: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=900&q=80",
+                      title: "Team collaboration",
+                      description: "Keep staff and work coordinated.",
+                    },
+                    {
+                      src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
+                      title: "Sales analytics",
+                      description: "See the numbers behind your growth.",
+                    },
+                    {
+                      src: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=900&q=80",
+                      title: "Customer relationships",
+                      description: "Build better customer connections.",
+                    },
+                  ].map((photo) => (
+                    <div key={photo.title} className="relative h-36 md:h-40 rounded-xl overflow-hidden border border-border shadow-sm">
+                      <img src={photo.src} alt={photo.title} loading="lazy" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#06281d]/95 via-[#06281d]/25 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                        <p className="font-semibold text-sm">{photo.title}</p>
+                        <p className="text-xs text-white/80 mt-0.5">{photo.description}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
