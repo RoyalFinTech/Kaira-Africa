@@ -6,10 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const databaseUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  console.error("DATABASE_URL (or DIRECT_URL) must be set to run migrations.");
+  console.error("DATABASE_URL must be set to run migrations.");
   process.exit(1);
 }
 
