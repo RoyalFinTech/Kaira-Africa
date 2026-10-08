@@ -17,6 +17,50 @@ async function inventorySnapshot(businessId: string) {
   };
 }
 
+async function generateModelSummaries(metrics: Record<string, unknown>): Promise<Array<{ kind: string; title: string; summary: string }> | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  const model = process.env.OPENAI_MODEL;
+  if (!apiKey || !model) return null;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        instructions: "You are Kaira Africa's business analyst. Write four concise, practical insights for a Gambian small business using only the supplied aggregate metrics. Use GMD for currency, do not invent figures or claim causation, and include one insight each for sales, customers, inventory, and transactions. Return only JSON: {\\"insights\\":[{\\"kind\\":\\"sales|customers|inventory|transactions\\",\\"title\\":\\"...\\",\\"summary\\":\\"...\\"}]}",
+        input: JSON.stringify(metrics),
+        max_output_tokens: 700,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) {
+      console.warn("[ai] Model request returned HTTP " + response.status + "; using rules-based insights.");
+      return null;
+    }
+    const body = await response.json() as {
+      output_text?: string;
+      output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+    };
+    const text = body.output_text ?? (body.output ?? [])
+      .flatMap((item) => item.content ?? [])
+      .filter((item) => item.type === "output_text" && typeof item.text === "string")
+      .map((item) => item.text as string).join("\\n");
+    const parsed = JSON.parse(text) as { insights?: Array<{ kind?: string; title?: string; summary?: string }> };
+    if (!Array.isArray(parsed.insights) || parsed.insights.length !== 4) return null;
+    const allowed = ["sales", "customers", "inventory", "transactions"];
+    const insights = parsed.insights;
+    if (new Set(insights.map((x) => x.kind)).size !== 4 ||
+        insights.some((x) => !x.kind || !allowed.includes(x.kind) ||
+          typeof x.title !== "string" || !x.title.trim() ||
+          typeof x.summary !== "string" || !x.summary.trim())) return null;
+    return insights as Array<{ kind: string; title: string; summary: string }>;
+  } catch (error) {
+    console.warn("[ai] Model narrative unavailable; using rules-based insights.", error instanceof Error ? error.name : "UnknownError");
+    return null;
+  }
+}
+
 router.post("/ai/insights/generate", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const [revenue, customers, transactions, inventory] = await Promise.all([
@@ -37,8 +81,27 @@ router.post("/ai/insights/generate", requireUser, async (req, res) => {
       summary: String(transactions.total) + " transactions were recorded in this period with a total volume of " + transactions.volume.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD.",
       payload: { total: transactions.total, volume: transactions.volume } },
   ];
+  // The model receives only aggregate metrics, never customer names or contact details.
+  const modelInsights = await generateModelSummaries({
+    period: "current month compared with prior month",
+    revenue: { total: revenue.total, changePercent: revenue.changePercent },
+    customers: { total: customers.total, changePercent: customers.changePercent },
+    transactions: { total: transactions.total, volume: transactions.volume },
+    inventory,
+  });
+  const source = modelInsights ? "openai" : "rules";
+  if (modelInsights) {
+    for (const item of generated) {
+      const modelItem = modelInsights.find((candidate) => candidate.kind === item.kind);
+      if (modelItem) {
+        item.title = modelItem.title!;
+        item.summary = modelItem.summary!;
+      }
+    }
+  }
   const rows = await Promise.all(generated.map((x) => db.insert(aiInsights).values({
-    businessId, kind: x.kind, title: x.title, summary: x.summary, payload: x.payload,
+    businessId, kind: x.kind, title: x.title, summary: x.summary,
+    payload: { ...(x.payload as Record<string, unknown>), source },
   }).returning()));
   res.status(201).json(rows.map(([row]) => ({ ...row, generatedAt: row.generatedAt.toISOString(), createdAt: row.createdAt.toISOString() })));
 });
