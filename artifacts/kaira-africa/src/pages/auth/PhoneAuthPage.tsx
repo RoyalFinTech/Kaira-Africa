@@ -255,7 +255,9 @@ export default function PhoneAuthPage() {
               </Link>
             </div>
           </motion.div>
-        </div>
+        
+            <p className="text-xs text-muted-foreground mt-4 text-center">By continuing, you agree to our <Link href="/legal/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/legal/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</p>
+</div>
       </div>
     </div>
   );

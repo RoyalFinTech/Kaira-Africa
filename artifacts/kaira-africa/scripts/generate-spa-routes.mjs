@@ -22,6 +22,14 @@ const routes = [
   'notifications',
   'profile',
   'settings',
+  'crm',
+  'inventory',
+  'ai-reports',
+  'legal/terms',
+  'legal/privacy',
+  'admin/analytics',
+  'admin/crm',
+  'admin/inventory',
 ];
 
 const index = resolve(dist, 'index.html');

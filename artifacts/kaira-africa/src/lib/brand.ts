@@ -4,6 +4,10 @@ export const BRAND = {
   name: 'Kaira Africa',
   tagline: 'Know Your Business. Grow Your Business.',
   logoUrl,
+  support: {
+    phone: '+220 407 1510',
+    address: 'Royal Africa House, (Opposite Indian Farm) OIC Highway, Sukuta, The Gambia',
+  },
 } as const;
 
 export { logoUrl };

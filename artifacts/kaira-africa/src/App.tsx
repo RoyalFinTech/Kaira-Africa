@@ -37,6 +37,14 @@ const ActivityPage       = lazy(() => import('@/pages/app/ActivityPage'));
 const NotificationsPage  = lazy(() => import('@/pages/app/NotificationsPage'));
 const ProfilePage        = lazy(() => import('@/pages/app/ProfilePage'));
 const SettingsPage       = lazy(() => import('@/pages/app/SettingsPage'));
+const CrmPage            = lazy(() => import('@/pages/app/CrmPage'));
+const InventoryPage      = lazy(() => import('@/pages/app/InventoryPage'));
+const AiReportsPage      = lazy(() => import('@/pages/app/AiReportsPage'));
+const LegalPage          = lazy(() => import('@/pages/LegalPage'));
+
+const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage'));
+const AdminCrmPage       = lazy(() => import('@/pages/admin/AdminCrmPage'));
+const AdminInventoryPage = lazy(() => import('@/pages/admin/AdminInventoryPage'));
 
 // Admin
 const AdminLoginPage     = lazy(() => import('@/pages/admin/AdminLoginPage'));
@@ -181,11 +189,35 @@ function Router() {
         <Route path="/settings">
           {() => <ProtectedRoute component={SettingsPage} />}
         </Route>
+        <Route path="/crm">
+          {() => <ProtectedRoute component={CrmPage} />}
+        </Route>
+        <Route path="/inventory">
+          {() => <ProtectedRoute component={InventoryPage} />}
+        </Route>
+        <Route path="/ai-reports">
+          {() => <ProtectedRoute component={AiReportsPage} />}
+        </Route>
+        <Route path="/legal/terms">
+          {() => <LegalPage type="terms" />}
+        </Route>
+        <Route path="/legal/privacy">
+          {() => <LegalPage type="privacy" />}
+        </Route>
 
         {/* ── Admin Routes ── */}
         <Route path="/admin" component={AdminLoginPage} />
         <Route path="/admin/dashboard">
           {() => <AdminProtectedRoute component={AdminDashboardPage} />}
+        </Route>
+        <Route path="/admin/analytics">
+          {() => <AdminProtectedRoute component={AdminAnalyticsPage} />}
+        </Route>
+        <Route path="/admin/crm">
+          {() => <AdminProtectedRoute component={AdminCrmPage} />}
+        </Route>
+        <Route path="/admin/inventory">
+          {() => <AdminProtectedRoute component={AdminInventoryPage} />}
         </Route>
 
         {/* ── 404 ── */}

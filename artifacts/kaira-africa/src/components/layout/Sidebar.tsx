@@ -8,6 +8,8 @@ import {
   TrendingUp,
   FileText,
   Activity,
+  Package,
+  BrainCircuit,
   Settings2,
   LogOut,
 } from 'lucide-react';
@@ -39,6 +41,8 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Team', href: '/team', icon: Users },
       { label: 'Customers', href: '/customers', icon: UserCheck },
       { label: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
+      { label: 'CRM', href: '/crm', icon: UserCheck },
+      { label: 'Inventory', href: '/inventory', icon: Package },
     ],
   },
   {
@@ -47,6 +51,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Analytics', href: '/analytics', icon: TrendingUp },
       { label: 'Reports', href: '/reports', icon: FileText },
       { label: 'Activity', href: '/activity', icon: Activity },
+      { label: 'AI Reports', href: '/ai-reports', icon: BrainCircuit },
     ],
   },
 ];

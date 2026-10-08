@@ -212,6 +212,33 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  Legal & Support
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button type="button" onClick={() => setLocation('/legal/terms')} className="p-3 rounded-lg border text-left hover:bg-muted transition-colors">
+                    <p className="text-sm font-semibold">Terms of Service</p>
+                    <p className="text-xs text-muted-foreground mt-1">Review Kaira Africa service terms.</p>
+                  </button>
+                  <button type="button" onClick={() => setLocation('/legal/privacy')} className="p-3 rounded-lg border text-left hover:bg-muted transition-colors">
+                    <p className="text-sm font-semibold">Privacy Policy</p>
+                    <p className="text-xs text-muted-foreground mt-1">Review how account and business data is handled.</p>
+                  </button>
+                </div>
+                <Separator />
+                <div className="text-sm">
+                  <p className="font-medium">Official Kaira Africa support</p>
+                  <p className="text-muted-foreground mt-1">+220 407 1510</p>
+                  <p className="text-muted-foreground">Royal Africa House, (Opposite Indian Farm) OIC Highway, Sukuta, The Gambia</p>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </div>
       </div>

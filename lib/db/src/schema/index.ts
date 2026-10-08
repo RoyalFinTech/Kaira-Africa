@@ -10,3 +10,6 @@ export * from "./transactions";
 export * from "./activity-logs";
 export * from "./notifications";
 export * from "./reports";
+export * from "./crm";
+export * from "./inventory";
+export * from "./ai-insights";
