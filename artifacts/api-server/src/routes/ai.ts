@@ -28,7 +28,7 @@ async function generateModelSummaries(metrics: Record<string, unknown>): Promise
       headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        instructions: "You are Kaira Africa's business analyst. Write four concise, practical insights for a Gambian small business using only the supplied aggregate metrics. Use GMD for currency, do not invent figures or claim causation, and include one insight each for sales, customers, inventory, and transactions. Return only JSON: {\\"insights\\":[{\\"kind\\":\\"sales|customers|inventory|transactions\\",\\"title\\":\\"...\\",\\"summary\\":\\"...\\"}]}",
+        instructions: "You are Kaira Africa's business analyst. Return exactly four concise, practical insights for sales, customers, inventory and transactions. Use only the supplied aggregate metrics, use GMD, never invent figures or claim causation, and output one JSON object with an insights array whose items contain kind, title and summary.",
         input: JSON.stringify(metrics),
         max_output_tokens: 700,
       }),
@@ -45,7 +45,7 @@ async function generateModelSummaries(metrics: Record<string, unknown>): Promise
     const text = body.output_text ?? (body.output ?? [])
       .flatMap((item) => item.content ?? [])
       .filter((item) => item.type === "output_text" && typeof item.text === "string")
-      .map((item) => item.text as string).join("\\n");
+      .map((item) => item.text as string).join("");
     const parsed = JSON.parse(text) as { insights?: Array<{ kind?: string; title?: string; summary?: string }> };
     if (!Array.isArray(parsed.insights) || parsed.insights.length !== 4) return null;
     const allowed = ["sales", "customers", "inventory", "transactions"];
