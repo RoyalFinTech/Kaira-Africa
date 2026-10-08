@@ -15,6 +15,13 @@
       "when": 1785615427091,
       "tag": "0001_bent_gertrude_yorkes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791498720000,
+      "tag": "0002_wealthy_kaira_crm_inventory_ai",
+      "breakpoints": true
     }
   ]
 }
