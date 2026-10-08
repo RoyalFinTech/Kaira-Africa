@@ -5,8 +5,9 @@ export const BRAND = {
   tagline: 'Know Your Business. Grow Your Business.',
   logoUrl,
   support: {
-    phone: '+220 407 1510',
+    phone: '+220 87 407 1510',
     address: 'Royal Africa House, (Opposite Indian Farm) OIC Highway, Sukuta, The Gambia',
+    whatsappUrl: 'https://wa.me/220874071510',
   },
 } as const;
 
