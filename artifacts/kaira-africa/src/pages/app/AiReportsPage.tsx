@@ -20,6 +20,13 @@ export default function AiReportsPage() {
   const generate = async () => { await generateAiInsights(); await qc.invalidateQueries({ queryKey: ["ai-insights"] }); };
   return <PageTransition><div className="space-y-6">
     <div className="flex items-center justify-between"><div><h1 className="font-display text-3xl font-bold flex items-center gap-2"><BrainCircuit className="h-7 w-7 text-primary" />AI Reports & Insights</h1><p className="text-muted-foreground text-sm">Business intelligence generated from your real Kaira data.</p></div><Button className="gap-2" onClick={generate}><RefreshCw className="h-4 w-4" />Generate insights</Button></div>
+    {insights.length > 0 && (
+      <div className="rounded-xl border p-4 text-sm text-muted-foreground">
+        {insights[0]?.payload?.source === "openai"
+          ? "Model-generated summaries are enabled. Only aggregate revenue, customer counts, transaction totals and inventory totals are sent for narrative generation."
+          : "Rule-based insights are active. To enable model-generated report narratives, configure OPENAI_API_KEY and OPENAI_MODEL in the API service environment. No customer names, emails, phone numbers or individual transaction records are sent to the model."}
+      </div>
+    )}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card><CardHeader><CardTitle>Sales trend</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={260}><AreaChart data={revenue?.data || []}><XAxis dataKey="label" fontSize={11}/><YAxis fontSize={11}/><Tooltip/><Area dataKey="value" type="monotone" stroke="hsl(var(--primary))" fill="hsl(var(--primary)/0.12)"/></AreaChart></ResponsiveContainer><div className="mt-3 font-semibold">{formatCurrency(revenue?.total || 0)} revenue</div></CardContent></Card>
       <Card><CardHeader><CardTitle>Transaction mix</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={260}><PieChart><Pie data={transactions?.byType || []} dataKey="value" nameKey="label" outerRadius={90} label>{(transactions?.byType || []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip/></PieChart></ResponsiveContainer><div className="mt-3 font-semibold">{customers?.total || 0} new customers in period</div></CardContent></Card>
