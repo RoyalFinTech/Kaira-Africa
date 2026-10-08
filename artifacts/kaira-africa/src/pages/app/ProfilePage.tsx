@@ -233,7 +233,10 @@ export default function ProfilePage() {
                 <Separator />
                 <div className="text-sm">
                   <p className="font-medium">Official Kaira Africa support</p>
-                  <p className="text-muted-foreground mt-1">+220 407 1510</p>
+                  <div className="flex flex-wrap gap-3 mt-1">
+                    <a href="tel:+220874071510" className="text-primary hover:underline">Call +220 87 407 1510</a>
+                    <a href="https://wa.me/220874071510" target="_blank" rel="noreferrer" className="text-primary hover:underline">WhatsApp support</a>
+                  </div>
                   <p className="text-muted-foreground">Royal Africa House, (Opposite Indian Farm) OIC Highway, Sukuta, The Gambia</p>
                 </div>
               </CardContent>
