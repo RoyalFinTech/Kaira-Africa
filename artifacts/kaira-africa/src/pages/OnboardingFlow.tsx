@@ -99,7 +99,7 @@ export default function OnboardingFlow() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-br from-[#082b20]/95 via-[#082b20]/75 to-[#98751e]/45" />
                 </div>
-                {/* African pattern SVG background */
+                {/* African pattern SVG background */}
                 <div className="absolute inset-0 opacity-10">
                   <svg className="w-full h-full" viewBox="0 0 400 400">
                     <pattern id="pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
