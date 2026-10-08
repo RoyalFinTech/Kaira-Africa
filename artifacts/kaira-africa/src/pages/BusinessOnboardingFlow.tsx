@@ -53,7 +53,7 @@ export default function BusinessOnboardingFlow() {
   const [formData, setFormData] = useState<any>({});
   const [completeError, setCompleteError] = useState<string | null>(null);
 
-  const form1 = useForm({ resolver: zodResolver(step1Schema), defaultValues: { businessName: '', businessType: '', industry: '', country: 'Nigeria', city: '', phone: '', email: '' } });
+  const form1 = useForm({ resolver: zodResolver(step1Schema), defaultValues: { businessName: '', businessType: '', industry: '', country: 'The Gambia', city: '', phone: '', email: '' } });
   const form2 = useForm({ resolver: zodResolver(step2Schema), defaultValues: { description: '', website: '', address: '' } });
   const form3 = useForm({ resolver: zodResolver(step3Schema), defaultValues: { teamSize: '' } });
 
@@ -118,8 +118,12 @@ export default function BusinessOnboardingFlow() {
       <div className="border-b border-border p-6">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <KairaLogo width={120} />
-          <div className="text-sm text-muted-foreground">
-            Step {currentStep} of 4
+          <div className="flex flex-col items-end gap-1.5 text-right">
+            <div className="text-sm text-muted-foreground">Step {currentStep} of 4</div>
+            <div className="flex items-center gap-3 text-xs sm:text-sm">
+              <a href="tel:+220874071510" className="text-primary hover:underline whitespace-nowrap">Call support</a>
+              <a href="https://wa.me/220874071510" target="_blank" rel="noreferrer" className="text-primary hover:underline whitespace-nowrap">WhatsApp</a>
+            </div>
           </div>
         </div>
       </div>
@@ -196,8 +200,11 @@ export default function BusinessOnboardingFlow() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="Nigeria">Nigeria</SelectItem>
+                            <SelectItem value="The Gambia">The Gambia</SelectItem>
+                            <SelectItem value="Senegal">Senegal</SelectItem>
+                            <SelectItem value="Sierra Leone">Sierra Leone</SelectItem>
                             <SelectItem value="Ghana">Ghana</SelectItem>
+                            <SelectItem value="Nigeria">Nigeria</SelectItem>
                             <SelectItem value="Kenya">Kenya</SelectItem>
                             <SelectItem value="South Africa">South Africa</SelectItem>
                             <SelectItem value="Egypt">Egypt</SelectItem>
@@ -220,7 +227,7 @@ export default function BusinessOnboardingFlow() {
                     <FormField control={form1.control} name="phone" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Phone</FormLabel>
-                        <FormControl><Input {...field} placeholder="+234 901 234 5678" /></FormControl>
+                        <FormControl><Input {...field} placeholder="+220 87 407 1510" /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
