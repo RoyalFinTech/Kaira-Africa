@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 
@@ -25,9 +26,14 @@ const Alert = React.forwardRef<
   <div
     ref={ref}
     role="alert"
-    className={cn(alertVariants({ variant }), className)}
+    className={cn(alertVariants({ variant }), 'pb-8 pr-9', className)}
     {...props}
-  />
+  >
+    <KairaLogo
+      width={22}
+      className="pointer-events-none absolute bottom-2 right-2 rounded bg-white p-0.5 opacity-90"
+    />
+  </div>
 ));
 Alert.displayName = 'Alert';
 
