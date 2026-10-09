@@ -93,7 +93,9 @@ export default function AdminLoginPage() {
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
 
         <div className="relative z-10">
-          <KairaLogo width={140} className="brightness-0 invert" />
+          <div className="w-fit rounded-xl bg-white p-2 shadow-sm">
+            <KairaLogo width={140} />
+          </div>
         </div>
 
         <div className="relative z-10 space-y-6">
