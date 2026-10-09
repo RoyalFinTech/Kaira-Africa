@@ -20,14 +20,14 @@ async function waitForDeployedSplashBundle() {
       const htmlResponse = await fetch(`${baseUrl}/?branding-smoke=${Date.now()}`, { cache: 'no-store' });
       assert.equal(htmlResponse.status, 200, 'Frontend root must return HTTP 200');
       const html = await htmlResponse.text();
-      const scriptMatch = html.match(/src=["']([^"']+\\.js(?:\\?[^"']*)?)["']/);
+      const scriptMatch = html.match(/src=["']([^"']+\.js(?:\?[^"']*)?)["']/);
       assert.ok(scriptMatch, 'Production HTML must contain the built JavaScript entry point');
 
       const entryUrl = new URL(scriptMatch[1], baseUrl);
       const entryResponse = await fetch(entryUrl, { cache: 'no-store' });
       assert.equal(entryResponse.status, 200, 'Built JavaScript entry point must load');
       const entry = await entryResponse.text();
-      const chunkMatch = entry.match(/SplashScreen-[A-Za-z0-9_-]+\\.js/);
+      const chunkMatch = entry.match(/SplashScreen-[A-Za-z0-9_-]+\.js/);
       assert.ok(chunkMatch, 'Built JavaScript must contain a lazy-loaded splash chunk');
 
       const chunkUrl = new URL(chunkMatch[0], entryUrl);
@@ -122,7 +122,7 @@ await mkdir(outputDir, { recursive: true });
 // Validate the actual public file first, bypassing the browser cache.
 const assetResponse = await fetch(`${baseUrl}/kaira-logo.png?rev=20261009-2&asset-smoke=${Date.now()}`, { cache: 'no-store' });
 assert.equal(assetResponse.status, 200, 'Official logo asset must return HTTP 200');
-assert.match(assetResponse.headers.get('content-type') || '', /image\\/png/i, 'Official logo asset must be served as PNG');
+assert.match(assetResponse.headers.get('content-type') || '', /image\/png/i, 'Official logo asset must be served as PNG');
 const assetBytes = Buffer.from(await assetResponse.arrayBuffer());
 assert.ok(assetBytes.length > 20_000, `Official logo file looks unexpectedly small: ${assetBytes.length} bytes`);
 assert.equal(assetBytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'Official logo must be a valid PNG');
