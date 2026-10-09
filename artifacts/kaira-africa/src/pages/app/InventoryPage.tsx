@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/PageTransition";
 import { getInventoryProducts, createInventoryProduct, adjustInventory } from "@/lib/platform-api";
 import { formatCurrency } from "@/lib/utils";
+import { KairaLogo } from "@/components/common/KairaLogo";
 
 export default function InventoryPage() {
   const qc = useQueryClient();
@@ -29,7 +30,7 @@ export default function InventoryPage() {
       <Card><CardContent className="p-5"><div className="text-xs text-muted-foreground">Inventory value</div><div className="text-2xl font-bold mt-1">{formatCurrency(value)}</div></CardContent></Card>
       <Card><CardContent className="p-5"><div className="text-xs text-muted-foreground">Low stock</div><div className="text-2xl font-bold mt-1">{low}</div></CardContent></Card>
     </div>
-    {isError && <Card><CardContent className="p-5 text-sm text-destructive">Inventory data could not be loaded.</CardContent></Card>}
+    {isError && <Card><CardContent className="p-5"><div className="flex items-center gap-3 text-sm text-destructive" role="alert"><KairaLogo width={36} className="shrink-0 rounded bg-white p-0.5" /><span>Inventory data could not be loaded.</span></div></CardContent></Card>}
     {open && <Card><CardHeader><CardTitle>New inventory product</CardTitle></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
       <Input placeholder="Product name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       <Input placeholder="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
