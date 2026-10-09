@@ -293,9 +293,11 @@ export default function OTPPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center justify-center gap-2 text-sm text-destructive mb-4"
+                className="flex items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive mb-4"
+                role="alert"
               >
-                <XCircle className="h-4 w-4" />
+                <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
+                <XCircle className="h-4 w-4 shrink-0" />
                 {errorMessage || 'Invalid code. Please try again.'}
               </motion.div>
             )}
