@@ -53,7 +53,10 @@ export function KairaLogo({ className, width = 180, height }: KairaLogoProps) {
       width={width}
       height={height}
       onError={() => setImageFailed(true)}
+      loading="eager"
+      decoding="async"
       className={cn('block max-w-full object-contain', className)}
+      style={{ width, height: height ?? 'auto', objectFit: 'contain' }}
     />
   );
 }
