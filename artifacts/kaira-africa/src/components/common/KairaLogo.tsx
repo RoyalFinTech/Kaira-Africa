@@ -13,6 +13,18 @@ export function KairaLogo({ className, width = 180, height }: KairaLogoProps) {
 
   if (imageFailed) {
     const markSize = Math.min(width, 44);
+    if (width <= 48) {
+      return (
+        <span
+          role="img"
+          aria-label={BRAND.name}
+          className={cn('grid shrink-0 place-items-center rounded-lg border border-[#D8B45A]/40 bg-[#0D2818] font-bold text-[#D8B45A]', className)}
+          style={{ width: markSize, height: markSize, fontSize: markSize * 0.55 }}
+        >
+          K
+        </span>
+      );
+    }
     return (
       <span
         role="img"
