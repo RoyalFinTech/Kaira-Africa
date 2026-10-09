@@ -124,7 +124,7 @@ export default function FullNamePage() {
               />
 
               {formError && (
-                <p className="text-sm text-destructive" role="alert">{formError}</p>
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><p className="text-sm text-destructive">{formError}</p></div>
               )}
 
               <Button

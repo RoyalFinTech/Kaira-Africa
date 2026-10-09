@@ -1,3 +1,4 @@
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, Download, ArrowLeftRight } from 'lucide-react';
@@ -132,7 +133,7 @@ function NewTransactionDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             <Label htmlFor="description">Description</Label>
             <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Invoice #204" />
           </div>
-          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          {error && <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><span>{error}</span></div>}
           <DialogFooter>
             <Button type="submit" disabled={createTransaction.isPending}>
               {createTransaction.isPending ? 'Recording…' : 'Record Transaction'}

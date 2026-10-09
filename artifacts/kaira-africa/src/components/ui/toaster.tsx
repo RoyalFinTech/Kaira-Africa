@@ -6,6 +6,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from '@/components/ui/toast';
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { useToast } from '@/hooks/use-toast';
 
 export function Toaster() {
@@ -16,7 +17,8 @@ export function Toaster() {
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
-            <div className="grid gap-1">
+            <KairaLogo width={34} className="mr-1 shrink-0 rounded bg-white p-0.5" />
+            <div className="grid min-w-0 flex-1 gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
                 <ToastDescription>{description}</ToastDescription>

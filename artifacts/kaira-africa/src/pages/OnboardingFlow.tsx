@@ -110,7 +110,9 @@ export default function OnboardingFlow() {
                   </svg>
                 </div>
                 <div className="relative z-10">
-                  <KairaLogo width={200} className="mx-auto mb-8 brightness-0 invert" />
+                  <div className="mx-auto mb-8 w-fit rounded-2xl bg-white p-3 shadow-xl ring-1 ring-white/30">
+                    <KairaLogo width={200} />
+                  </div>
                   <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">
                     {slide.title}
                   </h1>

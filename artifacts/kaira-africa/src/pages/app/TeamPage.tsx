@@ -1,3 +1,4 @@
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, Users, Trash2 } from 'lucide-react';
@@ -100,7 +101,7 @@ function InviteMemberDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             <Label htmlFor="tm-phone">Phone</Label>
             <Input id="tm-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
-          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          {error && <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><span>{error}</span></div>}
           <DialogFooter>
             <Button type="submit" disabled={createTeamMember.isPending}>
               {createTeamMember.isPending ? 'Inviting…' : 'Send Invite'}

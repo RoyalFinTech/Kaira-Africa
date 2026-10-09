@@ -1,3 +1,4 @@
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
@@ -106,7 +107,7 @@ function AddCustomerDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               <Input id="city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
             </div>
           </div>
-          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          {error && <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><span>{error}</span></div>}
           <DialogFooter>
             <Button type="submit" disabled={createCustomer.isPending}>
               {createCustomer.isPending ? 'Adding…' : 'Add Customer'}

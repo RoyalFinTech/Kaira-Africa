@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-[100dvh] flex">
       <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-sidebar via-primary to-primary/90 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
-          <KairaLogo width={160} className="brightness-0 invert" />
+          <div className="w-fit rounded-xl bg-white p-2 shadow-sm"><KairaLogo width={160} /></div>
         </div>
       </div>
 

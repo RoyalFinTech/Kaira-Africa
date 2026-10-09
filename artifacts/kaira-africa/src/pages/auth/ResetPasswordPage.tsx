@@ -90,7 +90,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-[100dvh] flex">
       <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-sidebar via-primary to-primary/90 p-12 flex-col justify-between relative overflow-hidden">
         <div className="relative z-10">
-          <KairaLogo width={160} className="brightness-0 invert" />
+          <div className="w-fit rounded-xl bg-white p-2 shadow-sm"><KairaLogo width={160} /></div>
         </div>
       </div>
 
@@ -170,7 +170,7 @@ export default function ResetPasswordPage() {
               />
 
               {formError && (
-                <p className="text-sm text-destructive" role="alert">{formError}</p>
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><p className="text-sm text-destructive">{formError}</p></div>
               )}
 
               <Button type="submit" className="w-full" size="lg" disabled={resetPassword.isPending}>

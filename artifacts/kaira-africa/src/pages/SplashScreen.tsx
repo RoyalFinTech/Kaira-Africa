@@ -48,7 +48,9 @@ export default function SplashScreen() {
       >
         <div className="relative">
           <div className="absolute inset-0 blur-2xl opacity-50 bg-secondary" />
-          <KairaLogo width={180} className="relative brightness-0 invert" />
+          <div className="relative rounded-2xl bg-white p-3 shadow-xl ring-1 ring-white/20">
+            <KairaLogo width={180} className="relative" />
+          </div>
         </div>
       </motion.div>
 

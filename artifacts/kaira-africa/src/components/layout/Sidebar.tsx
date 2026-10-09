@@ -75,7 +75,9 @@ export function Sidebar() {
     <div className="w-[260px] h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
       <div className="p-6 pb-4">
-        <KairaLogo width={160} className="brightness-0 invert" />
+        <div className="w-fit rounded-xl bg-white p-2 shadow-sm">
+          <KairaLogo width={160} />
+        </div>
       </div>
 
       {/* User Info */}
