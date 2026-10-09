@@ -70,7 +70,7 @@ export default function AdminDashboardPage() {
 
         {/* Logo + Admin badge */}
         <div className="p-5 pb-4">
-          <KairaLogo width={120} className="brightness-0 invert mb-3" />
+          <div className="mb-3 w-fit rounded-lg bg-white p-1.5 shadow-sm"><KairaLogo width={120} /></div>
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20">
             <Shield className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
             <span className="text-xs font-semibold text-amber-300 tracking-wide">ADMIN PORTAL</span>
