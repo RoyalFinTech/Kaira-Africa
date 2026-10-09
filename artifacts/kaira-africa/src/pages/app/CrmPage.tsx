@@ -41,7 +41,7 @@ export default function CrmPage() {
       <Card><CardContent className="p-5"><div className="text-xs text-muted-foreground">Active</div><div className="text-2xl font-bold mt-1">{data?.metrics.activeCustomers ?? 0}</div></CardContent></Card>
       <Card><CardContent className="p-5"><div className="text-xs text-muted-foreground">Open follow-ups</div><div className="text-2xl font-bold mt-1">{data?.metrics.openFollowUps ?? 0}</div></CardContent></Card>
     </div>
-    {isError && <Card><CardContent className="p-5 text-sm text-destructive">CRM data could not be loaded. Complete business onboarding and sign in again if this persists.</CardContent></Card>}
+    {isError && <Card><CardContent className="p-5"><div className="flex items-center gap-3 text-sm text-destructive" role="alert"><KairaLogo width={36} className="shrink-0 rounded bg-white p-0.5" /><span>CRM data could not be loaded. Complete business onboarding and sign in again if this persists.</span></div></CardContent></Card>}
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <Card className="xl:col-span-2"><CardHeader><CardTitle>Customer CRM</CardTitle><Input placeholder="Search customers or companies…" value={search} onChange={(e) => setSearch(e.target.value)} /></CardHeader><CardContent>
         {isLoading ? <div className="h-48 animate-pulse bg-muted rounded-xl" /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="py-3">Customer</th><th className="py-3">Contact</th><th className="py-3">Sales</th><th className="py-3">Status</th></tr></thead><tbody>
