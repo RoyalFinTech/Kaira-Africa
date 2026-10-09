@@ -111,7 +111,7 @@ export default function OnboardingFlow() {
                 </div>
                 <div className="relative z-10">
                   <div className="mx-auto mb-8 w-fit rounded-2xl bg-white p-3 shadow-xl ring-1 ring-white/30">
-                    <KairaLogo width={200} />
+                    <KairaLogo width={220} height={220} />
                   </div>
                   <h1 className="font-display text-4xl md:text-6xl font-bold text-white mb-4">
                     {slide.title}

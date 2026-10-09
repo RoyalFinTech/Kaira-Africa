@@ -1,0 +1,48 @@
+name: Live Kaira Branding Smoke Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'artifacts/kaira-africa/**'
+      - '.github/workflows/live-branding-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-branding:
+    name: Inspect the real deployed splash and onboarding
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: npm install --prefix /tmp/kaira-playwright playwright
+
+      - name: Install Chromium
+        run: /tmp/kaira-playwright/node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Inspect Render deployment in a real browser
+        env:
+          PLAYWRIGHT_MODULE: /tmp/kaira-playwright/node_modules/playwright/index.mjs
+          KAIRA_BASE_URL: https://kaira-africa-frontend.onrender.com
+          KAIRA_SMOKE_OUTPUT: test-results/kaira-branding
+        run: node artifacts/kaira-africa/scripts/smoke-live-branding.mjs
+
+      - name: Save browser screenshots and pixel inspection output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaira-live-branding-smoke
+          path: test-results/kaira-branding/
+          if-no-files-found: warn
+          retention-days: 7

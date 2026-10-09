@@ -1,4 +1,4 @@
-import logoUrl from '@assets/file_00000000eeb881f4948b1dbbe04abbb2_1785501248542.png';
+const logoUrl = `${import.meta.env.BASE_URL}kaira-logo.png?rev=20261009-2`;
 
 export const BRAND = {
   name: 'Kaira Africa',
