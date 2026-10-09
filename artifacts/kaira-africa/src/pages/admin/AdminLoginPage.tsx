@@ -184,6 +184,7 @@ export default function AdminLoginPage() {
                 className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2"
               >
                 <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
                 <p className="text-sm text-destructive">{errorMsg}</p>
               </motion.div>
             )}
@@ -195,6 +196,7 @@ export default function AdminLoginPage() {
                 className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 flex items-start gap-2"
               >
                 <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">Account Restricted</p>
                   <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
