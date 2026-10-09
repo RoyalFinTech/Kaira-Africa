@@ -1,3 +1,4 @@
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
@@ -168,7 +169,7 @@ export default function ProfilePage() {
                       <p className="text-xs text-muted-foreground mt-1">Changing your phone number requires re-verifying it — not available here yet.</p>
                     </FormItem>
                     {formError && (
-                      <p className="text-sm text-destructive" role="alert">{formError}</p>
+                      <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><span>{formError}</span></div>
                     )}
                     <div className="flex items-center gap-3 pt-2">
                       <Button type="submit" size="sm" className="gap-2" disabled={updateProfile.isPending}>
