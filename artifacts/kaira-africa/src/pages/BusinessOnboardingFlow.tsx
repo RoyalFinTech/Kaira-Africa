@@ -338,10 +338,11 @@ export default function BusinessOnboardingFlow() {
               <h1 className="font-display text-4xl font-bold mb-4">Your Kaira workspace is ready</h1>
               <p className="text-lg text-muted-foreground mb-8">Let's set up your dashboard and start growing your business</p>
               {completeError && (
-                <p className="flex items-center justify-center gap-2 text-sm text-destructive mb-4" role="alert">
-                  <AlertCircle className="h-4 w-4" />
-                  {completeError}
-                </p>
+                <div className="flex items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive mb-4" role="alert">
+                  <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{completeError}</span>
+                </div>
               )}
               <Button onClick={handleComplete} size="lg" className="px-8" disabled={createBusiness.isPending}>
                 {createBusiness.isPending ? (
