@@ -1,3 +1,4 @@
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
@@ -168,7 +169,7 @@ export default function SettingsPage() {
                         <Label>Physical Address</Label>
                         <Input name="address" defaultValue={business?.address || ''} disabled={!canEditBusiness} />
                       </div>
-                      {saveError && <p className="text-sm text-destructive" role="alert">{saveError}</p>}
+                      {saveError && <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><span>{saveError}</span></div>}
                       {canEditBusiness && <SaveButton saved={saved} pending={updateBusiness.isPending} />}
                     </form>
                   </CardContent>
