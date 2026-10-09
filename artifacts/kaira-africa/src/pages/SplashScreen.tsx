@@ -12,9 +12,11 @@ export default function SplashScreen() {
   const [, setLocation] = useLocation();
   const [progress, setProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('Preparing your workspace');
+  const [splashStartedAt, setSplashStartedAt] = useState(0);
 
   useEffect(() => {
     const startedAt = Date.now();
+    setSplashStartedAt(startedAt);
 
     // The progress reflects elapsed time rather than jumping in arbitrary steps.
     // It reaches 100% before the route changes, leaving a short finish beat.
@@ -107,6 +109,7 @@ export default function SplashScreen() {
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(progress)}
+          data-splash-started-at={splashStartedAt || ''}
         >
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-[#197442] via-[#2b9a5a] to-[#D8B45A]"
