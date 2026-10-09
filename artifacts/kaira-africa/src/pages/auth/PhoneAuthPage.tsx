@@ -94,7 +94,7 @@ export default function PhoneAuthPage() {
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-secondary" />
 
         <div className="relative z-10">
-          <KairaLogo width={160} className="brightness-0 invert" />
+          <div className="w-fit rounded-xl bg-white p-2 shadow-sm"><KairaLogo width={160} /></div>
         </div>
 
         <div className="relative z-10 space-y-8">
@@ -212,9 +212,10 @@ export default function PhoneAuthPage() {
                 />
 
                 {formError && (
-                  <p className="text-sm text-destructive -mt-2" role="alert">
-                    {formError}
-                  </p>
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 -mt-2" role="alert">
+                    <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
+                    <p className="text-sm text-destructive">{formError}</p>
+                  </div>
                 )}
 
                 <Button
