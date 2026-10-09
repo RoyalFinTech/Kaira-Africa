@@ -148,13 +148,17 @@ try {
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
-  const timingStartedAt = Date.now();
   await page.goto(`${baseUrl}/?splash-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await verifyLogo(page, 'SPLASH SCREEN', resolve(outputDir, 'splash-screen.png'));
 
-  // At 7 seconds the splash should still be active; navigation should only
-  // happen after the 9-second progress animation has finished.
-  await page.waitForTimeout(7_000);
+  const progressBar = page.locator('[role="progressbar"][data-splash-started-at]');
+  const startedAtText = await progressBar.getAttribute('data-splash-started-at');
+  assert.ok(startedAtText, 'Splash should expose its real start time for timing verification');
+  const timingStartedAt = Number(startedAtText);
+  assert.ok(Number.isFinite(timingStartedAt) && timingStartedAt > 0, 'Splash start timestamp must be valid');
+
+  // At 7 seconds after the splash actually mounted, it should still be active.
+  await page.waitForFunction((startedAt) => Date.now() - Number(startedAt) >= 7_000, startedAtText, { timeout: 8_000 });
   assert.equal(new URL(page.url()).pathname, '/', 'Splash must remain visible at 7 seconds');
   await page.waitForURL((url) => url.pathname === '/onboarding', { timeout: 6_000 });
   const totalSplashMs = Date.now() - timingStartedAt;
