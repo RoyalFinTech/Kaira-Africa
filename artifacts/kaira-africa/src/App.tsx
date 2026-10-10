@@ -82,6 +82,15 @@ function AdminProtectedRoute({ component: Component }: {
   return <Component />;
 }
 
+// Onboarding is entered through the splash on a fresh visit. If someone
+// refreshes or opens /onboarding directly, send them back to the splash.
+function SplashGatedOnboarding() {
+  const passedSplash = sessionStorage.getItem('kaira_splash_complete') === '1';
+  if (!passedSplash) return <Redirect to="/" />;
+  sessionStorage.removeItem('kaira_splash_complete');
+  return <OnboardingFlow />;
+}
+
 // ─── Router ──────────────────────────────────────────────────────────────────
 function handleUnauthorized(error: unknown): boolean {
   if (error instanceof ApiError && error.status === 401) {
@@ -139,7 +148,7 @@ function Router() {
       <Switch>
         {/* ── Splash + Onboarding ── */}
         <Route path="/" component={SplashScreen} />
-        <Route path="/onboarding" component={OnboardingFlow} />
+        <Route path="/onboarding" component={SplashGatedOnboarding} />
 
         {/* ── User Auth (Phone + OTP) ── */}
         <Route path="/login" component={PhoneAuthPage} />
