@@ -38,6 +38,9 @@ export default function SplashScreen() {
       const onboardingDone = localStorage.getItem('kaira_onboarding_done');
 
       if (!onboardingDone) {
+        // Gate the onboarding route so a direct refresh on /onboarding
+        // returns through the splash rather than skipping the brand intro.
+        sessionStorage.setItem('kaira_splash_complete', '1');
         setLocation('/onboarding');
       } else if (!isUserToken()) {
         setLocation('/login');
