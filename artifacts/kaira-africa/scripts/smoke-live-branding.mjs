@@ -169,14 +169,14 @@ try {
 
   // Verify the actual login hero photo and the explicit Gambian flag rendering.
   const heroResponsePromise = page.waitForResponse(
-    (response) => response.url().includes('images.unsplash.com/photo-1497366754035-f200968a6e72') && response.status() === 200,
+    (response) => response.url().includes('images.unsplash.com/photo-1521737711867-e3b97375f902') && response.status() === 200,
     { timeout: 20_000 },
   );
   await page.goto(`${baseUrl}/login?hero-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await page.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 15_000 });
   const heroResponse = await heroResponsePromise;
   assert.equal(heroResponse.status(), 200, 'Business-office hero image must load successfully');
-  const heroPanel = page.locator('div[style*="images.unsplash.com/photo-1497366754035-f200968a6e72"]').first();
+  const heroPanel = page.locator('div[style*="images.unsplash.com/photo-1521737711867-e3b97375f902"]').first();
   const heroStats = await heroPanel.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return { backgroundImage: style.backgroundImage, backgroundSize: style.backgroundSize, backgroundPosition: style.backgroundPosition };
