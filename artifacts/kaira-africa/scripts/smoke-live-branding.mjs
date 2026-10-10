@@ -166,8 +166,40 @@ try {
   console.log('SPLASH TIMING VERIFIED:', `${totalSplashMs}ms before onboarding`);
 
   await verifyLogo(page, 'FIRST ONBOARDING SCREEN', resolve(outputDir, 'onboarding-screen.png'));
+
+  // Verify the actual login hero photo and the explicit Gambian flag rendering.
+  const heroResponsePromise = page.waitForResponse(
+    (response) => response.url().includes('images.unsplash.com/photo-1497366754035-f200968a6e72') && response.status() === 200,
+    { timeout: 20_000 },
+  );
+  await page.goto(`${baseUrl}/login?hero-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 15_000 });
+  const heroResponse = await heroResponsePromise;
+  assert.equal(heroResponse.status(), 200, 'Business-office hero image must load successfully');
+  const heroPanel = page.locator('div[style*="images.unsplash.com/photo-1497366754035-f200968a6e72"]').first();
+  const heroStats = await heroPanel.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, backgroundSize: style.backgroundSize, backgroundPosition: style.backgroundPosition };
+  });
+  assert.ok(heroStats.backgroundImage.includes('images.unsplash.com'), `Login hero must use the business background image: ${JSON.stringify(heroStats)}`);
+  assert.equal(heroStats.backgroundSize, 'cover', 'Login hero background must cover the whole panel');
+  const flag = page.getByRole('img', { name: 'Flag of The Gambia' });
+  await flag.waitFor({ state: 'visible', timeout: 10_000 });
+  assert.equal(await flag.locator('span').count(), 5, 'Gambia flag must show all five horizontal color bands');
+  await page.screenshot({ path: resolve(outputDir, 'login-phone-screen.png'), fullPage: true });
+  console.log('LOGIN HERO AND FLAG VERIFIED:', JSON.stringify({ heroStatus: heroResponse.status(), heroStats, flagBands: await flag.locator('span').count() }));
+
+  // A direct open/refresh on /onboarding must return to splash first.
+  await page.evaluate(() => sessionStorage.removeItem('kaira_splash_complete'));
+  await page.goto(`${baseUrl}/onboarding?direct-entry-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.waitForURL((url) => url.pathname === '/', { timeout: 10_000 });
+  const secondSplash = page.locator('[role="progressbar"][data-splash-started-at]');
+  await secondSplash.waitFor({ state: 'visible', timeout: 10_000 });
+  await page.waitForURL((url) => url.pathname === '/onboarding', { timeout: 12_000 });
+  console.log('DIRECT ONBOARDING ENTRY VERIFIED: direct /onboarding passed through splash before onboarding.');
+
   assert.deepEqual(pageErrors, [], `Browser runtime reported errors: ${pageErrors.join(' | ')}`);
-  console.log('LIVE BRANDING SMOKE TEST PASSED: splash logo, splash timing, and first onboarding logo render correctly.');
+  console.log('LIVE BRANDING SMOKE TEST PASSED: splash logo, splash timing, onboarding logo, login hero photo, Gambia flag, and direct-entry splash gate.');
   await context.close();
 } finally {
   await browser.close();
