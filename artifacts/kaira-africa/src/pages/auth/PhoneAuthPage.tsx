@@ -75,20 +75,16 @@ export default function PhoneAuthPage() {
     <div className="min-h-[100dvh] flex">
       {/* ── Left Panel — Branding ── */}
       <div className="hidden lg:flex lg:w-[42%] bg-sidebar flex-col justify-between p-12 relative overflow-hidden">
-        {/* African geometric pattern */}
-        <div className="absolute inset-0 opacity-[0.06]">
-          <svg className="w-full h-full" viewBox="0 0 500 800" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <pattern id="kente" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                <rect x="0" y="0" width="50" height="50" fill="white" />
-                <rect x="50" y="50" width="50" height="50" fill="white" />
-                <polygon points="50,0 100,50 50,100 0,50" fill="white" opacity="0.5" />
-                <circle cx="50" cy="50" r="15" fill="white" opacity="0.3" />
-              </pattern>
-            </defs>
-            <rect width="500" height="800" fill="url(#kente)" />
-          </svg>
-        </div>
+        {/* Photographic business workspace background with a dark green overlay.
+            The logo and copy remain separate foreground elements above this layer. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "linear-gradient(135deg, rgba(7, 35, 24, 0.88), rgba(7, 35, 24, 0.68) 55%, rgba(7, 35, 24, 0.82)), url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85')",
+          }}
+        />
+        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_28%,rgba(216,180,90,0.14),transparent_45%)]" />
 
         {/* Gold arc accent */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-secondary" />
@@ -182,7 +178,13 @@ export default function PhoneAuthPage() {
                       <FormControl>
                         <div className="flex">
                           <div className="flex items-center gap-2 px-2 border border-r-0 border-input rounded-l-md bg-muted text-sm font-medium whitespace-nowrap">
-                            <span className="text-base">🇬🇲</span>
+                            <span className="inline-flex h-5 w-7 shrink-0 flex-col overflow-hidden rounded-[2px] border border-black/10 shadow-sm" role="img" aria-label="Flag of The Gambia">
+                              <span className="h-[30%] w-full bg-[#CE1126]" />
+                              <span className="h-[10%] w-full bg-white" />
+                              <span className="h-[20%] w-full bg-[#0C1C8C]" />
+                              <span className="h-[10%] w-full bg-white" />
+                              <span className="h-[30%] w-full bg-[#3A7728]" />
+                            </span>
                             <span className="text-muted-foreground">+220</span>
                             <Select value={networkPrefix || 'none'} onValueChange={(value) => setNetworkPrefix(value === 'none' ? '' : value)}>
                               <SelectTrigger className="h-9 w-[116px] border-0 bg-transparent px-1 font-bold focus:ring-0">
