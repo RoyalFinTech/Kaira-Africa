@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { Phone, ChevronRight, Shield } from 'lucide-react';
+import { Phone, ChevronRight, Shield, Users, Package, ChartNoAxesCombined, Sparkles, Headset, MapPin, MessageCircle } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +72,47 @@ export default function PhoneAuthPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex">
+    <div className="min-h-[100dvh] flex flex-col lg:flex-row">
+      {/* ── Mobile brand banner — same visual identity as desktop, adapted for small screens ── */}
+      <section
+        className="relative isolate flex min-h-[190px] flex-col justify-between overflow-hidden bg-[#0D2818] px-5 pb-4 pt-5 sm:min-h-[220px] sm:px-7 lg:hidden"
+        aria-label="Kaira Africa business platform"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-20 bg-cover bg-[center_42%]"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&q=85')",
+          }}
+        />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#071F16]/95 via-[#0D2818]/75 to-[#0D2818]/55" />
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-[#D8B45A]" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="rounded-lg bg-white p-1.5 shadow-lg ring-1 ring-white/50">
+            <KairaLogo width={76} height={76} className="rounded-md" />
+          </div>
+          <span className="rounded-full border border-[#D8B45A]/60 bg-black/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#F3D681]">
+            Built for The Gambia
+          </span>
+        </div>
+        <div className="mt-4">
+          <h2 className="font-display text-xl font-extrabold leading-tight text-white sm:text-2xl">Know your business.<br className="hidden sm:block" /> Grow your business.</h2>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {[
+              { label: 'CRM', Icon: Users },
+              { label: 'Inventory', Icon: Package },
+              { label: 'Analytics', Icon: ChartNoAxesCombined },
+              { label: 'AI Reports', Icon: Sparkles },
+            ].map(({ label, Icon }) => (
+              <div key={label} className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-white/90 sm:text-xs">
+                <Icon className="h-3.5 w-3.5 shrink-0 text-[#D8B45A]" />
+                <span className="truncate">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Left Panel — Branding ── */}
       <div className="hidden lg:flex lg:w-[42%] bg-sidebar flex-col justify-between p-12 relative overflow-hidden">
         {/* Photographic business workspace background with a dark green overlay.
@@ -111,17 +151,21 @@ export default function PhoneAuthPage() {
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             {[
-              'Fast & secure phone verification',
-              'No passwords to remember',
-              'Your data stays private',
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-secondary/20 border border-secondary/40 flex items-center justify-center flex-shrink-0">
-                  <ChevronRight className="h-3 w-3 text-secondary" />
+              { label: 'CRM', detail: 'Manage customers', Icon: Users },
+              { label: 'Inventory', detail: 'Track stock', Icon: Package },
+              { label: 'Analytics', detail: 'Understand sales', Icon: ChartNoAxesCombined },
+              { label: 'AI Reports', detail: 'Smart summaries', Icon: Sparkles },
+            ].map(({ label, detail, Icon }) => (
+              <div key={label} className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/20 text-secondary">
+                  <Icon className="h-4 w-4" />
                 </div>
-                <span className="text-sm text-sidebar-foreground/70">{item}</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">{label}</p>
+                  <p className="text-xs leading-relaxed text-sidebar-foreground/65">{detail}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -133,12 +177,9 @@ export default function PhoneAuthPage() {
       </div>
 
       {/* ── Right Panel — Form ── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-16 bg-background">
+      <div className="flex-1 flex items-start lg:items-center justify-center px-5 pb-8 pt-7 sm:px-7 lg:p-16 bg-background">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="mb-8 lg:hidden text-center">
-            <KairaLogo width={130} className="mx-auto" />
-          </div>
+          {/* Mobile logo is included in the photographic brand banner above. */}
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -146,7 +187,7 @@ export default function PhoneAuthPage() {
             transition={{ duration: 0.4 }}
           >
             {/* Step indicator */}
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center gap-2 mb-6 sm:mb-8">
               <div className="flex gap-1.5">
                 <div className="h-1.5 w-8 rounded-full bg-primary" />
                 <div className="h-1.5 w-8 rounded-full bg-muted" />
@@ -155,11 +196,11 @@ export default function PhoneAuthPage() {
               <span className="text-xs text-muted-foreground ml-1">Step 1 of 3</span>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                 <Phone className="h-6 w-6 text-primary" />
               </div>
-              <h1 className="font-display text-2xl font-bold text-foreground mb-2">
+              <h1 className="font-display text-2xl font-bold text-foreground mb-2 sm:text-[1.75rem]">
                 Enter your phone number
               </h1>
               <p className="text-muted-foreground text-sm">
@@ -168,7 +209,7 @@ export default function PhoneAuthPage() {
             </div>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
                 <FormField
                   control={form.control}
                   name="phone"
@@ -248,12 +289,16 @@ export default function PhoneAuthPage() {
               </form>
             </Form>
 
-            <div className="mt-8 pt-6 border-t border-border text-center space-y-2">
-              <p className="text-xs text-muted-foreground">Customer Support</p>
-              <div className="flex items-center justify-center gap-4 text-sm">
-                <a href="tel:+220874071510" className="text-primary hover:underline">Call +220 87 407 1510</a>
-                <a href="https://wa.me/220874071510" target="_blank" rel="noreferrer" className="text-primary hover:underline">WhatsApp</a>
+            <div className="mt-6 pt-5 border-t border-border space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">Customer Support</p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <a href="tel:+220874071510" className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"><Headset className="h-4 w-4" /> +220 87 407 1510</a>
+                <a href="https://wa.me/220874071510" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"><MessageCircle className="h-4 w-4" /> WhatsApp</a>
               </div>
+              <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>Royal Africa House, (Opposite Indian Farm), OIC Highway, Sukuta, The Gambia</span>
+              </p>
             </div>
 
             {/* Admin separator */}
