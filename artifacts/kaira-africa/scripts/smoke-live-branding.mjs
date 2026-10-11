@@ -198,8 +198,45 @@ try {
   await page.waitForURL((url) => url.pathname === '/onboarding', { timeout: 12_000 });
   console.log('DIRECT ONBOARDING ENTRY VERIFIED: direct /onboarding passed through splash before onboarding.');
 
+  // Verify the real mobile breakpoint at a common Android viewport.
+  const mobileContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
+  });
+  const mobilePage = await mobileContext.newPage();
+  const mobileErrors = [];
+  mobilePage.on('pageerror', (error) => mobileErrors.push(error.message));
+  await mobilePage.goto(`${baseUrl}/login?mobile-branding-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await mobilePage.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 15_000 });
+  const mobileBanner = mobilePage.locator('section[aria-label="Kaira Africa business platform"]');
+  await mobileBanner.waitFor({ state: 'visible', timeout: 10_000 });
+  const mobileLogo = mobileBanner.locator('img[alt="Kaira Africa"]');
+  await mobileLogo.waitFor({ state: 'visible', timeout: 10_000 });
+  const mobileLogoStats = await mobileLogo.evaluate((img) => {
+    const rect = img.getBoundingClientRect();
+    return { width: rect.width, height: rect.height, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
+  });
+  assert.ok(mobileLogoStats.width >= 60 && mobileLogoStats.height >= 60, `Mobile banner logo should remain clearly visible: ${JSON.stringify(mobileLogoStats)}`);
+  assert.ok(mobileLogoStats.naturalWidth > 0 && mobileLogoStats.naturalHeight > 0, 'Mobile banner logo asset must load');
+  for (const feature of ['CRM', 'Inventory', 'Analytics', 'AI Reports']) {
+    await mobileBanner.getByText(feature, { exact: true }).waitFor({ state: 'visible', timeout: 5_000 });
+  }
+  const mobileLayout = await mobilePage.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    viewportHeight: window.innerHeight,
+    bodyHeight: document.documentElement.scrollHeight,
+  }));
+  assert.ok(mobileLayout.documentWidth <= mobileLayout.viewportWidth, `Mobile login must not overflow horizontally: ${JSON.stringify(mobileLayout)}`);
+  assert.deepEqual(mobileErrors, [], `Mobile browser runtime errors: ${mobileErrors.join(' | ')}`);
+  await mobilePage.screenshot({ path: resolve(outputDir, 'login-mobile-screen.png'), fullPage: true });
+  console.log('MOBILE LOGIN RESPONSIVE UI VERIFIED:', JSON.stringify({ mobileLogoStats, mobileLayout, features: ['CRM', 'Inventory', 'Analytics', 'AI Reports'] }));
+  await mobileContext.close();
+
   assert.deepEqual(pageErrors, [], `Browser runtime reported errors: ${pageErrors.join(' | ')}`);
-  console.log('LIVE BRANDING SMOKE TEST PASSED: splash logo, splash timing, onboarding logo, login hero photo, Gambia flag, and direct-entry splash gate.');
+  console.log('LIVE BRANDING SMOKE TEST PASSED: splash logo, splash timing, onboarding logo, desktop login hero, flag, mobile branded banner, and direct-entry splash gate.');
   await context.close();
 } finally {
   await browser.close();
