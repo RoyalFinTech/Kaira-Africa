@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const baseUrl = (process.env.KAIRA_BASE_URL || 'https://kaira-africa-frontend.onrender.com').replace(/\/$/, '');
@@ -237,16 +237,63 @@ try {
   // Render the authenticated app shell with all API requests safely intercepted.
   // The fake token is never sent to the production API; requests receive a stub
   // response so this verifies navigation/layout without reading or mutating data.
+  const analyticsRequests = [];
+  const transactionFixture = {
+    transactions: [{
+      id: 'visual-test-transaction-1',
+      reference: 'KAI-CSV-001',
+      amount: 123.45,
+      currency: 'GMD',
+      type: 'payment',
+      status: 'completed',
+      customerId: 'visual-test-customer-1',
+      customerName: 'Test "CSV", Customer',
+      description: 'Visual-only CSV escaping test',
+      createdAt: '2026-10-12T12:34:56.000Z',
+      completedAt: '2026-10-12T12:34:56.000Z',
+    }],
+    total: 1,
+    page: 1,
+    limit: 20,
+  };
   await mobilePage.route('**/api/**', async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const corsHeaders = {
+      'access-control-allow-origin': baseUrl,
+      'access-control-allow-headers': 'authorization,content-type',
+      'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS',
+      'access-control-allow-credentials': 'true',
+    };
+    if (requestUrl.pathname.endsWith('/api/analytics/revenue')) {
+      analyticsRequests.push(requestUrl.href);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: corsHeaders,
+        body: JSON.stringify({
+          total: 123.45,
+          change: 12.5,
+          changePercent: 10,
+          data: [{ label: '2026-10-12', value: 123.45, previousValue: 111 }],
+          topCustomers: [],
+        }),
+      });
+      return;
+    }
+    if (requestUrl.pathname.endsWith('/api/transactions')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: corsHeaders,
+        body: JSON.stringify(transactionFixture),
+      });
+      return;
+    }
     await route.fulfill({
       status: 503,
       contentType: 'application/json',
-      headers: {
-        'access-control-allow-origin': baseUrl,
-        'access-control-allow-headers': 'authorization,content-type',
-        'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS',
-      },
-      body: JSON.stringify({ message: 'Visual smoke test: API responses are intentionally stubbed.' }),
+      headers: corsHeaders,
+      body: JSON.stringify({ message: 'Visual smoke test: non-target API responses are intentionally stubbed.' }),
     });
   });
   await mobilePage.addInitScript(() => {
@@ -270,6 +317,23 @@ try {
   }));
   assert.ok(bottomNavMetrics.contentWidth <= bottomNavMetrics.navWidth + 1, `Mobile bottom nav must not overflow its own container: ${JSON.stringify(bottomNavMetrics)}`);
   assert.ok(bottomNavMetrics.links.every((link) => link.right <= bottomNavMetrics.viewportWidth + 1), `Every bottom-nav link must remain within the viewport: ${JSON.stringify(bottomNavMetrics)}`);
+
+  // Verify the dashboard period control changes its selected state and refetches
+  // the matching analytics period, using only a deterministic stub response.
+  const quarterButton = mobilePage.getByRole('button', { name: 'Quarter', exact: true });
+  await quarterButton.waitFor({ state: 'visible', timeout: 10_000 });
+  await quarterButton.click();
+  await quarterButton.waitFor({ state: 'visible', timeout: 5_000 });
+  await quarterButton.evaluate((button) => {
+    if (button.getAttribute('aria-pressed') !== 'true') throw new Error('Quarter control did not become selected');
+  });
+  const revenueDeadline = Date.now() + 5_000;
+  while (!analyticsRequests.some((url) => new URL(url).searchParams.get('period') === 'quarter') && Date.now() < revenueDeadline) {
+    await sleep(100);
+  }
+  assert.ok(analyticsRequests.some((url) => new URL(url).searchParams.get('period') === 'quarter'), `Selecting Quarter must request quarter analytics: ${JSON.stringify(analyticsRequests)}`);
+  console.log('DASHBOARD PERIOD CONTROL VERIFIED:', JSON.stringify({ selected: 'quarter', requests: analyticsRequests }));
+
   await dailyLedgerLink.click();
   await mobilePage.waitForURL((url) => url.pathname === '/daily-ledger', { timeout: 10_000 });
   await mobilePage.getByRole('heading', { name: 'Daily Sales & Expense Book' }).waitFor({ state: 'visible', timeout: 10_000 });
@@ -280,6 +344,29 @@ try {
   }));
   assert.ok(ledgerMobileWidth.documentWidth <= ledgerMobileWidth.viewportWidth, `Mobile daily ledger must not overflow horizontally: ${JSON.stringify(ledgerMobileWidth)}`);
   console.log('MOBILE DAILY LEDGER NAV VERIFIED:', JSON.stringify({ bottomNavMetrics, ledgerMobileWidth }));
+
+  // Verify the CSV download through the visible UI. The one-row fixture includes
+  // commas and a quote in the customer name to exercise proper escaping.
+  await mobilePage.goto(`${baseUrl}/transactions?csv-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await mobilePage.getByRole('heading', { name: 'Transactions' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await mobilePage.getByText('KAI-CSV-001', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+  const exportButton = mobilePage.getByRole('button', { name: 'Export CSV' });
+  await exportButton.waitFor({ state: 'visible', timeout: 10_000 });
+  assert.equal(await exportButton.isEnabled(), true, 'CSV export should be enabled when transaction rows are available');
+  const downloadPromise = mobilePage.waitForEvent('download', { timeout: 10_000 });
+  await exportButton.click();
+  const csvDownload = await downloadPromise;
+  assert.match(csvDownload.suggestedFilename(), /^kaira-transactions-\d{4}-\d{2}-\d{2}\.csv$/, 'CSV download should have a dated filename');
+  const csvPath = await csvDownload.path();
+  assert.ok(csvPath, 'CSV download should have a readable temporary file');
+  const csv = await readFile(csvPath, 'utf8');
+  assert.ok(csv.startsWith('\uFEFFReference,Type,Status,Customer,Amount (GMD),Date'), 'CSV should include its UTF-8 BOM and column headers');
+  assert.ok(csv.includes('KAI-CSV-001'), 'CSV should contain the transaction reference');
+  assert.ok(csv.includes('"Test ""CSV"", Customer"'), 'CSV should escape quotes and commas inside customer values');
+  assert.ok(csv.includes('123.45'), 'CSV should contain the transaction amount');
+  console.log('TRANSACTION CSV EXPORT VERIFIED:', JSON.stringify({ filename: csvDownload.suggestedFilename(), bytes: Buffer.byteLength(csv), referenceIncluded: csv.includes('KAI-CSV-001'), escapedCustomer: csv.includes('"Test ""CSV"", Customer"') }));
+
+  assert.deepEqual(mobileErrors, [], `Authenticated mobile app generated runtime errors: ${mobileErrors.join(' | ')}`);
   await mobileContext.close();
 
   assert.deepEqual(pageErrors, [], `Browser runtime reported errors: ${pageErrors.join(' | ')}`);
