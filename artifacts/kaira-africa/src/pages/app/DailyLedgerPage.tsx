@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { KairaLogo } from "@/components/common/KairaLogo";
 import { PageTransition } from "@/components/common/PageTransition";
-import { createDailyLedgerEntry, getDailyLedger, updateDailyLedgerStatus, type DailyLedgerType } from "@/lib/platform-api";
+import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerType } from "@/lib/platform-api";
 import { formatCurrency } from "@/lib/utils";
 
 const TYPE_LABELS: Record<DailyLedgerType, string> = {
@@ -35,6 +35,8 @@ export default function DailyLedgerPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
+  const [productId, setProductId] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [customerName, setCustomerName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [recordedDate, setRecordedDate] = useState(todayDate());
@@ -48,6 +50,13 @@ export default function DailyLedgerPage() {
     queryFn: () => getDailyLedger(startDate, endDate),
     enabled: Boolean(startDate && endDate && startDate <= endDate),
   });
+  const { data: inventoryProducts = [] } = useQuery({
+    queryKey: ["inventory-products"],
+    queryFn: getInventoryProducts,
+  });
+  const selectedProduct = inventoryProducts.find((product) => product.id === productId);
+  const stockLinkedSale = entryType === "sale" && Boolean(selectedProduct);
+  const productSaleTotal = selectedProduct ? selectedProduct.salePrice * Number(quantity || 0) : 0;
   const response = ledgerQuery.data;
   const summary = response?.summary;
   const pieData = useMemo(() => [
@@ -61,6 +70,8 @@ export default function DailyLedgerPage() {
     setDescription("");
     setCategory("");
     setAmount("");
+    setProductId("");
+    setQuantity("1");
     setCustomerName("");
     setDueDate("");
     setRecordedDate(todayDate());
@@ -92,11 +103,16 @@ export default function DailyLedgerPage() {
         amount: numericAmount,
         currency: "GMD",
         customerName: customerName.trim() || undefined,
+        productId: entryType === "sale" && productId ? productId : undefined,
+        quantity: entryType === "sale" && productId ? Number(quantity) : undefined,
         dueDate: dueDate || undefined,
         recordedDate,
       });
-      await queryClient.invalidateQueries({ queryKey: ["daily-ledger"] });
-      setNotice("Daily record saved to your business ledger.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["daily-ledger"] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory-products"] }),
+      ]);
+      setNotice(entryType === "sale" && productId ? "Sale recorded and inventory stock updated together." : "Daily record saved to your business ledger.");
       resetForm();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not save this record. Please try again.");
@@ -137,12 +153,17 @@ export default function DailyLedgerPage() {
             <form onSubmit={submit} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <label className="space-y-1.5 text-sm font-medium">Record type
-                  <select value={entryType} onChange={(e) => setEntryType(e.target.value as DailyLedgerType)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <select value={entryType} onChange={(e) => {
+                    const nextType = e.target.value as DailyLedgerType;
+                    setEntryType(nextType);
+                    if (nextType !== "sale") { setProductId(""); setQuantity("1"); }
+                  }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                     {Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Amount (GMD)
-                  <Input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="e.g. 250.00" required />
+                  <Input value={stockLinkedSale ? productSaleTotal.toFixed(2) : amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="e.g. 250.00" disabled={stockLinkedSale} required />
+                  {stockLinkedSale && <span className="block text-xs font-normal text-muted-foreground">Calculated from the product price and quantity.</span>}
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Record date
                   <Input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} required />
@@ -152,6 +173,34 @@ export default function DailyLedgerPage() {
                 </label>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {entryType === "sale" && (
+                  <>
+                    <label className="space-y-1.5 text-sm font-medium">Inventory product (optional)
+                      <select value={productId} onChange={(e) => {
+                        const id = e.target.value;
+                        setProductId(id);
+                        const product = inventoryProducts.find((p) => p.id === id);
+                        if (product) setAmount((product.salePrice * Number(quantity || 0)).toFixed(2));
+                      }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                        <option value="">Manual sale (no stock adjustment)</option>
+                        {inventoryProducts.filter((p) => p.active && p.quantity > 0 && p.salePrice > 0).map((product) => (
+                          <option key={product.id} value={product.id}>{product.name} · {product.quantity} {product.unit} in stock · {formatCurrency(product.salePrice, "GMD")}</option>
+                        ))}
+                      </select>
+                      <span className="block text-xs font-normal text-muted-foreground">Choose a stocked product to calculate the sale and reduce inventory in the same database transaction.</span>
+                    </label>
+                    {productId && selectedProduct && (
+                      <label className="space-y-1.5 text-sm font-medium">Quantity sold
+                        <Input type="number" min="1" max={selectedProduct.quantity} step="1" value={quantity} onChange={(e) => {
+                          const nextQuantity = e.target.value;
+                          setQuantity(nextQuantity);
+                          setAmount((selectedProduct.salePrice * Number(nextQuantity || 0)).toFixed(2));
+                        }} required />
+                        <span className="block text-xs font-normal text-muted-foreground">Available: {selectedProduct.quantity} {selectedProduct.unit}. Stock is checked again by the server when you save.</span>
+                      </label>
+                    )}
+                  </>
+                )}
                 <label className="space-y-1.5 text-sm font-medium">Description
                   <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={entryType === "sale" ? "e.g. Daily shop sales" : entryType === "expense" ? "e.g. Market supplies" : "Describe this record"} minLength={2} maxLength={200} required />
                 </label>
