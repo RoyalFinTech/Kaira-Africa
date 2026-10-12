@@ -207,6 +207,7 @@ export default function DailyLedgerPage() {
                 {(entryType === "debt" || entryType === "debt_payment") && (
                   <label className="space-y-1.5 text-sm font-medium">{entryType === "debt" ? "Debtor / customer name" : "Customer paying debt"}
                     <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer's full name" required={entryType === "debt" || entryType === "debt_payment"} />
+                    {entryType === "debt_payment" && <span className="block text-xs font-normal leading-relaxed text-muted-foreground">Use the same spelling as the original unpaid debt. The payment is applied to this customer's oldest debt first and reduces the remaining balance.</span>}
                   </label>
                 )}
                 {entryType === "debt" && (
