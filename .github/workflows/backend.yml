@@ -17,6 +17,7 @@ on:
     branches: [main]
     paths:
       - "artifacts/api-server/**"
+      - "artifacts/kaira-africa/**"
       - "lib/db/**"
       - "lib/api-zod/**"
       - "lib/api-client-react/**"
