@@ -1,6 +1,7 @@
-import { pgTable, uuid, text, bigint, char, date, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, bigint, char, date, timestamp, integer, index } from "drizzle-orm/pg-core";
 import { businesses } from "./businesses";
 import { users } from "./users";
+import { inventoryProducts } from "./inventory";
 
 /**
  * Day-to-day operator ledger. Monetary values are stored as minor units so
@@ -18,6 +19,8 @@ export const dailyLedgerEntries = pgTable(
     amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
     currency: char("currency", { length: 3 }).notNull().default("GMD"),
     customerName: text("customer_name"),
+    productId: uuid("product_id").references(() => inventoryProducts.id, { onDelete: "set null" }),
+    quantity: integer("quantity"),
     dueDate: date("due_date", { mode: "string" }),
     status: text("status").notNull().default("recorded"),
     recordedDate: date("recorded_date", { mode: "string" }).notNull().defaultNow(),
