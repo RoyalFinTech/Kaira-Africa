@@ -72,7 +72,7 @@ router.post("/ai/insights/generate", requireUser, async (req, res) => {
     db.select({
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
-      debtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      debtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then coalesce(${dailyLedgerEntries.balanceMinor}, ${dailyLedgerEntries.amountMinor}) else 0 end), 0)`,
       debtPaymentMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt_payment' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       count: sql<number>`count(*)`,
     }).from(dailyLedgerEntries).where(and(
