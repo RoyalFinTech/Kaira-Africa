@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { db, users, businesses, customers, transactions, inventoryProducts, crmInteractions, dailyLedgerEntries } from "@workspace/db";
 import { requireAdmin } from "../middlewares/auth";
@@ -6,32 +7,61 @@ import { fromMinorUnits } from "../lib/money";
 
 const router: IRouter = Router();
 
-router.get("/admin/platform/records", requireAdmin, async (_req, res) => {
-  const [userRows, businessRows, customerRows, transactionRows] = await Promise.all([
+const pageQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+function pageMeta(page: number, pageSize: number, total: number) {
+  return { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
+}
+
+
+router.get("/admin/platform/records", requireAdmin, async (req, res) => {
+  const pagesInput = z.object({
+    usersPage: z.coerce.number().int().min(1).default(1),
+    businessesPage: z.coerce.number().int().min(1).default(1),
+    customersPage: z.coerce.number().int().min(1).default(1),
+    transactionsPage: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(50),
+  }).parse(req.query);
+  const size = pagesInput.pageSize;
+
+  const [
+    userRows, businessRows, customerRows, transactionRows,
+    [{ total: usersTotal }], [{ total: businessesTotal }],
+    [{ total: customersTotal }], [{ total: transactionsTotal }],
+  ] = await Promise.all([
     db.select({
       id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email,
       phoneCountryCode: users.phoneCountryCode, phoneNumber: users.phoneNumber, role: users.role,
       status: users.status, businessId: users.businessId, businessName: businesses.name, createdAt: users.createdAt,
     }).from(users).leftJoin(businesses, eq(businesses.id, users.businessId))
-      .orderBy(desc(users.createdAt)).limit(300),
+      .orderBy(desc(users.createdAt)).limit(size).offset((pagesInput.usersPage - 1) * size),
     db.select({
       id: businesses.id, name: businesses.name, type: businesses.type, industry: businesses.industry,
       country: businesses.country, city: businesses.city, phone: businesses.phone, email: businesses.email,
       status: businesses.status, createdAt: businesses.createdAt,
-    }).from(businesses).orderBy(desc(businesses.createdAt)).limit(300),
+    }).from(businesses).orderBy(desc(businesses.createdAt))
+      .limit(size).offset((pagesInput.businessesPage - 1) * size),
     db.select({
       id: customers.id, firstName: customers.firstName, lastName: customers.lastName,
       email: customers.email, phone: customers.phone, company: customers.company,
       status: customers.status, businessName: businesses.name, createdAt: customers.createdAt,
     }).from(customers).innerJoin(businesses, eq(businesses.id, customers.businessId))
-      .orderBy(desc(customers.createdAt)).limit(300),
+      .orderBy(desc(customers.createdAt)).limit(size).offset((pagesInput.customersPage - 1) * size),
     db.select({
       id: transactions.id, reference: transactions.reference, amountMinor: transactions.amountMinor,
       currency: transactions.currency, type: transactions.type, status: transactions.status,
       description: transactions.description, businessName: businesses.name, createdAt: transactions.createdAt,
     }).from(transactions).innerJoin(businesses, eq(businesses.id, transactions.businessId))
-      .orderBy(desc(transactions.createdAt)).limit(300),
+      .orderBy(desc(transactions.createdAt)).limit(size).offset((pagesInput.transactionsPage - 1) * size),
+    db.select({ total: count() }).from(users),
+    db.select({ total: count() }).from(businesses),
+    db.select({ total: count() }).from(customers),
+    db.select({ total: count() }).from(transactions),
   ]);
+
   res.json({
     users: userRows.map((row) => ({
       id: row.id, name: [row.firstName, row.lastName].filter(Boolean).join(" ") || "Name pending",
@@ -47,6 +77,12 @@ router.get("/admin/platform/records", requireAdmin, async (_req, res) => {
       ...row, amount: fromMinorUnits(Number(row.amountMinor), row.currency),
       createdAt: row.createdAt.toISOString(),
     })),
+    pagination: {
+      users: pageMeta(pagesInput.usersPage, size, Number(usersTotal)),
+      businesses: pageMeta(pagesInput.businessesPage, size, Number(businessesTotal)),
+      customers: pageMeta(pagesInput.customersPage, size, Number(customersTotal)),
+      transactions: pageMeta(pagesInput.transactionsPage, size, Number(transactionsTotal)),
+    },
   });
 });
 
