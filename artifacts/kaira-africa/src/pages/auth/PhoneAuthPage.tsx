@@ -134,13 +134,7 @@ export default function PhoneAuthPage() {
         </div>
 
         <div className="relative z-10 space-y-8">
-          {/* Africa continent decoration */}
-          <div className="text-secondary/30">
-            <svg width="120" height="140" viewBox="0 0 120 140" fill="currentColor">
-              <path d="M60 8 L75 18 L88 35 L92 55 L88 78 L78 98 L65 118 L55 128 L42 122 L30 108 L24 90 L20 70 L24 50 L35 30 L48 14 Z" />
-              <ellipse cx="85" cy="52" rx="12" ry="8" />
-            </svg>
-          </div>
+
 
           <div>
             <h2 className="font-display text-3xl font-bold text-white leading-tight mb-3">
