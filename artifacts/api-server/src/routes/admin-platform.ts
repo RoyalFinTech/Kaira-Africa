@@ -6,6 +6,50 @@ import { fromMinorUnits } from "../lib/money";
 
 const router: IRouter = Router();
 
+router.get("/admin/platform/records", requireAdmin, async (_req, res) => {
+  const [userRows, businessRows, customerRows, transactionRows] = await Promise.all([
+    db.select({
+      id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email,
+      phoneCountryCode: users.phoneCountryCode, phoneNumber: users.phoneNumber, role: users.role,
+      status: users.status, businessId: users.businessId, businessName: businesses.name, createdAt: users.createdAt,
+    }).from(users).leftJoin(businesses, eq(businesses.id, users.businessId))
+      .orderBy(desc(users.createdAt)).limit(300),
+    db.select({
+      id: businesses.id, name: businesses.name, type: businesses.type, industry: businesses.industry,
+      country: businesses.country, city: businesses.city, phone: businesses.phone, email: businesses.email,
+      status: businesses.status, createdAt: businesses.createdAt,
+    }).from(businesses).orderBy(desc(businesses.createdAt)).limit(300),
+    db.select({
+      id: customers.id, firstName: customers.firstName, lastName: customers.lastName,
+      email: customers.email, phone: customers.phone, company: customers.company,
+      status: customers.status, businessName: businesses.name, createdAt: customers.createdAt,
+    }).from(customers).innerJoin(businesses, eq(businesses.id, customers.businessId))
+      .orderBy(desc(customers.createdAt)).limit(300),
+    db.select({
+      id: transactions.id, reference: transactions.reference, amountMinor: transactions.amountMinor,
+      currency: transactions.currency, type: transactions.type, status: transactions.status,
+      description: transactions.description, businessName: businesses.name, createdAt: transactions.createdAt,
+    }).from(transactions).innerJoin(businesses, eq(businesses.id, transactions.businessId))
+      .orderBy(desc(transactions.createdAt)).limit(300),
+  ]);
+  res.json({
+    users: userRows.map((row) => ({
+      id: row.id, name: [row.firstName, row.lastName].filter(Boolean).join(" ") || "Name pending",
+      email: row.email, phone: row.phoneCountryCode + " " + row.phoneNumber, role: row.role,
+      status: row.status, businessName: row.businessName, createdAt: row.createdAt.toISOString(),
+    })),
+    businesses: businessRows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+    customers: customerRows.map((row) => ({
+      ...row, name: [row.firstName, row.lastName].filter(Boolean).join(" "),
+      createdAt: row.createdAt.toISOString(),
+    })),
+    transactions: transactionRows.map((row) => ({
+      ...row, amount: fromMinorUnits(Number(row.amountMinor), row.currency),
+      createdAt: row.createdAt.toISOString(),
+    })),
+  });
+});
+
 router.get("/admin/platform/overview", requireAdmin, async (_req, res) => {
   const since = new Date(); since.setDate(since.getDate() - 13);
   const results = await Promise.all([
