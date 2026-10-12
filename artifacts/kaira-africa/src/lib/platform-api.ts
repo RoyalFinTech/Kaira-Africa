@@ -72,3 +72,55 @@ export interface AdminInventoryRow {
   quantity: number; reorderLevel: number; inventoryValue: number;
 }
 export const getAdminInventory = () => request<AdminInventoryRow[]>("/api/admin/platform/inventory");
+
+
+export type DailyLedgerType = "sale" | "expense" | "debt" | "debt_payment" | "other_income";
+export interface DailyLedgerEntry {
+  id: string;
+  entryType: DailyLedgerType;
+  description: string;
+  category: string | null;
+  amount: number;
+  currency: string;
+  customerName: string | null;
+  dueDate: string | null;
+  status: string;
+  recordedDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface DailyLedgerResponse {
+  startDate: string;
+  endDate: string;
+  entries: DailyLedgerEntry[];
+  summary: {
+    sales: number;
+    expenses: number;
+    outstandingDebt: number;
+    debtPayments: number;
+    otherIncome: number;
+    salesLessExpenses: number;
+    totalRecords: number;
+  };
+  dailyTrend: { date: string; sales: number; expenses: number }[];
+  expensesByCategory: { label: string; value: number }[];
+}
+export const getDailyLedger = (startDate: string, endDate: string) =>
+  request<DailyLedgerResponse>("/api/daily-ledger?" + new URLSearchParams({ startDate, endDate }).toString());
+export const createDailyLedgerEntry = (input: {
+  entryType: DailyLedgerType;
+  description: string;
+  category?: string;
+  amount: number;
+  currency?: "GMD";
+  customerName?: string;
+  dueDate?: string;
+  recordedDate: string;
+}) => request<DailyLedgerEntry>("/api/daily-ledger", { method: "POST", body: JSON.stringify(input) });
+export const updateDailyLedgerStatus = (id: string, status: "paid" | "unpaid") =>
+  request<DailyLedgerEntry>("/api/daily-ledger/" + encodeURIComponent(id) + "/status", { method: "PATCH", body: JSON.stringify({ status }) });
+
+export interface AdminDailyLedgerRow extends DailyLedgerEntry {
+  businessName: string;
+}
+export const getAdminDailyLedger = () => request<AdminDailyLedgerRow[]>("/api/admin/platform/daily-ledger");
