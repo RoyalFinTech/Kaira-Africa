@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { KairaLogo } from "@/components/common/KairaLogo";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Users, Plus, Phone, Mail, MessageSquare, CalendarCheck2, CheckCircle2 } from "lucide-react";
