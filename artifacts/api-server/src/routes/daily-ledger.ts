@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, dailyLedgerEntries, inventoryProducts, inventoryMovements } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
@@ -38,6 +38,7 @@ function serialize(entry: typeof dailyLedgerEntries.$inferSelect) {
     description: entry.description,
     category: entry.category,
     amount: fromMinorUnits(Number(entry.amountMinor), entry.currency),
+    balance: entry.entryType === "debt" ? fromMinorUnits(Number(entry.balanceMinor ?? entry.amountMinor), entry.currency) : null,
     currency: entry.currency,
     customerName: entry.customerName,
     productId: entry.productId,
@@ -66,17 +67,19 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
     lte(dailyLedgerEntries.recordedDate, endDate),
   );
 
-  const [entries, [totals], trend, expensesByCategory] = await Promise.all([
+  const [entries, [totals], [outstandingTotals], trend, expensesByCategory] = await Promise.all([
     db.select().from(dailyLedgerEntries).where(conditions)
       .orderBy(desc(dailyLedgerEntries.recordedDate), desc(dailyLedgerEntries.createdAt)).limit(500),
     db.select({
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
-      outstandingDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       debtPaymentMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt_payment' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       otherIncomeMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'other_income' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       totalRecords: sql<number>`count(*)`,
     }).from(dailyLedgerEntries).where(conditions),
+    db.select({
+      outstandingDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then coalesce(${dailyLedgerEntries.balanceMinor}, ${dailyLedgerEntries.amountMinor}) else 0 end), 0)`,
+    }).from(dailyLedgerEntries).where(eq(dailyLedgerEntries.businessId, businessId)),
     db.select({
       date: dailyLedgerEntries.recordedDate,
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
@@ -99,7 +102,7 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
     summary: {
       sales,
       expenses,
-      outstandingDebt: fromMinorUnits(Number(totals.outstandingDebtMinor), "GMD"),
+      outstandingDebt: fromMinorUnits(Number(outstandingTotals.outstandingDebtMinor), "GMD"),
       debtPayments: fromMinorUnits(Number(totals.debtPaymentMinor), "GMD"),
       otherIncome: fromMinorUnits(Number(totals.otherIncomeMinor), "GMD"),
       salesLessExpenses: Number((sales - expenses).toFixed(2)),
@@ -124,8 +127,10 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
   if (input.dueDate && input.dueDate < recordedDate) {
     throw new BadRequestError("Debt due date cannot be earlier than the recorded date");
   }
-  if (input.entryType === "debt" && !input.customerName?.trim()) {
-    throw new BadRequestError("Add the debtor or customer name for an unpaid debt");
+  if ((input.entryType === "debt" || input.entryType === "debt_payment") && !input.customerName?.trim()) {
+    throw new BadRequestError(input.entryType === "debt"
+      ? "Add the debtor or customer name for an unpaid debt"
+      : "Add the customer name so this payment can be applied to their outstanding debt");
   }
   if (input.productId && input.entryType !== "sale") {
     throw new BadRequestError("Inventory products can only be attached to a sale");
@@ -139,6 +144,49 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
     let productId: string | null = null;
     let quantity: number | null = null;
     let description = input.description;
+
+    // Apply debt payments to this customer's open debts, oldest first. This
+    // runs under row locks with the payment insertion so concurrent requests
+    // cannot spend the same outstanding balance twice.
+    if (input.entryType === "debt_payment") {
+      const customerKey = input.customerName!.trim().toLocaleLowerCase();
+      const openDebts = await tx.select().from(dailyLedgerEntries).where(and(
+        eq(dailyLedgerEntries.businessId, businessId),
+        eq(dailyLedgerEntries.entryType, "debt"),
+        eq(dailyLedgerEntries.status, "unpaid"),
+        sql`lower(trim(coalesce(${dailyLedgerEntries.customerName}, ''))) = ${customerKey}`,
+      )).orderBy(asc(dailyLedgerEntries.recordedDate), asc(dailyLedgerEntries.createdAt)).for("update");
+
+      const totalDueMinor = openDebts.reduce((sum, debt) => sum + Number(debt.balanceMinor ?? debt.amountMinor), 0);
+      if (totalDueMinor <= 0) {
+        throw new BadRequestError("No unpaid debt was found for " + input.customerName + ". Check the name against the original debtor record.");
+      }
+      if (amountMinor > totalDueMinor) {
+        throw new BadRequestError("This payment exceeds " + input.customerName + "'s remaining debt of " +
+          fromMinorUnits(totalDueMinor, input.currency).toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD.");
+      }
+
+      let remainingMinor = amountMinor;
+      for (const debt of openDebts) {
+        if (remainingMinor <= 0) break;
+        const balanceMinor = Number(debt.balanceMinor ?? debt.amountMinor);
+        const allocatedMinor = Math.min(balanceMinor, remainingMinor);
+        const nextBalanceMinor = balanceMinor - allocatedMinor;
+        await tx.update(dailyLedgerEntries).set({
+          balanceMinor: nextBalanceMinor,
+          status: nextBalanceMinor === 0 ? "paid" : "unpaid",
+          updatedAt: new Date(),
+        }).where(and(
+          eq(dailyLedgerEntries.id, debt.id),
+          eq(dailyLedgerEntries.businessId, businessId),
+        ));
+        remainingMinor -= allocatedMinor;
+      }
+    }
+
+    if (input.entryType === "debt") {
+      // A fresh credit sale starts with its full amount outstanding.
+    }
 
     if (input.productId) {
       const [product] = await tx.select().from(inventoryProducts).where(and(
@@ -181,6 +229,7 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
       description,
       category: input.category || null,
       amountMinor,
+      balanceMinor: input.entryType === "debt" ? amountMinor : null,
       currency: input.currency,
       customerName: input.customerName?.trim() || null,
       productId,
@@ -211,8 +260,13 @@ router.patch("/daily-ledger/:id/status", requireUser, requireRole("owner", "admi
   )).limit(1);
   if (!existing) throw new NotFoundError("Daily ledger entry not found");
   if (existing.entryType !== "debt") throw new BadRequestError("Only debtor records can be marked paid or unpaid");
+  if (input.status === "unpaid" && existing.status === "paid") {
+    throw new BadRequestError("A paid debtor entry cannot be reopened because payments have already been allocated. Record a new credit sale instead.");
+  }
   const [updated] = await db.update(dailyLedgerEntries).set({
-    status: input.status, updatedAt: new Date(),
+    status: input.status,
+    balanceMinor: input.status === "paid" ? 0 : (existing.balanceMinor ?? existing.amountMinor),
+    updatedAt: new Date(),
   }).where(and(eq(dailyLedgerEntries.id, existing.id), eq(dailyLedgerEntries.businessId, businessId))).returning();
   await recordActivity({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "updated",
