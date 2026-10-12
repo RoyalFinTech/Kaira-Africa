@@ -301,7 +301,10 @@ export default function ProfilePage() {
                     </div>
                   )}
                   <div className="flex items-center gap-3">
-                    <Button type="submit" size="sm" disabled={saveBusiness.isPending || !business}>
+                  {user && user.role !== "owner" && (
+                    <p className="text-xs text-muted-foreground" role="status">Business details can only be changed by the business owner account. Ask the owner to update official contact and registration details.</p>
+                  )}
+                    <Button type="submit" size="sm" disabled={saveBusiness.isPending || !business || user?.role !== "owner"}>
                       {saveBusiness.isPending ? 'Saving business…' : businessSaved ? <><CheckCircle2 className="h-4 w-4 mr-1" /> Saved!</> : 'Save Business Details'}
                     </Button>
                     {businessSaved && <span className="text-xs text-primary">Business details updated.</span>}

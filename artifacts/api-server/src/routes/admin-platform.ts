@@ -141,6 +141,7 @@ router.get("/admin/platform/daily-ledger", requireAdmin, async (req, res) => {
       description: dailyLedgerEntries.description,
       category: dailyLedgerEntries.category,
       amountMinor: dailyLedgerEntries.amountMinor,
+      balanceMinor: dailyLedgerEntries.balanceMinor,
       currency: dailyLedgerEntries.currency,
       customerName: dailyLedgerEntries.customerName,
       dueDate: dailyLedgerEntries.dueDate,
@@ -155,13 +156,14 @@ router.get("/admin/platform/daily-ledger", requireAdmin, async (req, res) => {
       total: count(),
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
-      unpaidDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      unpaidDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then coalesce(${dailyLedgerEntries.balanceMinor}, ${dailyLedgerEntries.amountMinor}) else 0 end), 0)`,
     }).from(dailyLedgerEntries),
   ]);
   res.json({
     data: rows.map((row) => ({
       ...row,
       amount: fromMinorUnits(Number(row.amountMinor), row.currency),
+      balance: row.entryType === "debt" ? fromMinorUnits(Number(row.balanceMinor ?? row.amountMinor), row.currency) : null,
       createdAt: row.createdAt.toISOString(),
     })),
     pagination: pageMeta(page, pageSize, Number(summary.total)),

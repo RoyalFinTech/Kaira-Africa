@@ -115,7 +115,7 @@ export default function DailyLedgerPage() {
         queryClient.invalidateQueries({ queryKey: ["daily-ledger"] }),
         queryClient.invalidateQueries({ queryKey: ["inventory-products"] }),
       ]);
-      setNotice(entryType === "sale" && productId ? "Sale recorded and inventory stock updated together." : "Daily record saved to your business ledger.");
+      setNotice(entryType === "sale" && productId ? "Sale recorded and inventory stock updated together." : entryType === "debt_payment" ? "Debt payment saved and applied to this customer’s oldest outstanding debt." : "Daily record saved to your business ledger.");
       resetForm();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not save this record. Please try again.");
@@ -210,7 +210,8 @@ export default function DailyLedgerPage() {
                 </label>
                 {(entryType === "debt" || entryType === "debt_payment") && (
                   <label className="space-y-1.5 text-sm font-medium">{entryType === "debt" ? "Debtor / customer name" : "Customer paying debt"}
-                    <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer's full name" required={entryType === "debt"} />
+                    <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer's full name" required={entryType === "debt" || entryType === "debt_payment"} />
+                    {entryType === "debt_payment" && <span className="block text-xs font-normal leading-relaxed text-muted-foreground">Use the same spelling as the original unpaid debt. The payment is applied to this customer's oldest debt first and reduces the remaining balance.</span>}
                   </label>
                 )}
                 {entryType === "debt" && (
@@ -265,7 +266,7 @@ export default function DailyLedgerPage() {
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
             {ledgerQuery.isLoading ? <div className="h-52 animate-pulse rounded-xl bg-muted" /> : !response?.entries.length ? <div className="py-12 text-center text-sm text-muted-foreground">No daily records in this period. Start by adding your first sale or expense above.</div> : (
               <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-sm">
-                <thead><tr className="border-b text-left text-muted-foreground"><th className="py-3 pr-3">Date</th><th className="py-3 pr-3">Type</th><th className="py-3 pr-3">Details</th><th className="py-3 pr-3">Customer / debtor</th><th className="py-3 pr-3">Status</th><th className="py-3 pr-3 text-right">Amount</th><th className="py-3 text-right">Action</th></tr></thead>
+                <thead><tr className="border-b text-left text-muted-foreground"><th className="py-3 pr-3">Date</th><th className="py-3 pr-3">Type</th><th className="py-3 pr-3">Details</th><th className="py-3 pr-3">Customer / debtor</th><th className="py-3 pr-3">Status</th><th className="py-3 pr-3 text-right">Amount</th><th className="py-3 pr-3 text-right">Balance left</th><th className="py-3 text-right">Action</th></tr></thead>
                 <tbody>{response.entries.map((entry) => <tr key={entry.id} className="border-b last:border-0 align-top">
                   <td className="py-3 pr-3 whitespace-nowrap">{entry.recordedDate}</td>
                   <td className="py-3 pr-3"><Badge variant="outline">{TYPE_LABELS[entry.entryType]}</Badge></td>
@@ -273,6 +274,7 @@ export default function DailyLedgerPage() {
                   <td className="py-3 pr-3">{entry.customerName || "—"}{entry.dueDate && <div className="text-xs text-muted-foreground">Due {entry.dueDate}</div>}</td>
                   <td className="py-3 pr-3">{entry.entryType === "debt" ? <Badge variant={entry.status === "paid" ? "default" : "destructive"}>{entry.status === "paid" ? "Paid" : "Unpaid"}</Badge> : <span className="text-xs text-muted-foreground">Recorded</span>}</td>
                   <td className="py-3 pr-3 text-right font-semibold whitespace-nowrap">{formatCurrency(entry.amount, entry.currency)}</td>
+                  <td className="py-3 pr-3 text-right whitespace-nowrap">{entry.entryType === "debt" ? formatCurrency(entry.balance ?? entry.amount, entry.currency) : "—"}</td>
                   <td className="py-3 text-right">{entry.entryType === "debt" && entry.status !== "paid" ? <Button type="button" size="sm" variant="outline" disabled={updatingId === entry.id} onClick={() => void markDebtPaid(entry.id)} className="gap-1"><CheckCircle2 className="h-3.5 w-3.5" />{updatingId === entry.id ? "Saving…" : "Mark paid"}</Button> : <span className="text-xs text-muted-foreground">—</span>}</td>
                 </tr>)}</tbody>
               </table></div>

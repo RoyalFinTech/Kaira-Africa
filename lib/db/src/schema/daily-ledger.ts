@@ -17,6 +17,7 @@ export const dailyLedgerEntries = pgTable(
     description: text("description").notNull(),
     category: text("category"),
     amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
+    balanceMinor: bigint("balance_minor", { mode: "number" }),
     currency: char("currency", { length: 3 }).notNull().default("GMD"),
     customerName: text("customer_name"),
     productId: uuid("product_id").references(() => inventoryProducts.id, { onDelete: "set null" }),
