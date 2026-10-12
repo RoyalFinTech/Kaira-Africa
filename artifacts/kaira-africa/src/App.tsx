@@ -47,6 +47,7 @@ const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage')
 const AdminCrmPage       = lazy(() => import('@/pages/admin/AdminCrmPage'));
 const AdminInventoryPage = lazy(() => import('@/pages/admin/AdminInventoryPage'));
 const AdminDailyLedgerPage = lazy(() => import('@/pages/admin/AdminDailyLedgerPage'));
+const AdminPlatformRecordsPage = lazy(() => import('@/pages/admin/AdminPlatformRecordsPage'));
 
 // Admin
 const AdminLoginPage     = lazy(() => import('@/pages/admin/AdminLoginPage'));
@@ -235,6 +236,9 @@ function Router() {
         </Route>
         <Route path="/admin/daily-ledger">
           {() => <AdminProtectedRoute component={AdminDailyLedgerPage} />}
+        </Route>
+        <Route path="/admin/records">
+          {() => <AdminProtectedRoute component={AdminPlatformRecordsPage} />}
         </Route>
 
         {/* ── 404 ── */}
