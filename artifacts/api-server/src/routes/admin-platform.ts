@@ -94,6 +94,7 @@ router.get("/admin/platform/daily-ledger", requireAdmin, async (_req, res) => {
     description: dailyLedgerEntries.description,
     category: dailyLedgerEntries.category,
     amountMinor: dailyLedgerEntries.amountMinor,
+    balanceMinor: dailyLedgerEntries.balanceMinor,
     currency: dailyLedgerEntries.currency,
     customerName: dailyLedgerEntries.customerName,
     dueDate: dailyLedgerEntries.dueDate,
@@ -107,6 +108,7 @@ router.get("/admin/platform/daily-ledger", requireAdmin, async (_req, res) => {
   res.json(rows.map((row) => ({
     ...row,
     amount: fromMinorUnits(Number(row.amountMinor), row.currency),
+    balance: row.entryType === "debt" ? fromMinorUnits(Number(row.balanceMinor ?? row.amountMinor), row.currency) : null,
     createdAt: row.createdAt.toISOString(),
   })));
 });
