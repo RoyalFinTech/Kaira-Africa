@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db, dailyLedgerEntries } from "@workspace/db";
+import { db, dailyLedgerEntries, inventoryProducts, inventoryMovements } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
@@ -19,6 +19,8 @@ const createEntryInput = z.object({
   amount: z.number().finite().positive().max(1_000_000_000),
   currency: z.literal("GMD").default("GMD"),
   customerName: z.string().trim().max(160).optional(),
+  productId: z.string().uuid().optional(),
+  quantity: z.number().int().positive().max(100000).optional(),
   dueDate: z.string().regex(datePattern, "Use YYYY-MM-DD for due date").optional(),
   recordedDate: z.string().regex(datePattern, "Use YYYY-MM-DD for record date").optional(),
 });
@@ -38,6 +40,8 @@ function serialize(entry: typeof dailyLedgerEntries.$inferSelect) {
     amount: fromMinorUnits(Number(entry.amountMinor), entry.currency),
     currency: entry.currency,
     customerName: entry.customerName,
+    productId: entry.productId,
+    quantity: entry.quantity,
     dueDate: entry.dueDate,
     status: entry.status,
     recordedDate: entry.recordedDate,
@@ -123,19 +127,70 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
   if (input.entryType === "debt" && !input.customerName?.trim()) {
     throw new BadRequestError("Add the debtor or customer name for an unpaid debt");
   }
-  const [entry] = await db.insert(dailyLedgerEntries).values({
-    businessId,
-    createdBy: req.user!.id,
-    entryType: input.entryType,
-    description: input.description,
-    category: input.category || null,
-    amountMinor: toMinorUnits(input.amount, input.currency),
-    currency: input.currency,
-    customerName: input.customerName?.trim() || null,
-    dueDate: input.dueDate || null,
-    status: input.entryType === "debt" ? "unpaid" : "recorded",
-    recordedDate,
-  }).returning();
+  if (input.productId && input.entryType !== "sale") {
+    throw new BadRequestError("Inventory products can only be attached to a sale");
+  }
+  if (input.productId && (!input.quantity || input.quantity < 1)) {
+    throw new BadRequestError("Enter the quantity sold from inventory");
+  }
+
+  const entry = await db.transaction(async (tx) => {
+    let amountMinor = toMinorUnits(input.amount, input.currency);
+    let productId: string | null = null;
+    let quantity: number | null = null;
+    let description = input.description;
+
+    if (input.productId) {
+      const [product] = await tx.select().from(inventoryProducts).where(and(
+        eq(inventoryProducts.id, input.productId),
+        eq(inventoryProducts.businessId, businessId),
+        eq(inventoryProducts.active, true),
+      )).limit(1).for("update");
+      if (!product) throw new NotFoundError("Inventory product not found in this business");
+      if (product.salePriceMinor <= 0) {
+        throw new BadRequestError("Set a sale price for this inventory product before recording a sale");
+      }
+      if (product.quantity < input.quantity!) {
+        throw new BadRequestError("Not enough stock. Available: " + product.quantity + " " + product.unit);
+      }
+      amountMinor = product.salePriceMinor * input.quantity!;
+      productId = product.id;
+      quantity = input.quantity!;
+      description = input.description + " · " + quantity + " × " + product.name;
+      await tx.update(inventoryProducts).set({
+        quantity: product.quantity - quantity,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(inventoryProducts.id, product.id),
+        eq(inventoryProducts.businessId, businessId),
+      ));
+      await tx.insert(inventoryMovements).values({
+        businessId,
+        productId: product.id,
+        userId: req.user!.id,
+        quantityDelta: -quantity,
+        type: "sale",
+        reason: input.description,
+      });
+    }
+
+    const [created] = await tx.insert(dailyLedgerEntries).values({
+      businessId,
+      createdBy: req.user!.id,
+      entryType: input.entryType,
+      description,
+      category: input.category || null,
+      amountMinor,
+      currency: input.currency,
+      customerName: input.customerName?.trim() || null,
+      productId,
+      quantity,
+      dueDate: input.dueDate || null,
+      status: input.entryType === "debt" ? "unpaid" : "recorded",
+      recordedDate,
+    }).returning();
+    return created;
+  });
 
   await recordActivity({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
