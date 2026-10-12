@@ -66,7 +66,11 @@ jobs:
           aws_key = re.compile(r"AKIA[0-9A-Z]{16}")
           secret_assignment = re.compile(
               r"(?:SESSION_SECRET|OTP_SECRET|PASSWORD_RESET_SECRET|SUPABASE_SERVICE_ROLE_KEY|SMTP_PASSWORD|AWS_SECRET_ACCESS_KEY)"
-              r"\s*[:=]\s*[\"']?[A-Za-z0-9_+/=-]{32,}"
+              r"\s*[:=]\s*[\x22\x27]?([A-Za-z0-9_+/=-]{32,})"
+          )
+          development_placeholders = (
+              "dev-only", "change-me", "replace-with", "placeholder",
+              "example-secret", "test-only", "local-development",
           )
           excluded_parts = {".git", "node_modules", "dist", "coverage", ".next"}
           findings = []
@@ -94,7 +98,11 @@ jobs:
                   findings.append((item, "private-key marker"))
               if aws_key.search(text):
                   findings.append((item, "AWS access-key pattern"))
-              if secret_assignment.search(text):
+              for match in secret_assignment.finditer(text):
+                  value = match.group(1).lower()
+                  # Allow only explicit local development placeholders, never real credentials.
+                  if any(marker in value for marker in development_placeholders):
+                      continue
                   findings.append((item, "long secret-like assignment"))
 
           if real_env_files:
