@@ -41,6 +41,9 @@ const businessTypeDescriptions: Record<string, string> = {
 };
 const industryExamples: Record<string, string> = {
   Retail: 'Examples: corner shop, boutique, market stall, grocery, phone-accessory shop or general merchandise.',
+  'Wholesale & Distribution': 'Examples: wholesale goods, import and distribution, or supplying shops and market sellers.',
+  'Beauty & Personal Care': 'Examples: hair salon, barber, cosmetics, skincare, spa or beauty services.',
+  'Construction & Trades': 'Examples: electrician, plumber, mason, builder, painter or maintenance services.',
   'Food & Hospitality': 'Examples: restaurant, café, takeaway, caterer, bakery, juice seller or guest house.',
   'Professional Services': 'Examples: consultancy, accounting, legal services, design or business support.',
   Agriculture: 'Examples: farming, livestock, fish trading, horticulture or agro-processing.',
@@ -181,7 +184,7 @@ export default function BusinessOnboardingFlow() {
                     </FormItem>
                   )} />
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="businessType" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Business Type</FormLabel>
@@ -213,14 +216,20 @@ export default function BusinessOnboardingFlow() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="Financial Services">Financial Services</SelectItem>
-                            <SelectItem value="Technology">Technology</SelectItem>
-                            <SelectItem value="Retail">Retail</SelectItem>
-                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="Agriculture">Agriculture</SelectItem>
+                            <SelectItem value="Retail">Retail / shop</SelectItem>
+                            <SelectItem value="Wholesale & Distribution">Wholesale & distribution</SelectItem>
+                            <SelectItem value="Food & Hospitality">Food, catering & hospitality</SelectItem>
+                            <SelectItem value="Transport">Transport & delivery</SelectItem>
+                            <SelectItem value="Beauty & Personal Care">Beauty & personal care</SelectItem>
+                            <SelectItem value="Construction & Trades">Construction & trades</SelectItem>
+                            <SelectItem value="Professional Services">Professional services</SelectItem>
+                            <SelectItem value="Financial Services">Financial services</SelectItem>
+                            <SelectItem value="Technology">Technology & digital services</SelectItem>
+                            <SelectItem value="Manufacturing">Manufacturing & production</SelectItem>
+                            <SelectItem value="Agriculture">Agriculture & farming</SelectItem>
                             <SelectItem value="Healthcare">Healthcare</SelectItem>
-                            <SelectItem value="Education">Education</SelectItem>
-                            <SelectItem value="Real Estate">Real Estate</SelectItem>
+                            <SelectItem value="Education">Education & training</SelectItem>
+                            <SelectItem value="Real Estate">Real estate & property</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>
                           </SelectContent>
                         </Select>
@@ -234,7 +243,7 @@ export default function BusinessOnboardingFlow() {
                     )} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="country" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">Country {field.value === "The Gambia" && <GambiaFlag width={24} height={16} />}</FormLabel>
@@ -265,7 +274,7 @@ export default function BusinessOnboardingFlow() {
                     )} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="phone" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Business Phone</FormLabel>
