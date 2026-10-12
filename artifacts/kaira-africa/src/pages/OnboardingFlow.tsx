@@ -219,7 +219,17 @@ export default function OnboardingFlow() {
                     Get Started
                     <ChevronRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <Button onClick={() => setLocation('/login')} variant="ghost" size="lg" className="w-full">
+                  <Button
+                    onClick={() => {
+                      // This visitor has seen the intro and deliberately chose sign-in.
+                      // Persist that choice so the next splash does not replay onboarding.
+                      localStorage.setItem('kaira_onboarding_done', 'true');
+                      setLocation('/login');
+                    }}
+                    variant="ghost"
+                    size="lg"
+                    className="w-full"
+                  >
                     Already have an account? Sign in
                   </Button>
                 </div>
