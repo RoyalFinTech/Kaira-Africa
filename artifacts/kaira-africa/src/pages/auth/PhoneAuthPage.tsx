@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { motion } from 'framer-motion';
 import { Phone, ChevronRight, Shield, Users, Package, ChartNoAxesCombined, Sparkles, Headset, MapPin, MessageCircle } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
+import { GambiaFlag } from '@/components/common/GambiaFlag';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -138,7 +139,7 @@ export default function PhoneAuthPage() {
 
           <div>
             <h2 className="font-display text-3xl font-bold text-white leading-tight mb-3">
-              🇬🇲 Built for<br />The Gambia
+              <GambiaFlag width={30} height={20} className="mr-2 align-middle" /> Built for<br />The Gambia
             </h2>
             <p className="text-sidebar-foreground/70 text-base leading-relaxed">
               {BRAND.tagline}
@@ -213,13 +214,7 @@ export default function PhoneAuthPage() {
                       <FormControl>
                         <div className="flex">
                           <div className="flex items-center gap-2 px-2 border border-r-0 border-input rounded-l-md bg-muted text-sm font-medium whitespace-nowrap">
-                            <span className="inline-flex h-5 w-7 shrink-0 flex-col overflow-hidden rounded-[2px] border border-black/10 shadow-sm" role="img" aria-label="Flag of The Gambia">
-                              <span className="h-[30%] w-full bg-[#CE1126]" />
-                              <span className="h-[10%] w-full bg-white" />
-                              <span className="h-[20%] w-full bg-[#0C1C8C]" />
-                              <span className="h-[10%] w-full bg-white" />
-                              <span className="h-[30%] w-full bg-[#3A7728]" />
-                            </span>
+                            <GambiaFlag width={28} height={20} />
                             <span className="text-muted-foreground">+220</span>
                             <Select value={networkPrefix || 'none'} onValueChange={(value) => setNetworkPrefix(value === 'none' ? '' : value)}>
                               <SelectTrigger className="h-9 w-[116px] border-0 bg-transparent px-1 font-bold focus:ring-0">
