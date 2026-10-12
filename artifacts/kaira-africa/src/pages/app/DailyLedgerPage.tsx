@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { KairaLogo } from "@/components/common/KairaLogo";
+import { PaginationControls } from "@/components/common/PaginationControls";
 import { PageTransition } from "@/components/common/PageTransition";
 import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerType } from "@/lib/platform-api";
 import { formatCurrency } from "@/lib/utils";
@@ -31,6 +32,7 @@ export default function DailyLedgerPage() {
   const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState(firstOfMonth());
   const [endDate, setEndDate] = useState(todayDate());
+  const [entryPage, setEntryPage] = useState(1);
   const [entryType, setEntryType] = useState<DailyLedgerType>("sale");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -46,8 +48,8 @@ export default function DailyLedgerPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const ledgerQuery = useQuery({
-    queryKey: ["daily-ledger", startDate, endDate],
-    queryFn: () => getDailyLedger(startDate, endDate),
+    queryKey: ["daily-ledger", startDate, endDate, entryPage],
+    queryFn: () => getDailyLedger(startDate, endDate, entryPage, 50),
     enabled: Boolean(startDate && endDate && startDate <= endDate),
   });
   const { data: inventoryProducts = [] } = useQuery({
@@ -108,6 +110,7 @@ export default function DailyLedgerPage() {
         dueDate: dueDate || undefined,
         recordedDate,
       });
+      setEntryPage(1);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["daily-ledger"] }),
         queryClient.invalidateQueries({ queryKey: ["inventory-products"] }),
@@ -127,6 +130,7 @@ export default function DailyLedgerPage() {
     setNotice(null);
     try {
       await updateDailyLedgerStatus(id, "paid");
+      setEntryPage(1);
       await queryClient.invalidateQueries({ queryKey: ["daily-ledger"] });
       setNotice("Debtor record marked as paid.");
     } catch (error) {
@@ -228,10 +232,10 @@ export default function DailyLedgerPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Report period</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="flex-1 space-y-1.5 text-sm font-medium">From<Input type="date" value={startDate} max={endDate} onChange={(e) => setStartDate(e.target.value)} /></label>
-            <label className="flex-1 space-y-1.5 text-sm font-medium">To<Input type="date" value={endDate} min={startDate} max={todayDate()} onChange={(e) => setEndDate(e.target.value)} /></label>
-            <Button type="button" variant="outline" onClick={() => { setStartDate(todayDate()); setEndDate(todayDate()); }}>Today</Button>
-            <Button type="button" variant="outline" onClick={() => { setStartDate(firstOfMonth()); setEndDate(todayDate()); }}>This month</Button>
+            <label className="flex-1 space-y-1.5 text-sm font-medium">From<Input type="date" value={startDate} max={endDate} onChange={(e) => { setEntryPage(1); setStartDate(e.target.value); }} /></label>
+            <label className="flex-1 space-y-1.5 text-sm font-medium">To<Input type="date" value={endDate} min={startDate} max={todayDate()} onChange={(e) => { setEntryPage(1); setEndDate(e.target.value); }} /></label>
+            <Button type="button" variant="outline" onClick={() => { setEntryPage(1); setStartDate(todayDate()); setEndDate(todayDate()); }}>Today</Button>
+            <Button type="button" variant="outline" onClick={() => { setEntryPage(1); setStartDate(firstOfMonth()); setEndDate(todayDate()); }}>This month</Button>
           </CardContent>
         </Card>
 
@@ -272,6 +276,13 @@ export default function DailyLedgerPage() {
                   <td className="py-3 text-right">{entry.entryType === "debt" && entry.status !== "paid" ? <Button type="button" size="sm" variant="outline" disabled={updatingId === entry.id} onClick={() => void markDebtPaid(entry.id)} className="gap-1"><CheckCircle2 className="h-3.5 w-3.5" />{updatingId === entry.id ? "Saving…" : "Mark paid"}</Button> : <span className="text-xs text-muted-foreground">—</span>}</td>
                 </tr>)}</tbody>
               </table></div>
+            )}
+            {!ledgerQuery.isLoading && response && (
+              <PaginationControls
+                pagination={response.pagination}
+                onPageChange={setEntryPage}
+                itemLabel="ledger entries"
+              />
             )}
           </CardContent>
         </Card>
