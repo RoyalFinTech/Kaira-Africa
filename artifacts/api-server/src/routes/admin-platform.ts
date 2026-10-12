@@ -109,52 +109,94 @@ router.get("/admin/platform/overview", requireAdmin, async (_req, res) => {
   });
 });
 
-router.get("/admin/platform/crm", requireAdmin, async (_req, res) => {
-  const rows = await db.select({
-    customerId: customers.id, customerName: sql.raw("concat(customers.first_name, ' ', customers.last_name)"),
-    businessName: businesses.name, phone: customers.phone, email: customers.email,
-    customerStatus: customers.status, createdAt: customers.createdAt,
-    interactionCount: sql.raw("count(crm_interactions.id)"),
-  }).from(customers).innerJoin(businesses, eq(businesses.id, customers.businessId))
-    .leftJoin(crmInteractions, eq(crmInteractions.customerId, customers.id))
-    .groupBy(customers.id, businesses.id).orderBy(desc(customers.createdAt)).limit(200);
-  res.json(rows.map((r) => ({ ...r, customerName: String(r.customerName), interactionCount: Number(r.interactionCount), createdAt: r.createdAt.toISOString() })));
+router.get("/admin/platform/crm", requireAdmin, async (req, res) => {
+  const { page, pageSize } = pageQuery.parse(req.query);
+  const [rows, [{ total }]] = await Promise.all([
+    db.select({
+      customerId: customers.id, customerName: sql.raw("concat(customers.first_name, ' ', customers.last_name)"),
+      businessName: businesses.name, phone: customers.phone, email: customers.email,
+      customerStatus: customers.status, createdAt: customers.createdAt,
+      interactionCount: sql.raw("count(crm_interactions.id)"),
+    }).from(customers).innerJoin(businesses, eq(businesses.id, customers.businessId))
+      .leftJoin(crmInteractions, eq(crmInteractions.customerId, customers.id))
+      .groupBy(customers.id, businesses.id).orderBy(desc(customers.createdAt))
+      .limit(pageSize).offset((page - 1) * pageSize),
+    db.select({ total: count() }).from(customers),
+  ]);
+  res.json({
+    data: rows.map((r) => ({ ...r, customerName: String(r.customerName), interactionCount: Number(r.interactionCount), createdAt: r.createdAt.toISOString() })),
+    pagination: pageMeta(page, pageSize, Number(total)),
+  });
 });
 
-router.get("/admin/platform/daily-ledger", requireAdmin, async (_req, res) => {
-  const rows = await db.select({
-    id: dailyLedgerEntries.id,
-    businessId: dailyLedgerEntries.businessId,
-    businessName: businesses.name,
-    entryType: dailyLedgerEntries.entryType,
-    description: dailyLedgerEntries.description,
-    category: dailyLedgerEntries.category,
-    amountMinor: dailyLedgerEntries.amountMinor,
-    currency: dailyLedgerEntries.currency,
-    customerName: dailyLedgerEntries.customerName,
-    dueDate: dailyLedgerEntries.dueDate,
-    status: dailyLedgerEntries.status,
-    recordedDate: dailyLedgerEntries.recordedDate,
-    createdAt: dailyLedgerEntries.createdAt,
-  }).from(dailyLedgerEntries)
-    .innerJoin(businesses, eq(businesses.id, dailyLedgerEntries.businessId))
-    .orderBy(desc(dailyLedgerEntries.recordedDate), desc(dailyLedgerEntries.createdAt))
-    .limit(500);
-  res.json(rows.map((row) => ({
-    ...row,
-    amount: fromMinorUnits(Number(row.amountMinor), row.currency),
-    createdAt: row.createdAt.toISOString(),
-  })));
+router.get("/admin/platform/daily-ledger", requireAdmin, async (req, res) => {
+  const { page, pageSize } = pageQuery.parse(req.query);
+  const offset = (page - 1) * pageSize;
+  const [rows, [summary]] = await Promise.all([
+    db.select({
+      id: dailyLedgerEntries.id,
+      businessId: dailyLedgerEntries.businessId,
+      businessName: businesses.name,
+      entryType: dailyLedgerEntries.entryType,
+      description: dailyLedgerEntries.description,
+      category: dailyLedgerEntries.category,
+      amountMinor: dailyLedgerEntries.amountMinor,
+      currency: dailyLedgerEntries.currency,
+      customerName: dailyLedgerEntries.customerName,
+      dueDate: dailyLedgerEntries.dueDate,
+      status: dailyLedgerEntries.status,
+      recordedDate: dailyLedgerEntries.recordedDate,
+      createdAt: dailyLedgerEntries.createdAt,
+    }).from(dailyLedgerEntries)
+      .innerJoin(businesses, eq(businesses.id, dailyLedgerEntries.businessId))
+      .orderBy(desc(dailyLedgerEntries.recordedDate), desc(dailyLedgerEntries.createdAt))
+      .limit(pageSize).offset(offset),
+    db.select({
+      total: count(),
+      salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      unpaidDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+    }).from(dailyLedgerEntries),
+  ]);
+  res.json({
+    data: rows.map((row) => ({
+      ...row,
+      amount: fromMinorUnits(Number(row.amountMinor), row.currency),
+      createdAt: row.createdAt.toISOString(),
+    })),
+    pagination: pageMeta(page, pageSize, Number(summary.total)),
+    summary: {
+      sales: fromMinorUnits(Number(summary.salesMinor), "GMD"),
+      expenses: fromMinorUnits(Number(summary.expenseMinor), "GMD"),
+      unpaidDebt: fromMinorUnits(Number(summary.unpaidDebtMinor), "GMD"),
+    },
+  });
 });
 
-router.get("/admin/platform/inventory", requireAdmin, async (_req, res) => {
-  const rows = await db.select({
-    id: inventoryProducts.id, name: inventoryProducts.name, sku: inventoryProducts.sku,
-    businessName: businesses.name, quantity: inventoryProducts.quantity, reorderLevel: inventoryProducts.reorderLevel,
-    inventoryValueMinor: sql.raw("(inventory_products.quantity * inventory_products.unit_cost_minor)"),
-  }).from(inventoryProducts).innerJoin(businesses, eq(businesses.id, inventoryProducts.businessId))
-    .orderBy(inventoryProducts.quantity).limit(200);
-  res.json(rows.map((r) => ({ ...r, inventoryValue: Number(r.inventoryValueMinor) / 100 })));
+router.get("/admin/platform/inventory", requireAdmin, async (req, res) => {
+  const { page, pageSize } = pageQuery.parse(req.query);
+  const [rows, [summary]] = await Promise.all([
+    db.select({
+      id: inventoryProducts.id, name: inventoryProducts.name, sku: inventoryProducts.sku,
+      businessName: businesses.name, quantity: inventoryProducts.quantity, reorderLevel: inventoryProducts.reorderLevel,
+      inventoryValueMinor: sql.raw("(inventory_products.quantity * inventory_products.unit_cost_minor)"),
+    }).from(inventoryProducts).innerJoin(businesses, eq(businesses.id, inventoryProducts.businessId))
+      .orderBy(inventoryProducts.quantity).limit(pageSize).offset((page - 1) * pageSize),
+    db.select({
+      total: count(),
+      lowStock: sql<number>`coalesce(sum(case when ${inventoryProducts.quantity} <= ${inventoryProducts.reorderLevel} then 1 else 0 end), 0)`,
+      totalValueMinor: sql<number>`coalesce(sum(${inventoryProducts.quantity} * ${inventoryProducts.unitCostMinor}), 0)`,
+    }).from(inventoryProducts),
+  ]);
+  res.json({
+    data: rows.map((r) => ({ ...r, inventoryValue: Number(r.inventoryValueMinor) / 100 })),
+    pagination: pageMeta(page, pageSize, Number(summary.total)),
+    summary: {
+      totalProducts: Number(summary.total),
+      lowStockProducts: Number(summary.lowStock),
+      totalValue: Number(summary.totalValueMinor) / 100,
+    },
+  });
 });
 
 export default router;
