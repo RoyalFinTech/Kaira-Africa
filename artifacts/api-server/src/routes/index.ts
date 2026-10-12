@@ -13,6 +13,7 @@ import crmRouter from "./crm";
 import inventoryRouter from "./inventory";
 import aiRouter from "./ai";
 import adminPlatformRouter from "./admin-platform";
+import dailyLedgerRouter from "./daily-ledger";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(crmRouter);
 router.use(inventoryRouter);
 router.use(aiRouter);
 router.use(adminPlatformRouter);
+router.use(dailyLedgerRouter);
 
 export default router;
