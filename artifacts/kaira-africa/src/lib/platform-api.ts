@@ -95,6 +95,7 @@ export interface DailyLedgerEntry {
   description: string;
   category: string | null;
   amount: number;
+  balance: number | null;
   currency: string;
   customerName: string | null;
   productId?: string | null;
