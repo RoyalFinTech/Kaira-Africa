@@ -360,7 +360,7 @@ try {
   const csvPath = await csvDownload.path();
   assert.ok(csvPath, 'CSV download should have a readable temporary file');
   const csv = await readFile(csvPath, 'utf8');
-  assert.ok(csv.startsWith('\uFEFFReference,Type,Status,Customer,Amount (GMD),Date'), 'CSV should include its UTF-8 BOM and column headers');
+  assert.ok(csv.startsWith('\uFEFF"Reference","Type","Status","Customer","Amount (GMD)","Date"'), 'CSV should include its UTF-8 BOM and properly quoted column headers');
   assert.ok(csv.includes('KAI-CSV-001'), 'CSV should contain the transaction reference');
   assert.ok(csv.includes('"Test ""CSV"", Customer"'), 'CSV should escape quotes and commas inside customer values');
   assert.ok(csv.includes('123.45'), 'CSV should contain the transaction amount');
