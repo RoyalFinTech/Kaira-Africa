@@ -138,8 +138,10 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
   if (input.dueDate && input.dueDate < recordedDate) {
     throw new BadRequestError("Debt due date cannot be earlier than the recorded date");
   }
-  if (input.entryType === "debt" && !input.customerName?.trim()) {
-    throw new BadRequestError("Add the debtor or customer name for an unpaid debt");
+  if ((input.entryType === "debt" || input.entryType === "debt_payment") && !input.customerName?.trim()) {
+    throw new BadRequestError(input.entryType === "debt"
+      ? "Add the debtor or customer name for an unpaid debt"
+      : "Add the customer name so this payment can be applied to their outstanding debt");
   }
   if (input.productId && input.entryType !== "sale") {
     throw new BadRequestError("Inventory products can only be attached to a sale");
@@ -153,6 +155,37 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
     let productId: string | null = null;
     let quantity: number | null = null;
     let description = input.description;
+
+    // Allocate payments oldest-first under row locks to prevent double spending.
+    if (input.entryType === "debt_payment") {
+      const customerKey = input.customerName!.trim().toLocaleLowerCase();
+      const openDebts = await tx.select().from(dailyLedgerEntries).where(and(
+        eq(dailyLedgerEntries.businessId, businessId),
+        eq(dailyLedgerEntries.entryType, "debt"),
+        eq(dailyLedgerEntries.status, "unpaid"),
+        sql`lower(trim(coalesce(${dailyLedgerEntries.customerName}, ''))) = ${customerKey}`,
+      )).orderBy(asc(dailyLedgerEntries.recordedDate), asc(dailyLedgerEntries.createdAt)).for("update");
+      const totalDueMinor = openDebts.reduce((sum, debt) => sum + Number(debt.balanceMinor ?? debt.amountMinor), 0);
+      const allocation = allocateDebtPayment(amountMinor, openDebts);
+      if (!allocation && totalDueMinor <= 0) {
+        throw new BadRequestError("No unpaid debt was found for " + input.customerName + ". Check the name against the original debtor record.");
+      }
+      if (!allocation && amountMinor > totalDueMinor) {
+        throw new BadRequestError("This payment exceeds " + input.customerName + "'s remaining debt of " +
+          fromMinorUnits(totalDueMinor, input.currency).toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD.");
+      }
+      if (!allocation) throw new BadRequestError("Enter a valid payment amount and try again.");
+      for (const item of allocation.allocations) {
+        await tx.update(dailyLedgerEntries).set({
+          balanceMinor: item.balanceMinor,
+          status: item.status,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(dailyLedgerEntries.id, item.id),
+          eq(dailyLedgerEntries.businessId, businessId),
+        ));
+      }
+    }
 
     if (input.productId) {
       const [product] = await tx.select().from(inventoryProducts).where(and(
@@ -195,6 +228,7 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
       description,
       category: input.category || null,
       amountMinor,
+      balanceMinor: input.entryType === "debt" ? amountMinor : null,
       currency: input.currency,
       customerName: input.customerName?.trim() || null,
       productId,
@@ -225,8 +259,13 @@ router.patch("/daily-ledger/:id/status", requireUser, requireRole("owner", "admi
   )).limit(1);
   if (!existing) throw new NotFoundError("Daily ledger entry not found");
   if (existing.entryType !== "debt") throw new BadRequestError("Only debtor records can be marked paid or unpaid");
+  if (input.status === "unpaid" && existing.status === "paid") {
+    throw new BadRequestError("A paid debtor entry cannot be reopened because payments have already been allocated. Record a new credit sale instead.");
+  }
   const [updated] = await db.update(dailyLedgerEntries).set({
-    status: input.status, updatedAt: new Date(),
+    status: input.status,
+    balanceMinor: input.status === "paid" ? 0 : (existing.balanceMinor ?? existing.amountMinor),
+    updatedAt: new Date(),
   }).where(and(eq(dailyLedgerEntries.id, existing.id), eq(dailyLedgerEntries.businessId, businessId))).returning();
   await recordActivity({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "updated",
