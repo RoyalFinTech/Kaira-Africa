@@ -233,6 +233,53 @@ try {
   assert.deepEqual(mobileErrors, [], `Mobile browser runtime errors: ${mobileErrors.join(' | ')}`);
   await mobilePage.screenshot({ path: resolve(outputDir, 'login-mobile-screen.png'), fullPage: true });
   console.log('MOBILE LOGIN RESPONSIVE UI VERIFIED:', JSON.stringify({ mobileLogoStats, mobileLayout, features: ['CRM', 'Inventory', 'Analytics', 'AI Reports'] }));
+
+  // Render the authenticated app shell with all API requests safely intercepted.
+  // The fake token is never sent to the production API; requests receive a stub
+  // response so this verifies navigation/layout without reading or mutating data.
+  await mobilePage.route('**/api/**', async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      headers: {
+        'access-control-allow-origin': baseUrl,
+        'access-control-allow-headers': 'authorization,content-type',
+        'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS',
+      },
+      body: JSON.stringify({ message: 'Visual smoke test: API responses are intentionally stubbed.' }),
+    });
+  });
+  await mobilePage.addInitScript(() => {
+    localStorage.setItem('kaira_token', 'usr_mobile_nav_visual_test');
+    localStorage.setItem('kaira_onboarding_done', 'true');
+  });
+  await mobilePage.goto(`${baseUrl}/dashboard?mobile-nav-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  const bottomNav = mobilePage.locator('div[class*="lg:hidden"] nav').first();
+  await bottomNav.waitFor({ state: 'visible', timeout: 15_000 });
+  const dailyLedgerLink = bottomNav.getByRole('link', { name: 'Daily Ledger' });
+  await dailyLedgerLink.waitFor({ state: 'visible', timeout: 10_000 });
+  const bottomNavMetrics = await bottomNav.evaluate((nav) => ({
+    navWidth: Math.round(nav.getBoundingClientRect().width),
+    contentWidth: nav.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+    links: Array.from(nav.querySelectorAll('a')).map((link) => ({
+      label: link.textContent?.trim(),
+      width: Math.round(link.getBoundingClientRect().width),
+      right: Math.round(link.getBoundingClientRect().right),
+    })),
+  }));
+  assert.ok(bottomNavMetrics.contentWidth <= bottomNavMetrics.navWidth + 1, `Mobile bottom nav must not overflow its own container: ${JSON.stringify(bottomNavMetrics)}`);
+  assert.ok(bottomNavMetrics.links.every((link) => link.right <= bottomNavMetrics.viewportWidth + 1), `Every bottom-nav link must remain within the viewport: ${JSON.stringify(bottomNavMetrics)}`);
+  await dailyLedgerLink.click();
+  await mobilePage.waitForURL((url) => url.pathname === '/daily-ledger', { timeout: 10_000 });
+  await mobilePage.getByRole('heading', { name: 'Daily Sales & Expense Book' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await mobilePage.screenshot({ path: resolve(outputDir, 'daily-ledger-mobile-screen.png'), fullPage: true });
+  const ledgerMobileWidth = await mobilePage.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  assert.ok(ledgerMobileWidth.documentWidth <= ledgerMobileWidth.viewportWidth, `Mobile daily ledger must not overflow horizontally: ${JSON.stringify(ledgerMobileWidth)}`);
+  console.log('MOBILE DAILY LEDGER NAV VERIFIED:', JSON.stringify({ bottomNavMetrics, ledgerMobileWidth }));
   await mobileContext.close();
 
   assert.deepEqual(pageErrors, [], `Browser runtime reported errors: ${pageErrors.join(' | ')}`);
