@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { PageTransition } from '@/components/common/PageTransition';
 import { useGetRevenueAnalytics, useGetCustomerAnalytics, useGetTransactionAnalytics } from '@workspace/api-client-react';
 import { formatCurrency } from '@/lib/utils';
-import { Area, AreaChart, Bar, BarChart, Line, LineChart, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from 'recharts';
+import { getDailyLedger } from '@/lib/platform-api';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from 'recharts';
 
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -15,6 +17,12 @@ export default function AnalyticsPage() {
   const { data: revenueData } = useGetRevenueAnalytics({ period: period as any });
   const { data: customerData } = useGetCustomerAnalytics({ period: period as any });
   const { data: transactionData } = useGetTransactionAnalytics({ period: period as any });
+  const ledgerEnd = new Date().toISOString().slice(0, 10);
+  const ledgerStart = ledgerEnd.slice(0, 7) + "-01";
+  const { data: dailyLedger } = useQuery({
+    queryKey: ["daily-ledger", ledgerStart, ledgerEnd],
+    queryFn: () => getDailyLedger(ledgerStart, ledgerEnd),
+  });
 
   return (
     <PageTransition>
@@ -100,6 +108,48 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
+        {/* Daily cash-book analytics from the persisted ledger. */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader><CardTitle>Daily sales vs expenses (GMD)</CardTitle></CardHeader>
+            <CardContent>
+              {(dailyLedger?.dailyTrend.length ?? 0) === 0 ? (
+                <div className="flex h-[250px] items-center justify-center text-center text-sm text-muted-foreground">Add daily sales and expenses in Daily Ledger to build this chart.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={dailyLedger?.dailyTrend ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" fontSize={10} />
+                    <YAxis fontSize={11} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value), "GMD")} />
+                    <Legend />
+                    <Bar dataKey="sales" name="Sales" fill="hsl(var(--chart-1))" radius={[4,4,0,0]} />
+                    <Bar dataKey="expenses" name="Expenses" fill="hsl(var(--chart-2))" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Expenses by category</CardTitle></CardHeader>
+            <CardContent>
+              {(dailyLedger?.expensesByCategory.length ?? 0) === 0 ? (
+                <div className="flex h-[250px] items-center justify-center text-center text-sm text-muted-foreground">Choose a category when recording expenses to see what your business spends on.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie data={dailyLedger?.expensesByCategory ?? []} dataKey="value" nameKey="label" outerRadius={82} label>
+                      {(dailyLedger?.expensesByCategory ?? []).map((entry, index) => <Cell key={entry.label} fill={COLORS[index % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(value) => formatCurrency(Number(value), "GMD")} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Two charts side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
