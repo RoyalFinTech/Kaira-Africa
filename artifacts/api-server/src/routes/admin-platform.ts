@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
-import { db, users, businesses, customers, transactions, inventoryProducts, crmInteractions } from "@workspace/db";
+import { db, users, businesses, customers, transactions, inventoryProducts, crmInteractions, dailyLedgerEntries } from "@workspace/db";
 import { requireAdmin } from "../middlewares/auth";
+import { fromMinorUnits } from "../lib/money";
 
 const router: IRouter = Router();
 
@@ -38,6 +39,32 @@ router.get("/admin/platform/crm", requireAdmin, async (_req, res) => {
     .leftJoin(crmInteractions, eq(crmInteractions.customerId, customers.id))
     .groupBy(customers.id, businesses.id).orderBy(desc(customers.createdAt)).limit(200);
   res.json(rows.map((r) => ({ ...r, customerName: String(r.customerName), interactionCount: Number(r.interactionCount), createdAt: r.createdAt.toISOString() })));
+});
+
+router.get("/admin/platform/daily-ledger", requireAdmin, async (_req, res) => {
+  const rows = await db.select({
+    id: dailyLedgerEntries.id,
+    businessId: dailyLedgerEntries.businessId,
+    businessName: businesses.name,
+    entryType: dailyLedgerEntries.entryType,
+    description: dailyLedgerEntries.description,
+    category: dailyLedgerEntries.category,
+    amountMinor: dailyLedgerEntries.amountMinor,
+    currency: dailyLedgerEntries.currency,
+    customerName: dailyLedgerEntries.customerName,
+    dueDate: dailyLedgerEntries.dueDate,
+    status: dailyLedgerEntries.status,
+    recordedDate: dailyLedgerEntries.recordedDate,
+    createdAt: dailyLedgerEntries.createdAt,
+  }).from(dailyLedgerEntries)
+    .innerJoin(businesses, eq(businesses.id, dailyLedgerEntries.businessId))
+    .orderBy(desc(dailyLedgerEntries.recordedDate), desc(dailyLedgerEntries.createdAt))
+    .limit(500);
+  res.json(rows.map((row) => ({
+    ...row,
+    amount: fromMinorUnits(Number(row.amountMinor), row.currency),
+    createdAt: row.createdAt.toISOString(),
+  })));
 });
 
 router.get("/admin/platform/inventory", requireAdmin, async (_req, res) => {
