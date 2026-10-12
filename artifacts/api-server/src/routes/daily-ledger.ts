@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, dailyLedgerEntries, inventoryProducts, inventoryMovements } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
@@ -7,6 +7,7 @@ import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
+import { allocateDebtPayment } from "../lib/debt-allocation";
 
 const router: IRouter = Router();
 const entryTypes = ["sale", "expense", "debt", "debt_payment", "other_income"] as const;
@@ -38,6 +39,7 @@ function serialize(entry: typeof dailyLedgerEntries.$inferSelect) {
     description: entry.description,
     category: entry.category,
     amount: fromMinorUnits(Number(entry.amountMinor), entry.currency),
+    balance: entry.entryType === "debt" ? fromMinorUnits(Number(entry.balanceMinor ?? entry.amountMinor), entry.currency) : null,
     currency: entry.currency,
     customerName: entry.customerName,
     productId: entry.productId,
@@ -69,18 +71,20 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
     lte(dailyLedgerEntries.recordedDate, endDate),
   );
 
-  const [entries, [totals], trend, expensesByCategory] = await Promise.all([
+  const [entries, [totals], [outstandingTotals], trend, expensesByCategory] = await Promise.all([
     db.select().from(dailyLedgerEntries).where(conditions)
       .orderBy(desc(dailyLedgerEntries.recordedDate), desc(dailyLedgerEntries.createdAt))
       .limit(query.pageSize).offset(offset),
     db.select({
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
-      outstandingDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       debtPaymentMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt_payment' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       otherIncomeMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'other_income' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       totalRecords: sql<number>`count(*)`,
     }).from(dailyLedgerEntries).where(conditions),
+    db.select({
+      outstandingDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then coalesce(${dailyLedgerEntries.balanceMinor}, ${dailyLedgerEntries.amountMinor}) else 0 end), 0)`,
+    }).from(dailyLedgerEntries).where(eq(dailyLedgerEntries.businessId, businessId)),
     db.select({
       date: dailyLedgerEntries.recordedDate,
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
@@ -109,7 +113,7 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
     summary: {
       sales,
       expenses,
-      outstandingDebt: fromMinorUnits(Number(totals.outstandingDebtMinor), "GMD"),
+      outstandingDebt: fromMinorUnits(Number(outstandingTotals.outstandingDebtMinor), "GMD"),
       debtPayments: fromMinorUnits(Number(totals.debtPaymentMinor), "GMD"),
       otherIncome: fromMinorUnits(Number(totals.otherIncomeMinor), "GMD"),
       salesLessExpenses: Number((sales - expenses).toFixed(2)),
