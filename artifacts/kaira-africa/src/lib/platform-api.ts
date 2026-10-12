@@ -124,3 +124,12 @@ export interface AdminDailyLedgerRow extends DailyLedgerEntry {
   businessName: string;
 }
 export const getAdminDailyLedger = () => request<AdminDailyLedgerRow[]>("/api/admin/platform/daily-ledger");
+
+
+export interface AdminPlatformRecords {
+  users: { id: string; name: string; email: string | null; phone: string; role: string; status: string; businessName: string | null; createdAt: string }[];
+  businesses: { id: string; name: string; type: string; industry: string; country: string; city: string; phone: string | null; email: string | null; status: string; createdAt: string }[];
+  customers: { id: string; name: string; firstName: string; lastName: string; email: string | null; phone: string | null; company: string | null; status: string; businessName: string; createdAt: string }[];
+  transactions: { id: string; reference: string; amount: number; currency: string; type: string; status: string; description: string | null; businessName: string; createdAt: string }[];
+}
+export const getAdminPlatformRecords = () => request<AdminPlatformRecords>("/api/admin/platform/records");
