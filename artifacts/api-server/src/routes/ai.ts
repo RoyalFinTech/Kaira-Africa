@@ -66,13 +66,12 @@ router.post("/ai/insights/generate", requireUser, async (req, res) => {
   const now = new Date();
   const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
   const periodEnd = now.toISOString().slice(0, 10);
-  const [revenue, customers, transactions, inventory, [ledgerTotals]] = await Promise.all([
+  const [revenue, customers, transactions, inventory, [ledgerTotals], [outstandingLedgerTotals]] = await Promise.all([
     getRevenueAnalytics(businessId, "month"), getCustomerAnalytics(businessId, "month"),
     getTransactionAnalytics(businessId, "month"), inventorySnapshot(businessId),
     db.select({
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
-      debtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       debtPaymentMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt_payment' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       count: sql<number>`count(*)`,
     }).from(dailyLedgerEntries).where(and(
@@ -80,11 +79,14 @@ router.post("/ai/insights/generate", requireUser, async (req, res) => {
       gte(dailyLedgerEntries.recordedDate, periodStart),
       lte(dailyLedgerEntries.recordedDate, periodEnd),
     )),
+    db.select({
+      outstandingMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then coalesce(${dailyLedgerEntries.balanceMinor}, ${dailyLedgerEntries.amountMinor}) else 0 end), 0)`,
+    }).from(dailyLedgerEntries).where(eq(dailyLedgerEntries.businessId, businessId)),
   ]);
   const dailyLedger = {
     recordedSales: Number(ledgerTotals.salesMinor) / 100,
     recordedExpenses: Number(ledgerTotals.expenseMinor) / 100,
-    outstandingDebts: Number(ledgerTotals.debtMinor) / 100,
+    outstandingDebts: Number(outstandingLedgerTotals.outstandingMinor) / 100,
     debtPaymentsReceived: Number(ledgerTotals.debtPaymentMinor) / 100,
     records: Number(ledgerTotals.count),
     periodStart,
