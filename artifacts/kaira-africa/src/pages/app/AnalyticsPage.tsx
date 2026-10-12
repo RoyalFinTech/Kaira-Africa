@@ -84,7 +84,7 @@ export default function AnalyticsPage() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `$${v / 1000}k`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `GMD ${(v / 1000).toFixed(1)}k`} />
                 <Tooltip content={({ active, payload }) => {
                   if (active && payload?.[0]) {
                     return (
