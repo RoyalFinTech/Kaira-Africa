@@ -28,24 +28,24 @@ export function MobileNav({ onMoreClick }: MobileNavProps) {
         {navItems.map((item) => {
           const isActive = location === item.href;
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} className="min-w-0 flex-1 basis-0">
               <div
                 className={cn(
-                  'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg transition-colors',
+                  'flex min-w-0 flex-col items-center justify-center gap-1 px-0 py-2 rounded-lg transition-colors',
                   isActive
                     ? 'text-secondary'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 <item.icon className="h-5 w-5" />
-                <span className="whitespace-nowrap text-[10px] font-medium sm:text-xs">{item.label}</span>
+                <span className="whitespace-nowrap text-[9px] font-medium sm:text-xs">{item.label}</span>
               </div>
             </Link>
           );
         })}
         <button
           onClick={onMoreClick}
-          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+          className="flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 px-0 py-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
         >
           <MoreHorizontal className="h-5 w-5" />
           <span className="whitespace-nowrap text-[10px] font-medium sm:text-xs">More</span>
