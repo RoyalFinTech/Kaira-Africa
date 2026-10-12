@@ -83,6 +83,8 @@ export interface DailyLedgerEntry {
   amount: number;
   currency: string;
   customerName: string | null;
+  productId?: string | null;
+  quantity?: number | null;
   dueDate: string | null;
   status: string;
   recordedDate: string;
@@ -114,6 +116,8 @@ export const createDailyLedgerEntry = (input: {
   amount: number;
   currency?: "GMD";
   customerName?: string;
+  productId?: string;
+  quantity?: number;
   dueDate?: string;
   recordedDate: string;
 }) => request<DailyLedgerEntry>("/api/daily-ledger", { method: "POST", body: JSON.stringify(input) });
