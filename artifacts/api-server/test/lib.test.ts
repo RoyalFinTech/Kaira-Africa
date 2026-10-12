@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeGambianPhone } from "../src/lib/phone";
+import { allocateDebtPayment } from "../src/lib/debt-allocation";
 import { toMinorUnits, fromMinorUnits } from "../src/lib/money";
 import { validatePasswordComplexity } from "../src/lib/password";
 import { displayName } from "../src/lib/display-name";
@@ -38,6 +39,29 @@ describe("normalizeGambianPhone", () => {
   });
 });
 
+describe("daily debt payment allocation", () => {
+  test("allocates a partial payment to the oldest debt first", () => {
+    const result = allocateDebtPayment(3500, [
+      { id: "oldest", amountMinor: 2000, balanceMinor: 2000 },
+      { id: "newer", amountMinor: 3000, balanceMinor: 3000 },
+    ]);
+    assert.ok(result);
+    assert.equal(result.totalDueMinor, 5000);
+    assert.deepEqual(result.allocations, [
+      { id: "oldest", allocatedMinor: 2000, balanceMinor: 0, status: "paid" },
+      { id: "newer", allocatedMinor: 1500, balanceMinor: 1500, status: "unpaid" },
+    ]);
+  });
+
+  test("rejects a payment above the outstanding balance", () => {
+    assert.equal(allocateDebtPayment(5001, [{ id: "debt", amountMinor: 5000, balanceMinor: 5000 }]), null);
+  });
+
+  test("rejects invalid payments and fully paid debt", () => {
+    assert.equal(allocateDebtPayment(100, [{ id: "paid", amountMinor: 100, balanceMinor: 0 }]), null);
+    assert.equal(allocateDebtPayment(0, [{ id: "debt", amountMinor: 100, balanceMinor: 100 }]), null);
+  });
+});
 describe("money conversion", () => {
   test("round-trips a decimal amount through minor units", () => {
     const minor = toMinorUnits(1250.75, "GMD");
