@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { motion } from 'framer-motion';
 import { Phone, ChevronRight, Shield, Users, Package, ChartNoAxesCombined, Sparkles, Headset, MapPin, MessageCircle } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
+import { GambiaFlag } from '@/components/common/GambiaFlag';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -124,7 +125,7 @@ export default function PhoneAuthPage() {
             backgroundImage: "linear-gradient(135deg, rgba(7, 35, 24, 0.88), rgba(7, 35, 24, 0.68) 55%, rgba(7, 35, 24, 0.82)), url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1800&q=85')",
           }}
         />
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_28%,rgba(216,180,90,0.14),transparent_45%)]" />
+
 
         {/* Gold arc accent */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-secondary" />
@@ -134,17 +135,11 @@ export default function PhoneAuthPage() {
         </div>
 
         <div className="relative z-10 space-y-8">
-          {/* Africa continent decoration */}
-          <div className="text-secondary/30">
-            <svg width="120" height="140" viewBox="0 0 120 140" fill="currentColor">
-              <path d="M60 8 L75 18 L88 35 L92 55 L88 78 L78 98 L65 118 L55 128 L42 122 L30 108 L24 90 L20 70 L24 50 L35 30 L48 14 Z" />
-              <ellipse cx="85" cy="52" rx="12" ry="8" />
-            </svg>
-          </div>
+
 
           <div>
             <h2 className="font-display text-3xl font-bold text-white leading-tight mb-3">
-              🇬🇲 Built for<br />The Gambia
+              <GambiaFlag width={30} height={20} className="mr-2 align-middle" /> Built for<br />The Gambia
             </h2>
             <p className="text-sidebar-foreground/70 text-base leading-relaxed">
               {BRAND.tagline}
@@ -219,13 +214,7 @@ export default function PhoneAuthPage() {
                       <FormControl>
                         <div className="flex">
                           <div className="flex items-center gap-2 px-2 border border-r-0 border-input rounded-l-md bg-muted text-sm font-medium whitespace-nowrap">
-                            <span className="inline-flex h-5 w-7 shrink-0 flex-col overflow-hidden rounded-[2px] border border-black/10 shadow-sm" role="img" aria-label="Flag of The Gambia">
-                              <span className="h-[30%] w-full bg-[#CE1126]" />
-                              <span className="h-[10%] w-full bg-white" />
-                              <span className="h-[20%] w-full bg-[#0C1C8C]" />
-                              <span className="h-[10%] w-full bg-white" />
-                              <span className="h-[30%] w-full bg-[#3A7728]" />
-                            </span>
+                            <GambiaFlag width={28} height={20} />
                             <span className="text-muted-foreground">+220</span>
                             <Select value={networkPrefix || 'none'} onValueChange={(value) => setNetworkPrefix(value === 'none' ? '' : value)}>
                               <SelectTrigger className="h-9 w-[116px] border-0 bg-transparent px-1 font-bold focus:ring-0">

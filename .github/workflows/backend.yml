@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "artifacts/api-server/**"
+      - "artifacts/kaira-africa/**"
       - "lib/db/**"
       - "lib/api-zod/**"
       - "lib/api-client-react/**"
@@ -16,6 +17,7 @@ on:
     branches: [main]
     paths:
       - "artifacts/api-server/**"
+      - "artifacts/kaira-africa/**"
       - "lib/db/**"
       - "lib/api-zod/**"
       - "lib/api-client-react/**"
@@ -85,6 +87,15 @@ jobs:
 
       - name: Typecheck api-server
         run: pnpm --filter @workspace/api-server run typecheck
+
+      - name: Typecheck frontend
+        run: pnpm --filter @workspace/kaira-africa run typecheck
+
+      - name: Build frontend SPA
+        run: pnpm --filter @workspace/kaira-africa run build
+        env:
+          PORT: 5173
+          BASE_PATH: /
 
       - name: Run smoke tests
         run: pnpm --filter @workspace/api-server run test

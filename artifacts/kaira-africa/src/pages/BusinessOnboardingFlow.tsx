@@ -25,7 +25,37 @@ import {
 } from '@/components/ui/form';
 import { Progress } from '@/components/ui/progress';
 import { KairaLogo } from '@/components/common/KairaLogo';
+import { GambiaFlag } from '@/components/common/GambiaFlag';
 import { useCreateBusiness, ApiError } from '@workspace/api-client-react';
+
+const businessTypeDescriptions: Record<string, string> = {
+  'Sole Proprietor': 'Owned and run by one person. Suitable for a shop, market stall, salon, tailor, food seller, tradesperson or one-person service business. The owner makes the decisions and is personally responsible for the business.',
+  Partnership: 'Owned by two or more people who share responsibilities, decisions and profits. Suitable for friends or family running a shop or service business together.',
+  'Limited Company': 'A registered company that is legally separate from its owners. Choose this if your business is registered as a limited company.',
+  LLC: 'A limited-liability business structure. Choose this only if this is the legal structure your business is registered under.',
+  Corporation: 'A formal incorporated company, usually with a more structured ownership and governance arrangement.',
+  Cooperative: 'A business owned and managed by its members for their shared benefit, such as a producer or savings cooperative.',
+  'NGO / Community Organisation': 'A non-profit organisation, charity, association or community group. Use this for organisations that are not run primarily to distribute profit to owners.',
+  NGO: 'A non-profit organisation, charity, association or community group.',
+  'Other / Informal Business': 'Choose this if your business type does not fit the options above, including a small informal or family-run business.',
+};
+const industryExamples: Record<string, string> = {
+  Retail: 'Examples: corner shop, boutique, market stall, grocery, phone-accessory shop or general merchandise.',
+  'Wholesale & Distribution': 'Examples: wholesale goods, import and distribution, or supplying shops and market sellers.',
+  'Beauty & Personal Care': 'Examples: hair salon, barber, cosmetics, skincare, spa or beauty services.',
+  'Construction & Trades': 'Examples: electrician, plumber, mason, builder, painter or maintenance services.',
+  'Food & Hospitality': 'Examples: restaurant, café, takeaway, caterer, bakery, juice seller or guest house.',
+  'Professional Services': 'Examples: consultancy, accounting, legal services, design or business support.',
+  Agriculture: 'Examples: farming, livestock, fish trading, horticulture or agro-processing.',
+  Transport: 'Examples: taxi, delivery, freight, vehicle hire or transport services.',
+  'Financial Services': 'Examples: bookkeeping, insurance, authorised financial services or money-related business.',
+  Technology: 'Examples: IT support, software, electronics, repair services or digital services.',
+  Manufacturing: 'Examples: furniture making, tailoring, food processing or product manufacturing.',
+  Healthcare: 'Examples: clinic, pharmacy, laboratory or health services.',
+  Education: 'Examples: school, training centre, tutoring or educational services.',
+  'Real Estate': 'Examples: property rental, property management, agency or construction-related services.',
+  Other: 'Choose the closest match if your work does not fit a listed industry.',
+};
 
 const step1Schema = z.object({
   businessName: z.string().min(2, 'Business name is required'),
@@ -136,8 +166,40 @@ export default function BusinessOnboardingFlow() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-2xl">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(280px,0.78fr)_minmax(0,1.22fr)] lg:gap-8">
+          <aside aria-label="Kaira business tools" className="relative hidden min-h-[620px] flex-col justify-end overflow-hidden rounded-3xl bg-[#0D2818] p-8 shadow-sm lg:flex">
+            <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=85" alt="Business team collaborating around a laptop in a meeting" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+            <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-[#082b20]/35 via-[#082b20]/55 to-[#06251a]/95" />
+            <div className="relative z-10 space-y-6 text-white">
+              <div className="inline-flex rounded-full border border-[#D8B45A]/50 bg-black/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#F3D681]">Built for The Gambia</div>
+              <div>
+                <h2 className="font-display text-3xl font-extrabold leading-tight">Your daily work.<br />One clear picture.</h2>
+                <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/80">Set up your business once, then keep customers, stock, sales and expenses organised in one workspace.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { title: 'Customer records', detail: 'People and follow-ups' },
+                  { title: 'Stock control', detail: 'Products and quantities' },
+                  { title: 'Daily ledger', detail: 'Sales, expenses and debts' },
+                  { title: 'Business insights', detail: 'Charts and summaries' },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-xl border border-white/15 bg-black/20 p-3 backdrop-blur-sm">
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-1 text-xs text-white/70">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+          <div className="w-full min-w-0 max-w-2xl mx-auto">
+            <div className="relative isolate mb-5 overflow-hidden rounded-xl bg-[#0D2818] p-4 text-white lg:hidden">
+              <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" loading="lazy" />
+              <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#06251a]/95 via-[#06251a]/80 to-[#06251a]/55" />
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#F3D681]">Built for The Gambia</p>
+              <p className="mt-1 font-display text-lg font-bold">Set up your business workspace</p>
+              <p className="mt-1 text-xs text-white/80">Customers · Inventory · Daily sales · Reports</p>
+            </div>
           {currentStep === 1 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <h1 className="font-display text-3xl font-bold mb-2">Business Information</h1>
@@ -148,55 +210,75 @@ export default function BusinessOnboardingFlow() {
                   <FormField control={form1.control} name="businessName" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Business Name</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormControl><Input {...field} placeholder="e.g. Mariama’s Mini Market" /></FormControl>
+                      <p className="text-xs text-muted-foreground">Enter the name your customers know your business by.</p>
                       <FormMessage />
                     </FormItem>
                   )} />
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="businessType" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Business Type</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="Corporation">Corporation</SelectItem>
-                            <SelectItem value="LLC">LLC</SelectItem>
+                            <SelectItem value="Sole Proprietor">Sole proprietor / individual trader</SelectItem>
                             <SelectItem value="Partnership">Partnership</SelectItem>
-                            <SelectItem value="Sole Proprietor">Sole Proprietor</SelectItem>
-                            <SelectItem value="NGO">NGO</SelectItem>
+                            <SelectItem value="Limited Company">Limited company</SelectItem>
+                            <SelectItem value="LLC">LLC (if registered as one)</SelectItem>
+                            <SelectItem value="Corporation">Corporation</SelectItem>
+                            <SelectItem value="Cooperative">Cooperative</SelectItem>
+                            <SelectItem value="NGO / Community Organisation">NGO / community organisation</SelectItem>
+                            <SelectItem value="Other / Informal Business">Other / informal business</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                        {field.value && (
+                          <p className="text-xs leading-relaxed text-muted-foreground rounded-md bg-muted/60 p-2.5">
+                            {businessTypeDescriptions[field.value] || 'Choose the legal structure or ownership arrangement that best describes your business.'}
+                          </p>
+                        )}
                       </FormItem>
                     )} />
 
                     <FormField control={form1.control} name="industry" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Industry</FormLabel>
+                        <FormLabel>Industry / Type of work</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="Financial Services">Financial Services</SelectItem>
-                            <SelectItem value="Technology">Technology</SelectItem>
-                            <SelectItem value="Retail">Retail</SelectItem>
-                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="Agriculture">Agriculture</SelectItem>
+                            <SelectItem value="Retail">Retail / shop</SelectItem>
+                            <SelectItem value="Wholesale & Distribution">Wholesale & distribution</SelectItem>
+                            <SelectItem value="Food & Hospitality">Food, catering & hospitality</SelectItem>
+                            <SelectItem value="Transport">Transport & delivery</SelectItem>
+                            <SelectItem value="Beauty & Personal Care">Beauty & personal care</SelectItem>
+                            <SelectItem value="Construction & Trades">Construction & trades</SelectItem>
+                            <SelectItem value="Professional Services">Professional services</SelectItem>
+                            <SelectItem value="Financial Services">Financial services</SelectItem>
+                            <SelectItem value="Technology">Technology & digital services</SelectItem>
+                            <SelectItem value="Manufacturing">Manufacturing & production</SelectItem>
+                            <SelectItem value="Agriculture">Agriculture & farming</SelectItem>
                             <SelectItem value="Healthcare">Healthcare</SelectItem>
-                            <SelectItem value="Education">Education</SelectItem>
-                            <SelectItem value="Real Estate">Real Estate</SelectItem>
+                            <SelectItem value="Education">Education & training</SelectItem>
+                            <SelectItem value="Real Estate">Real estate & property</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                        {field.value && (
+                          <p className="text-xs leading-relaxed text-muted-foreground rounded-md bg-muted/60 p-2.5">
+                            {industryExamples[field.value] || 'Select the sector that best represents what your business does.'}
+                          </p>
+                        )}
                       </FormItem>
                     )} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="country" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Country</FormLabel>
+                        <FormLabel className="flex items-center gap-2">Country {field.value === "The Gambia" && <GambiaFlag width={24} height={16} />}</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
@@ -216,18 +298,20 @@ export default function BusinessOnboardingFlow() {
 
                     <FormField control={form1.control} name="city" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormLabel>Town / Community</FormLabel>
+                        <FormControl><Input {...field} placeholder="e.g. Sukuta, Serrekunda, Brikama" /></FormControl>
+                        <p className="text-xs text-muted-foreground">Your town or community helps keep your business records organised.</p>
                         <FormMessage />
                       </FormItem>
                     )} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="phone" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl><Input {...field} placeholder="+220 87 407 1510" /></FormControl>
+                        <FormLabel>Business Phone</FormLabel>
+                        <FormControl><Input {...field} placeholder="+220 87 123 4567" /></FormControl>
+                        <p className="text-xs text-muted-foreground">Your business contact number, not Kaira customer support. Add the +220 country code.</p>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -235,7 +319,8 @@ export default function BusinessOnboardingFlow() {
                     <FormField control={form1.control} name="email" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Business Email</FormLabel>
-                        <FormControl><Input type="email" {...field} /></FormControl>
+                        <FormControl><Input type="email" {...field} placeholder="name@yourbusiness.gm" /></FormControl>
+                        <p className="text-xs text-muted-foreground">Use an email you check for customer enquiries, invoices and business notices.</p>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -358,6 +443,7 @@ export default function BusinessOnboardingFlow() {
               </Button>
             </motion.div>
           )}
+          </div>
         </div>
       </div>
     </div>

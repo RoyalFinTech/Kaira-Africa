@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import {
@@ -11,6 +12,7 @@ import {
   UserPlus,
   Plus,
   FileText,
+  ClipboardList,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,12 +23,18 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { useGetMe, useGetMyBusiness, useGetBusinessStats, useGetRevenueAnalytics } from '@workspace/api-client-react';
 import { formatCurrency, formatDate, formatRelativeTime, getGreeting, getInitials, cn } from '@/lib/utils';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { getDailyLedger } from '@/lib/platform-api';
 
 export default function DashboardPage() {
   const { data: user } = useGetMe();
   const { data: business } = useGetMyBusiness();
   const { data: stats, isLoading: statsLoading } = useGetBusinessStats();
   const { data: revenueAnalytics, isLoading: revenueLoading } = useGetRevenueAnalytics({ period: 'month' });
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const { data: todayLedger } = useQuery({
+    queryKey: ['daily-ledger', todayDate, todayDate],
+    queryFn: () => getDailyLedger(todayDate, todayDate),
+  });
 
   const greeting = useMemo(() => getGreeting(), []);
   const currentDate = useMemo(() => formatDate(new Date(), 'EEEE, MMMM dd, yyyy'), []);
@@ -151,6 +159,24 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
+        {/* Daily ledger glance — backed by the same persisted entries used by the ledger and AI reports. */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base"><ClipboardList className="h-4 w-4 text-primary" />Today's Daily Ledger</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Your recorded cash sales, expenses and customer debt for today.</p>
+            </div>
+            <Link href="/daily-ledger"><Button variant="outline" size="sm">Open ledger <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-lg bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Sales recorded</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.sales || 0, 'GMD')}</p></div>
+              <div className="rounded-lg bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Expenses recorded</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.expenses || 0, 'GMD')}</p></div>
+              <div className="rounded-lg bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Unpaid debtor balance</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.outstandingDebt || 0, 'GMD')}</p></div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Revenue Chart */}
         <Card>
           <CardHeader>
@@ -178,7 +204,7 @@ export default function DashboardPage() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value / 1000}k`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `GMD ${(value / 1000).toFixed(1)}k`} />
                 <Tooltip content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     return (

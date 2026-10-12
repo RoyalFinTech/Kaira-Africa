@@ -1,5 +1,7 @@
 import { KairaLogo } from '@/components/common/KairaLogo';
+import { GambiaFlag } from '@/components/common/GambiaFlag';
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +11,7 @@ import { User, Mail, Phone, Building2, Calendar, CheckCircle2, Edit2, Shield, Lo
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -16,7 +19,7 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
 import { PageTransition } from '@/components/common/PageTransition';
-import { useGetMe, useGetMyBusiness, useUpdateProfile, useLogoutAll, ApiError } from '@workspace/api-client-react';
+import { useGetMe, useGetMyBusiness, useUpdateProfile, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { formatDate, getInitials } from '@/lib/utils';
 
@@ -29,7 +32,32 @@ type ProfileForm = z.infer<typeof profileSchema>;
 export default function ProfilePage() {
   const { data: user } = useGetMe();
   const { data: business } = useGetMyBusiness();
+  const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
+  const [businessSaved, setBusinessSaved] = useState(false);
+  const [businessError, setBusinessError] = useState<string | null>(null);
+  const [businessDraft, setBusinessDraft] = useState({
+    name: '', type: '', industry: '', country: 'The Gambia', city: '',
+    phone: '', email: '', website: '', address: '', description: '', teamSize: '',
+  });
+
+  useEffect(() => {
+    if (!business) return;
+    setBusinessDraft({
+      name: business.name || '',
+      type: business.type || '',
+      industry: business.industry || '',
+      country: business.country || 'The Gambia',
+      city: business.city || '',
+      phone: business.phone || '',
+      email: business.email || '',
+      website: business.website || '',
+      address: business.address || '',
+      description: business.description || '',
+      teamSize: business.teamSize || '',
+    });
+  }, [business?.id, business?.name, business?.type, business?.industry, business?.country, business?.city,
+      business?.phone, business?.email, business?.website, business?.address, business?.description, business?.teamSize]);
   const [formError, setFormError] = useState<string | null>(null);
   const [, setLocation] = useLocation();
 
@@ -51,6 +79,23 @@ export default function ProfilePage() {
       onError: (error) => setFormError(error.message),
     },
   });
+
+  const saveBusiness = useUpdateBusiness({
+    mutation: {
+      onSuccess: async () => {
+        setBusinessSaved(true);
+        setBusinessError(null);
+        await queryClient.invalidateQueries();
+        window.setTimeout(() => setBusinessSaved(false), 2500);
+      },
+      onError: (error) => setBusinessError(error.message),
+    },
+  });
+
+  const updateBusinessField = (field: keyof typeof businessDraft, value: string) => {
+    setBusinessDraft((previous) => ({ ...previous, [field]: value }));
+    setBusinessSaved(false);
+  };
 
   const logoutAll = useLogoutAll({
     mutation: {
@@ -178,6 +223,90 @@ export default function ProfilePage() {
                     </div>
                   </form>
                 </Form>
+              </CardContent>
+            </Card>
+
+            {/* Business information — backed by PATCH /businesses/me */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  Business Information
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Update the business details saved during onboarding. These details are used across your workspace.</p>
+              </CardHeader>
+              <CardContent>
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    setBusinessError(null);
+                    saveBusiness.mutate({ data: businessDraft });
+                  }}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Business name
+                      <Input required minLength={2} value={businessDraft.name} onChange={(e) => updateBusinessField('name', e.target.value)} />
+                    </label>
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Business type
+                      <Input value={businessDraft.type} onChange={(e) => updateBusinessField('type', e.target.value)} placeholder="Sole Proprietor, Partnership…" />
+                      <span className="block text-xs font-normal text-muted-foreground">For example, a sole proprietor is one person who owns and runs the business.</span>
+                    </label>
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Industry / work
+                      <Input value={businessDraft.industry} onChange={(e) => updateBusinessField('industry', e.target.value)} placeholder="Retail, food, transport…" />
+                    </label>
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Country
+                      <div className="relative">
+                        <Input value={businessDraft.country} onChange={(e) => updateBusinessField('country', e.target.value)} />
+                        {businessDraft.country === 'The Gambia' && <GambiaFlag width={28} height={20} className="absolute right-3 top-1/2 -translate-y-1/2" />}
+                      </div>
+                    </label>
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Town / community
+                      <Input value={businessDraft.city} onChange={(e) => updateBusinessField('city', e.target.value)} />
+                    </label>
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Business phone
+                      <Input value={businessDraft.phone} onChange={(e) => updateBusinessField('phone', e.target.value)} placeholder="+220…" />
+                    </label>
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Business email
+                      <Input type="email" value={businessDraft.email} onChange={(e) => updateBusinessField('email', e.target.value)} placeholder="name@yourbusiness.gm" />
+                    </label>
+                    <label className="space-y-1.5 text-sm font-medium">
+                      Website
+                      <Input value={businessDraft.website} onChange={(e) => updateBusinessField('website', e.target.value)} placeholder="https://…" />
+                    </label>
+                  </div>
+                  <label className="block space-y-1.5 text-sm font-medium">
+                    Physical address
+                    <Input value={businessDraft.address} onChange={(e) => updateBusinessField('address', e.target.value)} />
+                  </label>
+                  <label className="block space-y-1.5 text-sm font-medium">
+                    Business description
+                    <Textarea rows={3} value={businessDraft.description} onChange={(e) => updateBusinessField('description', e.target.value)} placeholder="What does your business sell or provide?" />
+                  </label>
+                  <label className="block space-y-1.5 text-sm font-medium">
+                    Team size
+                    <Input value={businessDraft.teamSize} onChange={(e) => updateBusinessField('teamSize', e.target.value)} placeholder="e.g. Owner only, 1–5 people" />
+                  </label>
+                  {businessError && (
+                    <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
+                      <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
+                      <span>{businessError}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Button type="submit" size="sm" disabled={saveBusiness.isPending || !business}>
+                      {saveBusiness.isPending ? 'Saving business…' : businessSaved ? <><CheckCircle2 className="h-4 w-4 mr-1" /> Saved!</> : 'Save Business Details'}
+                    </Button>
+                    {businessSaved && <span className="text-xs text-primary">Business details updated.</span>}
+                  </div>
+                </form>
               </CardContent>
             </Card>
 

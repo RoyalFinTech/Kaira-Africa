@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq } from "drizzle-orm";
-import { db, aiInsights, inventoryProducts } from "@workspace/db";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { db, aiInsights, inventoryProducts, dailyLedgerEntries } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { getRevenueAnalytics, getCustomerAnalytics, getTransactionAnalytics } from "../repositories/analytics";
 
@@ -63,14 +63,39 @@ async function generateModelSummaries(metrics: Record<string, unknown>): Promise
 
 router.post("/ai/insights/generate", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
-  const [revenue, customers, transactions, inventory] = await Promise.all([
+  const now = new Date();
+  const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  const periodEnd = now.toISOString().slice(0, 10);
+  const [revenue, customers, transactions, inventory, [ledgerTotals]] = await Promise.all([
     getRevenueAnalytics(businessId, "month"), getCustomerAnalytics(businessId, "month"),
     getTransactionAnalytics(businessId, "month"), inventorySnapshot(businessId),
+    db.select({
+      salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      debtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      debtPaymentMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt_payment' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
+      count: sql<number>`count(*)`,
+    }).from(dailyLedgerEntries).where(and(
+      eq(dailyLedgerEntries.businessId, businessId),
+      gte(dailyLedgerEntries.recordedDate, periodStart),
+      lte(dailyLedgerEntries.recordedDate, periodEnd),
+    )),
   ]);
+  const dailyLedger = {
+    recordedSales: Number(ledgerTotals.salesMinor) / 100,
+    recordedExpenses: Number(ledgerTotals.expenseMinor) / 100,
+    outstandingDebts: Number(ledgerTotals.debtMinor) / 100,
+    debtPaymentsReceived: Number(ledgerTotals.debtPaymentMinor) / 100,
+    records: Number(ledgerTotals.count),
+    periodStart,
+    periodEnd,
+  };
   const generated = [
-    { kind: "sales", title: revenue.changePercent >= 0 ? "Revenue momentum is positive" : "Revenue needs attention",
-      summary: "Revenue for this period is " + revenue.total.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD, " + Math.abs(revenue.changePercent) + "% " + (revenue.changePercent >= 0 ? "above" : "below") + " the previous period.",
-      payload: { changePercent: revenue.changePercent, total: revenue.total } },
+    { kind: "sales", title: dailyLedger.records > 0 ? "Daily sales and cash-out summary" : revenue.changePercent >= 0 ? "Revenue momentum is positive" : "Revenue needs attention",
+      summary: dailyLedger.records > 0
+        ? "This month you recorded " + dailyLedger.recordedSales.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD in daily sales and " + dailyLedger.recordedExpenses.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD in expenses. Sales less recorded expenses is " + (dailyLedger.recordedSales - dailyLedger.recordedExpenses).toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD before stock costs, taxes and other adjustments. Review expense categories and check that daily entries are complete."
+        : "Revenue for this period is " + revenue.total.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD, " + Math.abs(revenue.changePercent) + "% " + (revenue.changePercent >= 0 ? "above" : "below") + " the previous period.",
+      payload: { changePercent: revenue.changePercent, total: revenue.total, dailyLedger } },
     { kind: "customers", title: "Customer base signal",
       summary: String(customers.total) + " customers were added in the selected period, with a " + String(customers.changePercent) + "% change from the prior period.",
       payload: { total: customers.total, changePercent: customers.changePercent } },
@@ -78,8 +103,8 @@ router.post("/ai/insights/generate", requireUser, async (req, res) => {
       summary: inventory.lowStock ? String(inventory.lowStock) + " products are at or below their reorder level. Review these items before the next sales cycle." : "No products are currently at or below their configured reorder level.",
       payload: inventory },
     { kind: "transactions", title: "Transaction pattern",
-      summary: String(transactions.total) + " transactions were recorded in this period with a total volume of " + transactions.volume.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD.",
-      payload: { total: transactions.total, volume: transactions.volume } },
+      summary: String(transactions.total) + " transactions were recorded in this period with a total volume of " + transactions.volume.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD. Daily ledger shows " + dailyLedger.outstandingDebts.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD in unpaid customer debt and " + dailyLedger.debtPaymentsReceived.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD in debt payments received. Reconcile outstanding balances against your debtor records.",
+      payload: { total: transactions.total, volume: transactions.volume, dailyLedger } },
   ];
   // The model receives only aggregate metrics, never customer names or contact details.
   const modelInsights = await generateModelSummaries({
@@ -88,6 +113,7 @@ router.post("/ai/insights/generate", requireUser, async (req, res) => {
     customers: { total: customers.total, changePercent: customers.changePercent },
     transactions: { total: transactions.total, volume: transactions.volume },
     inventory,
+    dailyLedger,
   });
   const source = modelInsights ? "openai" : "rules";
   if (modelInsights) {

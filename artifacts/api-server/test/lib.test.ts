@@ -8,15 +8,25 @@ import { generateOtp, OTP_LENGTH } from "../src/lib/otp";
 import { generateSessionToken, tokenKind, hashToken } from "../src/lib/tokens";
 
 describe("normalizeGambianPhone", () => {
-  test("accepts a bare 7-digit number", () => {
-    const { countryCode, number } = normalizeGambianPhone("7001234");
+  test("accepts the existing 7-digit Gamcel numbering format", () => {
+    const { countryCode, number } = normalizeGambianPhone("9123456");
     assert.equal(countryCode, "+220");
-    assert.equal(number, "7001234");
+    assert.equal(number, "9123456");
   });
 
-  test("accepts +220 prefix and strips spaces", () => {
-    const { number } = normalizeGambianPhone("+220 700 1234");
-    assert.equal(number, "7001234");
+  test("accepts +220 prefix and strips spaces from a newly prefixed mobile number", () => {
+    const { number } = normalizeGambianPhone("+220 871 234 567");
+    assert.equal(number, "871234567");
+  });
+
+  test("accepts all newly introduced operator prefixes", () => {
+    assert.equal(normalizeGambianPhone("831234567").number, "831234567");
+    assert.equal(normalizeGambianPhone("861234567").number, "861234567");
+    assert.equal(normalizeGambianPhone("871234567").number, "871234567");
+  });
+
+  test("rejects unallocated generic seven-digit subscriber numbers", () => {
+    assert.throws(() => normalizeGambianPhone("7001234"));
   });
 
   test("rejects too-short numbers", () => {

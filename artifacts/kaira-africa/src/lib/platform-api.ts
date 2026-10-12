@@ -72,3 +72,68 @@ export interface AdminInventoryRow {
   quantity: number; reorderLevel: number; inventoryValue: number;
 }
 export const getAdminInventory = () => request<AdminInventoryRow[]>("/api/admin/platform/inventory");
+
+
+export type DailyLedgerType = "sale" | "expense" | "debt" | "debt_payment" | "other_income";
+export interface DailyLedgerEntry {
+  id: string;
+  entryType: DailyLedgerType;
+  description: string;
+  category: string | null;
+  amount: number;
+  currency: string;
+  customerName: string | null;
+  productId?: string | null;
+  quantity?: number | null;
+  dueDate: string | null;
+  status: string;
+  recordedDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface DailyLedgerResponse {
+  startDate: string;
+  endDate: string;
+  entries: DailyLedgerEntry[];
+  summary: {
+    sales: number;
+    expenses: number;
+    outstandingDebt: number;
+    debtPayments: number;
+    otherIncome: number;
+    salesLessExpenses: number;
+    totalRecords: number;
+  };
+  dailyTrend: { date: string; sales: number; expenses: number }[];
+  expensesByCategory: { label: string; value: number }[];
+}
+export const getDailyLedger = (startDate: string, endDate: string) =>
+  request<DailyLedgerResponse>("/api/daily-ledger?" + new URLSearchParams({ startDate, endDate }).toString());
+export const createDailyLedgerEntry = (input: {
+  entryType: DailyLedgerType;
+  description: string;
+  category?: string;
+  amount: number;
+  currency?: "GMD";
+  customerName?: string;
+  productId?: string;
+  quantity?: number;
+  dueDate?: string;
+  recordedDate: string;
+}) => request<DailyLedgerEntry>("/api/daily-ledger", { method: "POST", body: JSON.stringify(input) });
+export const updateDailyLedgerStatus = (id: string, status: "paid" | "unpaid") =>
+  request<DailyLedgerEntry>("/api/daily-ledger/" + encodeURIComponent(id) + "/status", { method: "PATCH", body: JSON.stringify({ status }) });
+
+export interface AdminDailyLedgerRow extends DailyLedgerEntry {
+  businessName: string;
+}
+export const getAdminDailyLedger = () => request<AdminDailyLedgerRow[]>("/api/admin/platform/daily-ledger");
+
+
+export interface AdminPlatformRecords {
+  users: { id: string; name: string; email: string | null; phone: string; role: string; status: string; businessName: string | null; createdAt: string }[];
+  businesses: { id: string; name: string; type: string; industry: string; country: string; city: string; phone: string | null; email: string | null; status: string; createdAt: string }[];
+  customers: { id: string; name: string; firstName: string; lastName: string; email: string | null; phone: string | null; company: string | null; status: string; businessName: string; createdAt: string }[];
+  transactions: { id: string; reference: string; amount: number; currency: string; type: string; status: string; description: string | null; businessName: string; createdAt: string }[];
+}
+export const getAdminPlatformRecords = () => request<AdminPlatformRecords>("/api/admin/platform/records");

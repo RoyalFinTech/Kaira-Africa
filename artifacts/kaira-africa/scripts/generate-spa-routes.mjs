@@ -2,7 +2,7 @@ import { mkdir, copyFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const dist = resolve('dist/public');
-const routes = [
+const routes = [...new Set([
   'onboarding',
   'login',
   'login/otp',
@@ -11,17 +11,26 @@ const routes = [
   'admin/forgot-password',
   'admin/reset-password',
   'admin/dashboard',
+  'admin/analytics',
+  'admin/crm',
+  'admin/inventory',
+  'admin/daily-ledger',
+  'admin/records',
   'business-onboarding',
   'dashboard',
   'team',
   'customers',
   'transactions',
+  'crm',
+  'inventory',
+  'daily-ledger',
   'analytics',
   'reports',
   'activity',
   'notifications',
   'profile',
   'settings',
+  'ai-reports',
   'crm',
   'inventory',
   'ai-reports',
@@ -30,7 +39,7 @@ const routes = [
   'admin/analytics',
   'admin/crm',
   'admin/inventory',
-];
+])];
 
 const index = resolve(dist, 'index.html');
 for (const route of routes) {

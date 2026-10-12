@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Shield, Users, Building2, ArrowLeftRight, TrendingUp,
   Activity, FileText, Bell, LogOut, Settings, ChevronRight,
-  UserCheck, AlertTriangle, Eye, Lock, Globe
+  UserCheck, AlertTriangle, Eye, Lock, Globe, ClipboardList
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,18 +18,11 @@ import { getInitials } from '@/lib/utils';
 
 const navItems = [
   { label: 'Overview', href: '/admin/dashboard', icon: Shield, active: true },
-  { label: 'Users', href: '/admin/users', icon: Users },
-  { label: 'Businesses', href: '/admin/businesses', icon: Building2 },
-  { label: 'Transactions', href: '/admin/transactions', icon: ArrowLeftRight },
-  { label: 'Reports', href: '/admin/reports', icon: FileText },
+  { label: 'Platform Records', href: '/admin/records', icon: Users },
   { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
-  { label: 'CRM', href: '/admin/crm', icon: UserCheck },
+  { label: 'CRM / Customers', href: '/admin/crm', icon: UserCheck },
   { label: 'Inventory', href: '/admin/inventory', icon: Building2 },
-  { label: 'Audit Logs', href: '/admin/activity', icon: Activity },
-  { label: 'Notifications', href: '/admin/notifications', icon: Bell },
-  { label: 'Roles & Permissions', href: '/admin/roles', icon: Lock },
-  { label: 'Security', href: '/admin/security', icon: AlertTriangle },
-  { label: 'Settings', href: '/admin/settings', icon: Settings },
+  { label: 'Daily Ledger', href: '/admin/daily-ledger', icon: ClipboardList },
 ];
 
 export default function AdminDashboardPage() {
@@ -173,7 +166,9 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link href="/admin/analytics"><Card className="hover:border-amber-300 transition-colors"><CardContent className="p-5"><TrendingUp className="h-5 w-5 text-amber-500"/><h2 className="font-semibold mt-3 text-slate-900">Platform Analytics</h2><p className="text-xs text-slate-500 mt-1">Revenue trends, transaction mix and country distribution.</p></CardContent></Card></Link>
             <Link href="/admin/crm"><Card className="hover:border-amber-300 transition-colors"><CardContent className="p-5"><UserCheck className="h-5 w-5 text-amber-500"/><h2 className="font-semibold mt-3 text-slate-900">Platform CRM</h2><p className="text-xs text-slate-500 mt-1">Review customer relationships and CRM activity across businesses.</p></CardContent></Card></Link>
+            <Link href="/admin/records"><Card className="hover:border-amber-300 transition-colors"><CardContent className="p-5"><Users className="h-5 w-5 text-amber-500"/><h2 className="font-semibold mt-3 text-slate-900">Platform Records</h2><p className="text-xs text-slate-500 mt-1">Review registered users, businesses, customers and transactions.</p></CardContent></Card></Link>
             <Link href="/admin/inventory"><Card className="hover:border-amber-300 transition-colors"><CardContent className="p-5"><Building2 className="h-5 w-5 text-amber-500"/><h2 className="font-semibold mt-3 text-slate-900">Platform Inventory</h2><p className="text-xs text-slate-500 mt-1">Monitor tracked products and low-stock signals.</p></CardContent></Card></Link>
+            <Link href="/admin/daily-ledger"><Card className="hover:border-amber-300 transition-colors"><CardContent className="p-5"><ClipboardList className="h-5 w-5 text-amber-500"/><h2 className="font-semibold mt-3 text-slate-900">Daily Ledger</h2><p className="text-xs text-slate-500 mt-1">Review sales, expenses and debtor entries across businesses.</p></CardContent></Card></Link>
           </div>
 
           <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-start gap-3">
