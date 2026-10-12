@@ -1,47 +1,130 @@
-      - name: Final secret scan
+name: Kaira Africa Repository Integrity Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/organize-deployment.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/organize-deployment.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaira-repository-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit repository structure and tracked files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify expected project structure
+        shell: bash
         run: |
           set -euo pipefail
-          echo "Running final secret scan..." | tee -a "$REPORT"
+          test -f package.json
+          test -f pnpm-workspace.yaml
+          test -f pnpm-lock.yaml
+          test -f artifacts/api-server/Dockerfile
+          test -f artifacts/api-server/package.json
+          test -f artifacts/kaira-africa/package.json
+          test -f artifacts/kaira-africa/vite.config.ts
+          test -d lib/db
+          test -d lib/api-zod
+          echo "Repository structure check passed." | tee repository-audit-report.txt
 
-          # Scan for actual secret values, not environment-variable
-          # names or TypeScript/Zod schema declarations.
+      - name: Check whitespace errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          echo "Git whitespace check passed." | tee -a repository-audit-report.txt
 
-          PRIVATE_KEYS="$(grep -RInE \
-            --exclude-dir=.git \
-            --exclude-dir=node_modules \
-            --exclude-dir=dist \
-            --exclude='*.example' \
-            --exclude='*.md' \
-            '-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----' \
-            . 2>/dev/null || true)"
+      - name: Scan tracked files for real secrets and environment files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
 
-          AWS_KEYS="$(grep -RInE \
-            --exclude-dir=.git \
-            --exclude-dir=node_modules \
-            --exclude-dir=dist \
-            --exclude='*.example' \
-            'AKIA[0-9A-Z]{16}' \
-            . 2>/dev/null || true)"
+          report = Path("repository-audit-report.txt")
+          tracked = subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")
+          private_key = re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----")
+          aws_key = re.compile(r"AKIA[0-9A-Z]{16}")
+          secret_assignment = re.compile(
+              r"(?:SESSION_SECRET|OTP_SECRET|PASSWORD_RESET_SECRET|SUPABASE_SERVICE_ROLE_KEY|SMTP_PASSWORD|AWS_SECRET_ACCESS_KEY)"
+              r"\s*[:=]\s*[\x22\x27]?([A-Za-z0-9_+/=-]{32,})"
+          )
+          development_placeholders = (
+              "dev-only", "change-me", "replace-with", "placeholder",
+              "example-secret", "test-only", "local-development",
+          )
+          excluded_parts = {".git", "node_modules", "dist", "coverage", ".next"}
+          findings = []
+          real_env_files = []
 
-          # Look specifically for assignments containing long secret-like values.
-          SECRET_VALUES="$(grep -RInE \
-            --exclude-dir=.git \
-            --exclude-dir=node_modules \
-            --exclude-dir=dist \
-            --exclude='*.example' \
-            --exclude='*.md' \
-            '(SESSION_SECRET|OTP_SECRET|PASSWORD_RESET_SECRET|SUPABASE_SERVICE_ROLE_KEY|SMTP_PASSWORD|AWS_SECRET_ACCESS_KEY)[[:space:]]*[:=][[:space:]]*["'\'']?[A-Za-z0-9_+/=-]{32,}' \
-            . 2>/dev/null || true)"
+          for item in tracked:
+              if not item:
+                  continue
+              path = Path(item)
+              if excluded_parts.intersection(path.parts):
+                  continue
+              name = path.name
+              if name in {".env", ".env.local", ".env.production", ".env.staging"} or (
+                  name.startswith(".env.") and not name.endswith(".example")
+              ):
+                  real_env_files.append(item)
+                  continue
+              if name.endswith(".example") or path.suffix.lower() in {".md", ".lock", ".svg", ".png", ".jpg", ".jpeg", ".webp"}:
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8")
+              except (OSError, UnicodeDecodeError):
+                  continue
+              if private_key.search(text):
+                  findings.append((item, "private-key marker"))
+              if aws_key.search(text):
+                  findings.append((item, "AWS access-key pattern"))
+              for match in secret_assignment.finditer(text):
+                  value = match.group(1).lower()
+                  # Allow only explicit local development placeholders, never real credentials.
+                  if any(marker in value for marker in development_placeholders):
+                      continue
+                  findings.append((item, "long secret-like assignment"))
 
-          if [ -n "$PRIVATE_KEYS" ] || [ -n "$AWS_KEYS" ] || [ -n "$SECRET_VALUES" ]; then
-            echo "ERROR: Possible real secrets found." | tee -a "$REPORT"
+          if real_env_files:
+              for item in real_env_files:
+                  print(f"FAIL: tracked environment file: {item}")
+              sys.exit(1)
+          if findings:
+              for item, reason in findings:
+                  print(f"FAIL: {reason} in {item}")
+              sys.exit(1)
 
-            [ -n "$PRIVATE_KEYS" ] && echo "$PRIVATE_KEYS" >> "$REPORT"
-            [ -n "$AWS_KEYS" ] && echo "$AWS_KEYS" >> "$REPORT"
-            [ -n "$SECRET_VALUES" ] && echo "$SECRET_VALUES" >> "$REPORT"
+          message = "Secret and environment-file scan passed; no high-confidence real secrets or tracked runtime environment files found."
+          print(message)
+          with report.open("a", encoding="utf-8") as output:
+              output.write(message + "\n")
+          PY
 
-            exit 1
-          fi
-
-          echo "Secret scan passed." | tee -a "$REPORT"
-          echo "No high-confidence real secrets detected." >> "$REPORT"
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaira-repository-audit
+          path: repository-audit-report.txt
+          if-no-files-found: warn
+          retention-days: 7
