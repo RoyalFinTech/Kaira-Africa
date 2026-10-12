@@ -25,7 +25,34 @@ import {
 } from '@/components/ui/form';
 import { Progress } from '@/components/ui/progress';
 import { KairaLogo } from '@/components/common/KairaLogo';
+import { GambiaFlag } from '@/components/common/GambiaFlag';
 import { useCreateBusiness, ApiError } from '@workspace/api-client-react';
+
+const businessTypeDescriptions: Record<string, string> = {
+  'Sole Proprietor': 'Owned and run by one person. Suitable for a shop, market stall, salon, tailor, food seller, tradesperson or one-person service business. The owner makes the decisions and is personally responsible for the business.',
+  Partnership: 'Owned by two or more people who share responsibilities, decisions and profits. Suitable for friends or family running a shop or service business together.',
+  'Limited Company': 'A registered company that is legally separate from its owners. Choose this if your business is registered as a limited company.',
+  LLC: 'A limited-liability business structure. Choose this only if this is the legal structure your business is registered under.',
+  Corporation: 'A formal incorporated company, usually with a more structured ownership and governance arrangement.',
+  Cooperative: 'A business owned and managed by its members for their shared benefit, such as a producer or savings cooperative.',
+  'NGO / Community Organisation': 'A non-profit organisation, charity, association or community group. Use this for organisations that are not run primarily to distribute profit to owners.',
+  NGO: 'A non-profit organisation, charity, association or community group.',
+  'Other / Informal Business': 'Choose this if your business type does not fit the options above, including a small informal or family-run business.',
+};
+const industryExamples: Record<string, string> = {
+  Retail: 'Examples: corner shop, boutique, market stall, grocery, phone-accessory shop or general merchandise.',
+  'Food & Hospitality': 'Examples: restaurant, café, takeaway, caterer, bakery, juice seller or guest house.',
+  'Professional Services': 'Examples: consultancy, accounting, legal services, design or business support.',
+  Agriculture: 'Examples: farming, livestock, fish trading, horticulture or agro-processing.',
+  Transport: 'Examples: taxi, delivery, freight, vehicle hire or transport services.',
+  'Financial Services': 'Examples: bookkeeping, insurance, authorised financial services or money-related business.',
+  Technology: 'Examples: IT support, software, electronics, repair services or digital services.',
+  Manufacturing: 'Examples: furniture making, tailoring, food processing or product manufacturing.',
+  Healthcare: 'Examples: clinic, pharmacy, laboratory or health services.',
+  Education: 'Examples: school, training centre, tutoring or educational services.',
+  'Real Estate': 'Examples: property rental, property management, agency or construction-related services.',
+  Other: 'Choose the closest match if your work does not fit a listed industry.',
+};
 
 const step1Schema = z.object({
   businessName: z.string().min(2, 'Business name is required'),
@@ -148,7 +175,8 @@ export default function BusinessOnboardingFlow() {
                   <FormField control={form1.control} name="businessName" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Business Name</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormControl><Input {...field} placeholder="e.g. Mariama’s Mini Market" /></FormControl>
+                      <p className="text-xs text-muted-foreground">Enter the name your customers know your business by.</p>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -160,20 +188,28 @@ export default function BusinessOnboardingFlow() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="Corporation">Corporation</SelectItem>
-                            <SelectItem value="LLC">LLC</SelectItem>
+                            <SelectItem value="Sole Proprietor">Sole proprietor / individual trader</SelectItem>
                             <SelectItem value="Partnership">Partnership</SelectItem>
-                            <SelectItem value="Sole Proprietor">Sole Proprietor</SelectItem>
-                            <SelectItem value="NGO">NGO</SelectItem>
+                            <SelectItem value="Limited Company">Limited company</SelectItem>
+                            <SelectItem value="LLC">LLC (if registered as one)</SelectItem>
+                            <SelectItem value="Corporation">Corporation</SelectItem>
+                            <SelectItem value="Cooperative">Cooperative</SelectItem>
+                            <SelectItem value="NGO / Community Organisation">NGO / community organisation</SelectItem>
+                            <SelectItem value="Other / Informal Business">Other / informal business</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                        {field.value && (
+                          <p className="text-xs leading-relaxed text-muted-foreground rounded-md bg-muted/60 p-2.5">
+                            {businessTypeDescriptions[field.value] || 'Choose the legal structure or ownership arrangement that best describes your business.'}
+                          </p>
+                        )}
                       </FormItem>
                     )} />
 
                     <FormField control={form1.control} name="industry" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Industry</FormLabel>
+                        <FormLabel>Industry / Type of work</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger></FormControl>
                           <SelectContent>
@@ -189,6 +225,11 @@ export default function BusinessOnboardingFlow() {
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                        {field.value && (
+                          <p className="text-xs leading-relaxed text-muted-foreground rounded-md bg-muted/60 p-2.5">
+                            {industryExamples[field.value] || 'Select the sector that best represents what your business does.'}
+                          </p>
+                        )}
                       </FormItem>
                     )} />
                   </div>
@@ -216,8 +257,9 @@ export default function BusinessOnboardingFlow() {
 
                     <FormField control={form1.control} name="city" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormLabel>Town / Community</FormLabel>
+                        <FormControl><Input {...field} placeholder="e.g. Sukuta, Serrekunda, Brikama" /></FormControl>
+                        <p className="text-xs text-muted-foreground">Your town or community helps keep your business records organised.</p>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -226,8 +268,9 @@ export default function BusinessOnboardingFlow() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField control={form1.control} name="phone" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl><Input {...field} placeholder="+220 87 407 1510" /></FormControl>
+                        <FormLabel>Business Phone</FormLabel>
+                        <FormControl><Input {...field} placeholder="+220 87 123 4567" /></FormControl>
+                        <p className="text-xs text-muted-foreground">Your business contact number, not Kaira customer support. Add the +220 country code.</p>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -235,7 +278,8 @@ export default function BusinessOnboardingFlow() {
                     <FormField control={form1.control} name="email" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Business Email</FormLabel>
-                        <FormControl><Input type="email" {...field} /></FormControl>
+                        <FormControl><Input type="email" {...field} placeholder="name@yourbusiness.gm" /></FormControl>
+                        <p className="text-xs text-muted-foreground">Use an email you check for customer enquiries, invoices and business notices.</p>
                         <FormMessage />
                       </FormItem>
                     )} />
