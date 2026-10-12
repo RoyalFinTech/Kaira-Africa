@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={revenueData?.topCustomers.slice(0, 5).map(c => ({ name: `${c.firstName} ${c.lastName}`, value: c.totalSpend })) || []} layout="vertical">
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `$${v / 1000}k`} />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `GMD ${(v / 1000).toFixed(1)}k`} />
                   <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} width={100} />
                   <Tooltip formatter={(value) => formatCurrency(value as number)} />
                   <Bar dataKey="value" fill="hsl(var(--secondary))" />
