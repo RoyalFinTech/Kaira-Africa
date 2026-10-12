@@ -55,9 +55,12 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
   const query = z.object({
     startDate: z.string().regex(datePattern).optional(),
     endDate: z.string().regex(datePattern).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(50),
   }).parse(req.query);
   const startDate = query.startDate ?? monthStartToday();
   const endDate = query.endDate ?? dateOnlyNow();
+  const offset = (query.page - 1) * query.pageSize;
   if (startDate > endDate) throw new BadRequestError("Start date must be on or before end date");
 
   const conditions = and(
@@ -68,7 +71,8 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
 
   const [entries, [totals], trend, expensesByCategory] = await Promise.all([
     db.select().from(dailyLedgerEntries).where(conditions)
-      .orderBy(desc(dailyLedgerEntries.recordedDate), desc(dailyLedgerEntries.createdAt)).limit(500),
+      .orderBy(desc(dailyLedgerEntries.recordedDate), desc(dailyLedgerEntries.createdAt))
+      .limit(query.pageSize).offset(offset),
     db.select({
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
       expenseMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'expense' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
@@ -96,6 +100,12 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
   res.json({
     startDate, endDate,
     entries: entries.map(serialize),
+    pagination: {
+      page: query.page,
+      pageSize: query.pageSize,
+      total: Number(totals.totalRecords),
+      totalPages: Math.max(1, Math.ceil(Number(totals.totalRecords) / query.pageSize)),
+    },
     summary: {
       sales,
       expenses,
