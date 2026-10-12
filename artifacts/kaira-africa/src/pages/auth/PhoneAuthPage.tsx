@@ -125,7 +125,7 @@ export default function PhoneAuthPage() {
             backgroundImage: "linear-gradient(135deg, rgba(7, 35, 24, 0.88), rgba(7, 35, 24, 0.68) 55%, rgba(7, 35, 24, 0.82)), url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1800&q=85')",
           }}
         />
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_28%,rgba(216,180,90,0.14),transparent_45%)]" />
+
 
         {/* Gold arc accent */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-secondary" />
