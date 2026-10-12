@@ -253,20 +253,43 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
 router.patch("/daily-ledger/:id/status", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
   const businessId = requireBusiness(req);
   const input = z.object({ status: z.enum(["paid", "unpaid"]) }).parse(req.body);
-  const [existing] = await db.select().from(dailyLedgerEntries).where(and(
-    eq(dailyLedgerEntries.id, req.params.id as string),
-    eq(dailyLedgerEntries.businessId, businessId),
-  )).limit(1);
-  if (!existing) throw new NotFoundError("Daily ledger entry not found");
-  if (existing.entryType !== "debt") throw new BadRequestError("Only debtor records can be marked paid or unpaid");
-  if (input.status === "unpaid" && existing.status === "paid") {
-    throw new BadRequestError("A paid debtor entry cannot be reopened because payments have already been allocated. Record a new credit sale instead.");
-  }
-  const [updated] = await db.update(dailyLedgerEntries).set({
-    status: input.status,
-    balanceMinor: input.status === "paid" ? 0 : (existing.balanceMinor ?? existing.amountMinor),
-    updatedAt: new Date(),
-  }).where(and(eq(dailyLedgerEntries.id, existing.id), eq(dailyLedgerEntries.businessId, businessId))).returning();
+  const entryId = req.params.id as string;
+  const updated = await db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(dailyLedgerEntries).where(and(
+      eq(dailyLedgerEntries.id, entryId),
+      eq(dailyLedgerEntries.businessId, businessId),
+    )).limit(1).for("update");
+    if (!existing) throw new NotFoundError("Daily ledger entry not found");
+    if (existing.entryType !== "debt") throw new BadRequestError("Only debtor records can be marked paid or unpaid");
+    if (input.status === "unpaid" && existing.status === "paid") {
+      throw new BadRequestError("A paid debtor entry cannot be reopened because payments have already been allocated. Record a new credit sale instead.");
+    }
+    const remainingMinor = Number(existing.balanceMinor ?? existing.amountMinor);
+    if (input.status === "paid" && existing.status !== "paid" && remainingMinor > 0) {
+      await tx.insert(dailyLedgerEntries).values({
+        businessId,
+        createdBy: req.user!.id,
+        entryType: "debt_payment",
+        description: "Full settlement: " + existing.description,
+        category: "Debt payment",
+        amountMinor: remainingMinor,
+        balanceMinor: null,
+        currency: existing.currency,
+        customerName: existing.customerName,
+        productId: null,
+        quantity: null,
+        dueDate: null,
+        status: "recorded",
+        recordedDate: dateOnlyNow(),
+      });
+    }
+    const [row] = await tx.update(dailyLedgerEntries).set({
+      status: input.status,
+      balanceMinor: input.status === "paid" ? 0 : remainingMinor,
+      updatedAt: new Date(),
+    }).where(and(eq(dailyLedgerEntries.id, existing.id), eq(dailyLedgerEntries.businessId, businessId))).returning();
+    return row;
+  });
   await recordActivity({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "updated",
     entityType: "daily_ledger_entry", entityId: updated.id, entityName: updated.description,
