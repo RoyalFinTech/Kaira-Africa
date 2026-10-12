@@ -62,16 +62,30 @@ export interface AdminOverview {
   revenueTrend: { label: string; value: number }[];
 }
 export const getAdminOverview = () => request<AdminOverview>("/api/admin/platform/overview");
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
 export interface AdminCrmRow {
   customerId: string; customerName: string; businessName: string; phone: string | null; email: string | null;
   customerStatus: string; interactionCount: number; createdAt: string;
 }
-export const getAdminCrm = () => request<AdminCrmRow[]>("/api/admin/platform/crm");
+export interface AdminCrmResponse { data: AdminCrmRow[]; pagination: PaginationMeta }
+export const getAdminCrm = (page = 1, pageSize = 50) =>
+  request<AdminCrmResponse>("/api/admin/platform/crm?" + new URLSearchParams({ page: String(page), pageSize: String(pageSize) }).toString());
 export interface AdminInventoryRow {
   id: string; name: string; sku: string; businessName: string;
   quantity: number; reorderLevel: number; inventoryValue: number;
 }
-export const getAdminInventory = () => request<AdminInventoryRow[]>("/api/admin/platform/inventory");
+export interface AdminInventoryResponse {
+  data: AdminInventoryRow[];
+  pagination: PaginationMeta;
+  summary: { totalProducts: number; lowStockProducts: number; totalValue: number };
+}
+export const getAdminInventory = (page = 1, pageSize = 50) =>
+  request<AdminInventoryResponse>("/api/admin/platform/inventory?" + new URLSearchParams({ page: String(page), pageSize: String(pageSize) }).toString());
 
 
 export type DailyLedgerType = "sale" | "expense" | "debt" | "debt_payment" | "other_income";
@@ -95,6 +109,7 @@ export interface DailyLedgerResponse {
   startDate: string;
   endDate: string;
   entries: DailyLedgerEntry[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
   summary: {
     sales: number;
     expenses: number;
@@ -107,8 +122,10 @@ export interface DailyLedgerResponse {
   dailyTrend: { date: string; sales: number; expenses: number }[];
   expensesByCategory: { label: string; value: number }[];
 }
-export const getDailyLedger = (startDate: string, endDate: string) =>
-  request<DailyLedgerResponse>("/api/daily-ledger?" + new URLSearchParams({ startDate, endDate }).toString());
+export const getDailyLedger = (startDate: string, endDate: string, page = 1, pageSize = 50) =>
+  request<DailyLedgerResponse>("/api/daily-ledger?" + new URLSearchParams({
+    startDate, endDate, page: String(page), pageSize: String(pageSize),
+  }).toString());
 export const createDailyLedgerEntry = (input: {
   entryType: DailyLedgerType;
   description: string;
@@ -127,7 +144,13 @@ export const updateDailyLedgerStatus = (id: string, status: "paid" | "unpaid") =
 export interface AdminDailyLedgerRow extends DailyLedgerEntry {
   businessName: string;
 }
-export const getAdminDailyLedger = () => request<AdminDailyLedgerRow[]>("/api/admin/platform/daily-ledger");
+export interface AdminDailyLedgerResponse {
+  data: AdminDailyLedgerRow[];
+  pagination: PaginationMeta;
+  summary: { sales: number; expenses: number; unpaidDebt: number };
+}
+export const getAdminDailyLedger = (page = 1, pageSize = 50) =>
+  request<AdminDailyLedgerResponse>("/api/admin/platform/daily-ledger?" + new URLSearchParams({ page: String(page), pageSize: String(pageSize) }).toString());
 
 
 export interface AdminPlatformRecords {
@@ -135,5 +158,25 @@ export interface AdminPlatformRecords {
   businesses: { id: string; name: string; type: string; industry: string; country: string; city: string; phone: string | null; email: string | null; status: string; createdAt: string }[];
   customers: { id: string; name: string; firstName: string; lastName: string; email: string | null; phone: string | null; company: string | null; status: string; businessName: string; createdAt: string }[];
   transactions: { id: string; reference: string; amount: number; currency: string; type: string; status: string; description: string | null; businessName: string; createdAt: string }[];
+  pagination: {
+    users: PaginationMeta;
+    businesses: PaginationMeta;
+    customers: PaginationMeta;
+    transactions: PaginationMeta;
+  };
 }
-export const getAdminPlatformRecords = () => request<AdminPlatformRecords>("/api/admin/platform/records");
+export interface AdminPlatformPageParams {
+  usersPage: number;
+  businessesPage: number;
+  customersPage: number;
+  transactionsPage: number;
+  pageSize?: number;
+}
+export const getAdminPlatformRecords = (params: AdminPlatformPageParams) =>
+  request<AdminPlatformRecords>("/api/admin/platform/records?" + new URLSearchParams({
+    usersPage: String(params.usersPage),
+    businessesPage: String(params.businessesPage),
+    customersPage: String(params.customersPage),
+    transactionsPage: String(params.transactionsPage),
+    pageSize: String(params.pageSize ?? 50),
+  }).toString());
