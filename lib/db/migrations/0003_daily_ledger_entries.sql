@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS "daily_ledger_entries" (
   "amount_minor" bigint NOT NULL,
   "currency" char(3) DEFAULT 'GMD' NOT NULL,
   "customer_name" text,
+  "product_id" uuid REFERENCES "public"."inventory_products"("id") ON DELETE set null,
+  "quantity" integer,
   "due_date" date,
   "status" text DEFAULT 'recorded' NOT NULL,
   "recorded_date" date DEFAULT CURRENT_DATE NOT NULL,
@@ -20,3 +22,5 @@ CREATE INDEX IF NOT EXISTS "daily_ledger_business_date_idx" ON "daily_ledger_ent
 CREATE INDEX IF NOT EXISTS "daily_ledger_business_type_date_idx" ON "daily_ledger_entries" USING btree ("business_id","entry_type","recorded_date");
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "daily_ledger_business_status_idx" ON "daily_ledger_entries" USING btree ("business_id","status");
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "daily_ledger_product_idx" ON "daily_ledger_entries" USING btree ("product_id");
