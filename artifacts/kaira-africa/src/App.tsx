@@ -40,11 +40,13 @@ const SettingsPage       = lazy(() => import('@/pages/app/SettingsPage'));
 const CrmPage            = lazy(() => import('@/pages/app/CrmPage'));
 const InventoryPage      = lazy(() => import('@/pages/app/InventoryPage'));
 const AiReportsPage      = lazy(() => import('@/pages/app/AiReportsPage'));
+const DailyLedgerPage    = lazy(() => import('@/pages/app/DailyLedgerPage'));
 const LegalPage          = lazy(() => import('@/pages/LegalPage'));
 
 const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage'));
 const AdminCrmPage       = lazy(() => import('@/pages/admin/AdminCrmPage'));
 const AdminInventoryPage = lazy(() => import('@/pages/admin/AdminInventoryPage'));
+const AdminDailyLedgerPage = lazy(() => import('@/pages/admin/AdminDailyLedgerPage'));
 
 // Admin
 const AdminLoginPage     = lazy(() => import('@/pages/admin/AdminLoginPage'));
@@ -207,6 +209,9 @@ function Router() {
         <Route path="/ai-reports">
           {() => <ProtectedRoute component={AiReportsPage} />}
         </Route>
+        <Route path="/daily-ledger">
+          {() => <ProtectedRoute component={DailyLedgerPage} />}
+        </Route>
         <Route path="/legal/terms">
           {() => <LegalPage type="terms" />}
         </Route>
@@ -227,6 +232,9 @@ function Router() {
         </Route>
         <Route path="/admin/inventory">
           {() => <AdminProtectedRoute component={AdminInventoryPage} />}
+        </Route>
+        <Route path="/admin/daily-ledger">
+          {() => <AdminProtectedRoute component={AdminDailyLedgerPage} />}
         </Route>
 
         {/* ── 404 ── */}
