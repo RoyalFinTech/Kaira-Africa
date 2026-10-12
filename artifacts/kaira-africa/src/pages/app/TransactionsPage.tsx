@@ -174,6 +174,32 @@ export default function TransactionsPage() {
   const pendingCount = transactions.filter(t => t.status === 'pending').length;
   const failedCount = transactions.filter(t => t.status === 'failed').length;
 
+  const exportTransactionsCsv = () => {
+    if (transactions.length === 0) return;
+    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows: unknown[][] = [
+      ['Reference', 'Type', 'Status', 'Customer', 'Amount (GMD)', 'Date'],
+      ...transactions.map((txn) => [
+        txn.reference,
+        txn.type,
+        txn.status,
+        txn.customerName || '',
+        Number(txn.amount).toFixed(2),
+        new Date(txn.createdAt).toISOString(),
+      ]),
+    ];
+    const csv = '\uFEFF' + rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `kaira-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  };
+
   const typeBadgeColors: Record<string, string> = {
     payment: 'bg-primary/10 text-primary border-primary/20',
     deposit: 'bg-secondary/10 text-secondary border-secondary/20',
@@ -190,9 +216,15 @@ export default function TransactionsPage() {
             <p className="text-muted-foreground mt-1">View and manage all transactions</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" disabled title="CSV/PDF export isn't built yet">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={exportTransactionsCsv}
+              disabled={isLoading || transactions.length === 0}
+              title="Download the currently loaded and filtered transaction records as CSV"
+            >
               <Download className="mr-2 h-4 w-4" />
-              Export
+              Export CSV
             </Button>
             <Button onClick={() => setCreateOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />

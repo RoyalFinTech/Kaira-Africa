@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
@@ -29,7 +29,8 @@ export default function DashboardPage() {
   const { data: user } = useGetMe();
   const { data: business } = useGetMyBusiness();
   const { data: stats, isLoading: statsLoading } = useGetBusinessStats();
-  const { data: revenueAnalytics, isLoading: revenueLoading } = useGetRevenueAnalytics({ period: 'month' });
+  const [revenuePeriod, setRevenuePeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
+  const { data: revenueAnalytics, isLoading: revenueLoading } = useGetRevenueAnalytics({ period: revenuePeriod });
   const todayDate = new Date().toISOString().slice(0, 10);
   const { data: todayLedger } = useQuery({
     queryKey: ['daily-ledger', todayDate, todayDate],
@@ -182,8 +183,24 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Revenue Overview</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">Monthly</Button>
+              <div className="flex flex-wrap gap-1" role="group" aria-label="Revenue chart period">
+                {[
+                  { label: 'Week', value: 'week' },
+                  { label: 'Month', value: 'month' },
+                  { label: 'Quarter', value: 'quarter' },
+                  { label: 'Year', value: 'year' },
+                ].map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={revenuePeriod === option.value ? 'default' : 'outline'}
+                    aria-pressed={revenuePeriod === option.value}
+                    onClick={() => setRevenuePeriod(option.value as typeof revenuePeriod)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
               </div>
             </div>
           </CardHeader>
