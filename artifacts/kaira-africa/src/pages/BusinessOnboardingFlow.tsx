@@ -166,8 +166,40 @@ export default function BusinessOnboardingFlow() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-2xl">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(280px,0.78fr)_minmax(0,1.22fr)] lg:gap-8">
+          <aside aria-label="Kaira business tools" className="relative hidden min-h-[620px] flex-col justify-end overflow-hidden rounded-3xl bg-[#0D2818] p-8 shadow-sm lg:flex">
+            <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=85" alt="Business team collaborating around a laptop in a meeting" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+            <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-[#082b20]/35 via-[#082b20]/55 to-[#06251a]/95" />
+            <div className="relative z-10 space-y-6 text-white">
+              <div className="inline-flex rounded-full border border-[#D8B45A]/50 bg-black/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#F3D681]">Built for The Gambia</div>
+              <div>
+                <h2 className="font-display text-3xl font-extrabold leading-tight">Your daily work.<br />One clear picture.</h2>
+                <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/80">Set up your business once, then keep customers, stock, sales and expenses organised in one workspace.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { title: 'Customer records', detail: 'People and follow-ups' },
+                  { title: 'Stock control', detail: 'Products and quantities' },
+                  { title: 'Daily ledger', detail: 'Sales, expenses and debts' },
+                  { title: 'Business insights', detail: 'Charts and summaries' },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-xl border border-white/15 bg-black/20 p-3 backdrop-blur-sm">
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-1 text-xs text-white/70">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+          <div className="w-full min-w-0 max-w-2xl mx-auto">
+            <div className="relative isolate mb-5 overflow-hidden rounded-xl bg-[#0D2818] p-4 text-white lg:hidden">
+              <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" loading="lazy" />
+              <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#06251a]/95 via-[#06251a]/80 to-[#06251a]/55" />
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#F3D681]">Built for The Gambia</p>
+              <p className="mt-1 font-display text-lg font-bold">Set up your business workspace</p>
+              <p className="mt-1 text-xs text-white/80">Customers · Inventory · Daily sales · Reports</p>
+            </div>
           {currentStep === 1 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <h1 className="font-display text-3xl font-bold mb-2">Business Information</h1>
@@ -411,6 +443,7 @@ export default function BusinessOnboardingFlow() {
               </Button>
             </motion.div>
           )}
+          </div>
         </div>
       </div>
     </div>
