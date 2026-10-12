@@ -7,6 +7,7 @@ import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
+import { allocateDebtPayment } from "../lib/debt-allocation";
 
 const router: IRouter = Router();
 const entryTypes = ["sale", "expense", "debt", "debt_payment", "other_income"] as const;
@@ -158,34 +159,28 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
       )).orderBy(asc(dailyLedgerEntries.recordedDate), asc(dailyLedgerEntries.createdAt)).for("update");
 
       const totalDueMinor = openDebts.reduce((sum, debt) => sum + Number(debt.balanceMinor ?? debt.amountMinor), 0);
-      if (totalDueMinor <= 0) {
+      const allocation = allocateDebtPayment(amountMinor, openDebts);
+      if (!allocation && totalDueMinor <= 0) {
         throw new BadRequestError("No unpaid debt was found for " + input.customerName + ". Check the name against the original debtor record.");
       }
-      if (amountMinor > totalDueMinor) {
+      if (!allocation && amountMinor > totalDueMinor) {
         throw new BadRequestError("This payment exceeds " + input.customerName + "'s remaining debt of " +
           fromMinorUnits(totalDueMinor, input.currency).toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD.");
       }
+      if (!allocation) {
+        throw new BadRequestError("Enter a valid payment amount and try again.");
+      }
 
-      let remainingMinor = amountMinor;
-      for (const debt of openDebts) {
-        if (remainingMinor <= 0) break;
-        const balanceMinor = Number(debt.balanceMinor ?? debt.amountMinor);
-        const allocatedMinor = Math.min(balanceMinor, remainingMinor);
-        const nextBalanceMinor = balanceMinor - allocatedMinor;
+      for (const item of allocation.allocations) {
         await tx.update(dailyLedgerEntries).set({
-          balanceMinor: nextBalanceMinor,
-          status: nextBalanceMinor === 0 ? "paid" : "unpaid",
+          balanceMinor: item.balanceMinor,
+          status: item.status,
           updatedAt: new Date(),
         }).where(and(
-          eq(dailyLedgerEntries.id, debt.id),
+          eq(dailyLedgerEntries.id, item.id),
           eq(dailyLedgerEntries.businessId, businessId),
         ));
-        remainingMinor -= allocatedMinor;
       }
-    }
-
-    if (input.entryType === "debt") {
-      // A fresh credit sale starts with its full amount outstanding.
     }
 
     if (input.productId) {
