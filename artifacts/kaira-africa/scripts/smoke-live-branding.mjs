@@ -183,11 +183,11 @@ try {
   });
   assert.ok(heroStats.backgroundImage.includes('images.unsplash.com'), `Login hero must use the business background image: ${JSON.stringify(heroStats)}`);
   assert.ok(heroStats.backgroundSize.split(',').every((layer) => layer.trim() === 'cover'), `Every login hero background layer must cover the whole panel: ${JSON.stringify(heroStats)}`);
-  const flag = page.getByRole('img', { name: 'Flag of The Gambia' });
+  const flag = page.locator('form').getByRole('img', { name: 'Flag of The Gambia' });
   await flag.waitFor({ state: 'visible', timeout: 10_000 });
-  assert.equal(await flag.locator('span').count(), 5, 'Gambia flag must show all five horizontal color bands');
+  assert.equal(await flag.locator('rect').count(), 5, 'Gambia SVG flag must show all five horizontal color bands');
   await page.screenshot({ path: resolve(outputDir, 'login-phone-screen.png'), fullPage: true });
-  console.log('LOGIN HERO AND FLAG VERIFIED:', JSON.stringify({ heroStatus: heroResponse.status(), heroStats, flagBands: await flag.locator('span').count() }));
+  console.log('LOGIN HERO AND FLAG VERIFIED:', JSON.stringify({ heroStatus: heroResponse.status(), heroStats, flagBands: await flag.locator('rect').count() }));
 
   // A direct open/refresh on /onboarding must return to splash first.
   await page.evaluate(() => sessionStorage.removeItem('kaira_splash_complete'));
