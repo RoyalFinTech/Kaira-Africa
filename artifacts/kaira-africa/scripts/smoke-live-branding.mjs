@@ -183,7 +183,7 @@ try {
   });
   assert.ok(heroStats.backgroundImage.includes('images.unsplash.com'), `Login hero must use the business background image: ${JSON.stringify(heroStats)}`);
   assert.ok(heroStats.backgroundSize.split(',').every((layer) => layer.trim() === 'cover'), `Every login hero background layer must cover the whole panel: ${JSON.stringify(heroStats)}`);
-  const flag = page.getByRole('img', { name: 'Flag of The Gambia' });
+  const flag = page.locator('form').getByRole('img', { name: 'Flag of The Gambia' });
   await flag.waitFor({ state: 'visible', timeout: 10_000 });
   assert.equal(await flag.locator('span').count(), 5, 'Gambia flag must show all five horizontal color bands');
   await page.screenshot({ path: resolve(outputDir, 'login-phone-screen.png'), fullPage: true });
