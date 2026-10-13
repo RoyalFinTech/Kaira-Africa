@@ -95,7 +95,7 @@ function pinPhoneKey(req: Request): string {
   } catch {
     // Invalid input still receives an IP-based limit; normalizing here must not
     // throw before the request's schema/phone validation can return its message.
-    return raw.replace(/\\D/g, "").slice(-16) || "invalid";
+    return raw.replace(/\D/g, "").slice(-16) || "invalid";
   }
 }
 
