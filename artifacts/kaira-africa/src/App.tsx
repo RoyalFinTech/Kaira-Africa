@@ -17,6 +17,7 @@ const OnboardingFlow     = lazy(() => import('@/pages/OnboardingFlow'));
 
 // Auth
 const PhoneAuthPage      = lazy(() => import('@/pages/auth/PhoneAuthPage'));
+const PinLoginPage       = lazy(() => import('@/pages/auth/PinLoginPage'));
 const OTPPage            = lazy(() => import('@/pages/auth/OTPPage'));
 const FullNamePage       = lazy(() => import('@/pages/auth/FullNamePage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
@@ -155,6 +156,7 @@ function Router() {
 
         {/* ── User Auth (Phone + OTP) ── */}
         <Route path="/login" component={PhoneAuthPage} />
+        <Route path="/login/pin" component={PinLoginPage} />
         <Route path="/login/otp" component={OTPPage} />
         <Route path="/login/name" component={FullNamePage} />
         <Route path="/admin/forgot-password" component={ForgotPasswordPage} />
