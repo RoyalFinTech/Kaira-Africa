@@ -245,16 +245,16 @@ export default function ProfilePage() {
                         </FormItem>
                       )} />
                     </div>
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <Input value={user.email ?? ''} disabled className="text-muted-foreground bg-muted" />
+                    <div className="space-y-2">
+                      <label htmlFor="profile-email" className="text-sm font-medium leading-none">Email</label>
+                      <Input id="profile-email" value={user.email ?? ''} disabled className="text-muted-foreground bg-muted" />
                       <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here.</p>
-                    </FormItem>
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <Input value={user.phone ?? ''} disabled className="text-muted-foreground bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="profile-phone" className="text-sm font-medium leading-none">Phone</label>
+                      <Input id="profile-phone" value={user.phone ?? ''} disabled className="text-muted-foreground bg-muted" />
                       <p className="text-xs text-muted-foreground mt-1">Changing your phone number requires re-verifying it — not available here yet.</p>
-                    </FormItem>
+                    </div>
                     {formError && (
                       <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><span>{formError}</span></div>
                     )}
