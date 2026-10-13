@@ -5,6 +5,7 @@ const dist = resolve('dist/public');
 const routes = [...new Set([
   'onboarding',
   'login',
+  'login/pin',
   'login/otp',
   'login/name',
   'admin',
