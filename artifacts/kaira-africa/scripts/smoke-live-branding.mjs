@@ -408,8 +408,19 @@ try {
   await pinPage.getByText('Your PIN was saved successfully.').waitFor({ state: 'visible', timeout: 10_000 });
   await pinPage.getByText('PIN sign-in is enabled').waitFor({ state: 'visible', timeout: 10_000 });
   assert.equal(pinSetRequests.length, 1, 'Profile PIN setup should make one intercepted save request');
+  assert.equal(pinSetRequests[0].pin, '482951', 'Initial profile PIN setup should submit the new PIN');
+
+  // Updating a PIN must ask for the current PIN and submit the replacement.
+  await pinPage.getByLabel('Current six-digit PIN').fill('482951');
+  await pinPage.getByLabel('New six-digit PIN').fill('573824');
+  await pinPage.getByLabel('Confirm six-digit PIN').fill('573824');
+  await pinPage.getByRole('button', { name: 'Update PIN' }).click();
+  await pinPage.getByText('Your PIN was saved successfully.').waitFor({ state: 'visible', timeout: 10_000 });
+  assert.equal(pinSetRequests.length, 2, 'PIN update should make one additional intercepted save request');
+  assert.equal(pinSetRequests[1].currentPin, '482951', 'PIN update must include the current PIN for server verification');
+  assert.equal(pinSetRequests[1].pin, '573824', 'PIN update must include the replacement PIN');
   await pinPage.screenshot({ path: resolve(outputDir, 'profile-pin-settings.png'), fullPage: true });
-  console.log('PROFILE NON-BLANK STATE AND PIN SETTINGS VERIFIED');
+  console.log('PROFILE NON-BLANK STATE, PIN CREATION AND PIN UPDATE VERIFIED');
 
   // Exercise every primary desktop navigation destination through its actual link.
   const navigationTargets = [
@@ -471,8 +482,8 @@ try {
   await pinPage.getByLabel('Confirm PIN').fill('482951');
   await pinPage.locator('form button[type="submit"]').click();
   await pinPage.waitForURL((url) => url.pathname === '/business-onboarding' || url.pathname === '/dashboard', { timeout: 15_000 });
-  assert.equal(pinSetRequests.length, 2, 'Registration must save the PIN after SMS-verified profile completion');
-  assert.equal(pinSetRequests[1].pin, '482951', 'Registration must send only the PIN value to the protected API endpoint');
+  assert.equal(pinSetRequests.length, 3, 'Registration must save the PIN after SMS-verified profile completion');
+  assert.equal(pinSetRequests[2].pin, '482951', 'Registration must send only the PIN value to the protected API endpoint');
   await pinPage.screenshot({ path: resolve(outputDir, 'registration-pin-setup.png'), fullPage: true });
   assert.deepEqual(pinErrors, [], 'PIN/profile/navigation runtime errors: ' + pinErrors.join(' | '));
   console.log('PIN REGISTRATION, PROFILE, NAVIGATION AND MOBILE SMOKE TESTS PASSED:', JSON.stringify({
