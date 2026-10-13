@@ -456,7 +456,7 @@ try {
     'Profile route must render a visible profile heading. Diagnostics: ' +
       JSON.stringify({ ...profileRouteDiagnostics, pinErrors, pinConsoleErrors }),
   );
-  await pinPage.getByRole('heading', { name: 'PIN sign-in' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByText('PIN sign-in', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
   assert.ok((await pinPage.locator('main').innerText()).trim().length > 40, 'Profile must show useful content rather than a blank white page');
   await pinPage.getByLabel('New six-digit PIN').fill('482951');
   await pinPage.getByLabel('Confirm six-digit PIN').fill('482951');
