@@ -286,6 +286,13 @@ export default function DailyLedgerPage() {
                 itemLabel="ledger entries"
               />
             )}
+            {!ledgerQuery.isLoading && response && (
+              <PaginationControls
+                pagination={response.pagination}
+                onPageChange={setEntryPage}
+                itemLabel="ledger entries"
+              />
+            )}
           </CardContent>
         </Card>
       </div>
