@@ -24,7 +24,15 @@ export function AppShell({ children }: AppShellProps) {
       {/* Mobile Sidebar Drawer */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-[260px]">
-          <Sidebar />
+          <div
+            className="h-full"
+            onClick={(event) => {
+              const target = event.target as HTMLElement;
+              if (target.closest('a[href]')) setMobileMenuOpen(false);
+            }}
+          >
+            <Sidebar />
+          </div>
         </SheetContent>
       </Sheet>
 
