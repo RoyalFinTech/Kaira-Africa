@@ -178,7 +178,7 @@ router.post(
     if (user.pinHash) {
       const currentPinIsValid = Boolean(
         parsed.data.currentPin
-          && await verifyPassword(user.pinHash, parsed.data.currentPin),
+          && await verifyPin(user.pinHash, parsed.data.currentPin),
       );
       if (!currentPinIsValid) {
         await recordAuthEvent({
