@@ -44,7 +44,7 @@ export default function FullNamePage() {
 
   const form = useForm<NameForm>({
     resolver: zodResolver(nameSchema),
-    defaultValues: { fullName: '' },
+    defaultValues: { fullName: '', pin: '', confirmPin: '' },
   });
 
   const updateProfile = useUpdateProfile({
