@@ -278,6 +278,11 @@ export default function PhoneAuthPage() {
               </form>
             </Form>
 
+            <div className="mt-5 text-center text-sm">
+              <span className="text-muted-foreground">Already registered? </span>
+              <Link href="/login/pin" className="font-semibold text-primary underline-offset-4 hover:underline">Sign in with your 6-digit PIN</Link>
+            </div>
+
             <div className="mt-6 pt-5 border-t border-border space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Customer Support</p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
