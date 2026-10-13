@@ -86,7 +86,7 @@ export async function apiRequestJson<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const apiOrigin = API_BASE_URL.replace(/\\/+$/, "");
+  const apiOrigin = API_BASE_URL.endsWith("/") ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
   const normalizedPath = path.startsWith("/api/")
     ? path
     : `/api${path.startsWith("/") ? path : `/${path}`}`;
