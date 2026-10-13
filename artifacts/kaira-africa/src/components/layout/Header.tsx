@@ -56,7 +56,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
+    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 sm:px-6">
       {/* Left: Mobile menu + Breadcrumb */}
       <div className="flex items-center gap-4">
         <Button
@@ -72,27 +72,30 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Right: Search, Notifications, Avatar */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" aria-label="Find customers" title="Find customers" onClick={() => setLocation("/customers")}>
           <Search className="h-5 w-5" />
         </Button>
 
-        <Link href="/notifications">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className={`h-5 w-5 ${shouldShake ? 'animate-bell-shake' : ''}`} />
-            {unreadCount > 0 && (
-              <Badge
-                variant="secondary"
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-secondary text-sidebar-primary-foreground"
-              >
-                {unreadCount}
-              </Badge>
-            )}
-          </Button>
+        <Link
+          href="/notifications"
+          aria-label="Notifications"
+          title="Notifications"
+          className="relative inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Bell className={`h-5 w-5 ${shouldShake ? 'animate-bell-shake' : ''}`} />
+          {unreadCount > 0 && (
+            <Badge
+              variant="secondary"
+              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-secondary p-0 text-xs text-sidebar-primary-foreground"
+            >
+              {unreadCount}
+            </Badge>
+          )}
         </Link>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+            <Button variant="ghost" aria-label="Open profile and account menu" title="Account menu" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10 bg-primary">
                 <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                   {user && getInitials(user.firstName, user.lastName)}

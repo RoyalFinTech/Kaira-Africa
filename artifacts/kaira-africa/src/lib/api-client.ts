@@ -77,6 +77,51 @@ export function clearAdminInfo(): void {
 }
 
 /** Call once, at app startup (see main.tsx). */
+/**
+ * Small typed helper for the few auth endpoints that are introduced
+ * outside the generated SDK. It shares the same API origin and bearer
+ * token as the generated hooks, and surfaces server messages to forms.
+ */
+export async function apiRequestJson<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const apiOrigin = API_BASE_URL.endsWith("/") ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+  const normalizedPath = path.startsWith("/api/")
+    ? path
+    : `/api${path.startsWith("/") ? path : `/${path}`}`;
+  const headers = new Headers(init.headers);
+  if (init.body != null && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  const token = getToken();
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${apiOrigin}${normalizedPath}`, {
+    ...init,
+    headers,
+  });
+  if (response.status === 204) {
+    if (!response.ok) throw new Error(`Request failed (${response.status})`);
+    return undefined as T;
+  }
+
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const data = payload as { message?: unknown; error?: unknown } | null;
+    const message =
+      typeof data?.message === "string"
+        ? data.message
+        : typeof data?.error === "string"
+          ? data.error
+          : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+  return payload as T;
+}
+
 export function initApiClient(): void {
   setBaseUrl(API_BASE_URL);
   setAuthTokenGetter(() => getToken());

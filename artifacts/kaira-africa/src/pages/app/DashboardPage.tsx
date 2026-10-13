@@ -66,6 +66,35 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Welcome hero — generated artwork, backed by the existing daily-ledger workflow. */}
+        <section className="relative isolate min-h-[225px] overflow-hidden rounded-2xl border border-primary/10 bg-[#0B2A1B] shadow-sm sm:min-h-[245px]">
+          <img
+            src="/kaira-dashboard-hero.webp"
+            alt="A small business owner reviewing work on a laptop in her shop"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-[center_42%]"
+            loading="eager"
+          />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#062317]/95 via-[#062317]/78 to-[#062317]/10 sm:to-[#062317]/25" />
+          <div className="relative flex min-h-[225px] items-center p-5 sm:min-h-[245px] sm:p-8 lg:p-10">
+            <div className="max-w-xl">
+              <span className="inline-flex rounded-full border border-[#E9CA78]/50 bg-black/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#F4D985] sm:text-xs">
+                Built for Gambian businesses
+              </span>
+              <h2 className="mt-3 max-w-lg font-display text-2xl font-extrabold leading-tight text-white sm:text-3xl">
+                Every sale. Every detail. One clearer picture.
+              </h2>
+              <p className="mt-2 max-w-lg text-sm leading-6 text-white/85 sm:text-base">
+                Keep sales, expenses, customers and stock in one place — so you can focus on the next step for your business.
+              </p>
+              <Link href="/daily-ledger">
+                <Button className="mt-4 gap-2 bg-secondary text-secondary-foreground shadow-md hover:bg-secondary/90">
+                  Record today's activity <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

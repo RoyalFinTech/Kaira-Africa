@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isSixDigitPin, isStrongPin } from "../src/lib/pin";
-import { hashPin, verifyPin } from "../src/lib/pin";
+import { hashPin, isSixDigitPin, isStrongPin, verifyPin } from "../src/lib/pin";
 
 test("PIN accepts exactly six digits and preserves leading zeroes", () => {
   assert.equal(isSixDigitPin("012984"), true);

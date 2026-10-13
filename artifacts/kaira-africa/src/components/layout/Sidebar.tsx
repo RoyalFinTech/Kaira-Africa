@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   Settings2,
   LogOut,
+  User,
 } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -112,7 +113,7 @@ export function Sidebar() {
             </h3>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const isActive = location === item.href;
+                const isActive = location === item.href || location.startsWith(`${item.href}/`);
                 return (
                   <Link key={item.href} href={item.href}>
                     <div
@@ -138,6 +139,19 @@ export function Sidebar() {
 
       {/* Bottom Actions */}
       <div className="p-3 space-y-1">
+        <Link href="/profile" aria-current={location === "/profile" ? "page" : undefined}>
+          <div
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+              location === "/profile"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <User className="h-5 w-5 flex-shrink-0" />
+            <span>Profile</span>
+          </div>
+        </Link>
         <Link href="/settings">
           <div
             className={cn(

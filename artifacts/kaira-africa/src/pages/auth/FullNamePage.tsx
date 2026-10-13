@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { Smile, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Smile, ChevronLeft, ChevronRight, KeyRound } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useUpdateProfile } from '@workspace/api-client-react';
+import { apiRequestJson } from '@/lib/api-client';
+
+const weakPins = new Set(['012345', '123456', '234567', '345678', '456789', '987654', '876543', '765432', '654321', '543210']);
 
 const nameSchema = z.object({
   fullName: z
@@ -24,6 +27,13 @@ const nameSchema = z.object({
     .min(2, 'Please enter your full name')
     .max(80, 'Name is too long')
     .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens and apostrophes'),
+  pin: z.string()
+    .regex(/^\d{6}$/, 'Create a six-digit PIN')
+    .refine((value) => !/^(\d)\1{5}$/.test(value) && !weakPins.has(value), 'Avoid repeated digits or a simple sequence such as 123456'),
+  confirmPin: z.string().regex(/^\d{6}$/, 'Confirm your six-digit PIN'),
+}).refine((data) => data.pin === data.confirmPin, {
+  message: 'Your PIN entries do not match',
+  path: ['confirmPin'],
 });
 
 type NameForm = z.infer<typeof nameSchema>;
@@ -34,16 +44,27 @@ export default function FullNamePage() {
 
   const form = useForm<NameForm>({
     resolver: zodResolver(nameSchema),
-    defaultValues: { fullName: '' },
+    defaultValues: { fullName: '', pin: '', confirmPin: '' },
   });
 
   const updateProfile = useUpdateProfile({
     mutation: {
-      onSuccess: (user) => {
-        // A brand-new user has no business yet — the person who just
-        // named themselves always goes to onboarding next, since
-        // businessId can only be null at this point in the funnel.
-        setLocation(user.businessId ? '/dashboard' : '/business-onboarding');
+      onSuccess: async (user) => {
+        // Save the PIN after the SMS-verified profile update. If PIN saving
+        // fails, keep the user on this screen so they can retry safely.
+        try {
+          await apiRequestJson<void>('/auth/set-pin', {
+            method: 'POST',
+            body: JSON.stringify({ pin: form.getValues('pin') }),
+          });
+          const verifiedPhone = sessionStorage.getItem('kaira_pending_phone') || user.phone;
+          if (verifiedPhone) localStorage.setItem('kaira_last_phone', verifiedPhone);
+          setLocation(user.businessId ? '/dashboard' : '/business-onboarding');
+        } catch (cause) {
+          setFormError(cause instanceof Error
+            ? `Your name was saved, but your PIN could not be saved: ${cause.message}`
+            : 'Your name was saved, but your PIN could not be saved. Please try again.');
+        }
       },
       onError: (error) => {
         setFormError(error.message);
@@ -123,6 +144,62 @@ export default function FullNamePage() {
                 )}
               />
 
+              <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <KeyRound className="h-4 w-4 text-primary" />
+                  Create your six-digit sign-in PIN
+                </div>
+                <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                  Use this PIN the next time you sign in. Kaira Africa stores a secure hash, never the PIN itself. Avoid repeated digits and simple sequences.
+                </p>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="pin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Six-digit PIN</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            inputMode="numeric"
+                            autoComplete="new-password"
+                            placeholder="••••••"
+                            maxLength={6}
+                            className="h-12 text-center text-lg tracking-[0.45em]"
+                            {...field}
+                            onChange={(event) => field.onChange(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmPin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm PIN</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            inputMode="numeric"
+                            autoComplete="new-password"
+                            placeholder="••••••"
+                            maxLength={6}
+                            className="h-12 text-center text-lg tracking-[0.45em]"
+                            {...field}
+                            onChange={(event) => field.onChange(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
               {formError && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3" role="alert"><KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" /><p className="text-sm text-destructive">{formError}</p></div>
               )}
@@ -136,7 +213,7 @@ export default function FullNamePage() {
                 {updateProfile.isPending ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Setting up your workspace…
+                    Saving your name and secure PIN…
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">

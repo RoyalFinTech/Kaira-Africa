@@ -1,4 +1,5 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
+import { z } from "zod/v4";
 import {
   GetMeResponse,
   UpdateProfileBody,
@@ -25,6 +26,8 @@ import {
   getUserById,
   updateUserProfile,
   findOrCreateUserByPhone,
+  getUserByPhone,
+  updateUserPinHash,
   touchLastLogin,
 } from "../repositories/users";
 import {
@@ -60,6 +63,7 @@ import { normalizeGambianPhone } from "../lib/phone";
 import { generateOtp, hashOtp, OTP_TTL_MINUTES, OTP_RESEND_COOLDOWN_SECONDS } from "../lib/otp";
 import { generateSessionToken, hashToken, hashResetToken, tokenKind } from "../lib/tokens";
 import { hashPassword, verifyPassword, validatePasswordComplexity } from "../lib/password";
+import { hashPin, isSixDigitPin, isStrongPin, verifyPin } from "../lib/pin";
 import { sendOtpSms } from "../services/sms.service";
 import { sendPasswordResetEmail } from "../services/email.service";
 import { env, isProd } from "../config/env";
@@ -70,6 +74,34 @@ const router: IRouter = Router();
 const IS_PRODUCTION = isProd;
 const USER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+const PinLoginBody = z.object({
+  phoneNumber: z.string().min(1),
+  pin: z.string().refine(isSixDigitPin, "Enter your six-digit PIN."),
+});
+
+const SetPinBody = z.object({
+  pin: z.string().refine(
+    isStrongPin,
+    "Choose six digits that are not all the same or sequential.",
+  ),
+  currentPin: z.string().refine(
+    isSixDigitPin,
+    "Enter your current six-digit PIN.",
+  ).optional(),
+});
+
+function pinPhoneKey(req: Request): string {
+  const raw = String((req.body as Record<string, unknown> | undefined)?.phoneNumber ?? "");
+  try {
+    const { countryCode, number } = normalizeGambianPhone(raw);
+    return `${countryCode}${number}`;
+  } catch {
+    // Invalid input still receives an IP-based limit; normalizing here must not
+    // throw before the request's schema/phone validation can return its message.
+    return raw.replace(/\D/g, "").slice(-16) || "invalid";
+  }
+}
 
 function serializeUser(user: User) {
   return {
@@ -106,6 +138,144 @@ router.patch(
     });
     if (!updated) throw new NotFoundError("User not found");
     res.json(UpdateProfileResponse.parse(serializeUser(updated)));
+  },
+);
+
+// ─── PIN sign-in (business users) ────────────────────────────────────────────
+// PINs are hashed with Argon2id and never returned to the browser. The PIN
+// endpoint has independent IP and normalized-phone rate limits; SMS OTP remains
+// available as the recovery/sign-in fallback for people who forget their PIN.
+
+router.get("/auth/pin-status", requireUser, async (req, res) => {
+  const user = await getUserById(req.user!.id);
+  if (!user) throw new NotFoundError("User not found");
+  res.json({ enabled: Boolean(user.pinHash) });
+});
+
+router.post(
+  "/auth/set-pin",
+  requireUser,
+  rateLimit({
+    scope: "pin_set_user",
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    keyFn: (req) => req.user?.id ?? ipKey(req),
+    message: "Too many PIN updates. Please try again later.",
+  }),
+  async (req, res) => {
+    const parsed = SetPinBody.safeParse(req.body);
+    if (!parsed.success) {
+      throw new BadRequestError("Choose a valid six-digit PIN that is not all the same or sequential.");
+    }
+    const user = await getUserById(req.user!.id);
+    if (!user) throw new NotFoundError("User not found");
+    if (user.status !== "active") {
+      throw new ForbiddenError("This account is restricted.");
+    }
+
+    // Changing a previously configured PIN requires proof of the old PIN.
+    // First-time setup remains available after the user has authenticated.
+    if (user.pinHash) {
+      const currentPinIsValid = Boolean(
+        parsed.data.currentPin
+          && await verifyPin(user.pinHash, parsed.data.currentPin),
+      );
+      if (!currentPinIsValid) {
+        await recordAuthEvent({
+          actorType: "user",
+          actorId: user.id,
+          event: "user_pin_change_failed",
+          success: false,
+          ipAddress: req.ip,
+          userAgent: req.header("user-agent"),
+        });
+        throw new UnauthorizedError("Enter your current PIN to change it.");
+      }
+    }
+
+    const pinHash = await hashPin(parsed.data.pin);
+    await updateUserPinHash(user.id, pinHash);
+    await recordAuthEvent({
+      actorType: "user",
+      actorId: user.id,
+      event: "user_pin_set",
+      success: true,
+      ipAddress: req.ip,
+      userAgent: req.header("user-agent"),
+    });
+    res.status(204).end();
+  },
+);
+
+router.post(
+  "/auth/login-pin",
+  rateLimit({
+    scope: "pin_login_ip",
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    keyFn: ipKey,
+    message: "Too many sign-in attempts from this device. Try again shortly.",
+  }),
+  rateLimit({
+    scope: "pin_login_phone",
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    keyFn: pinPhoneKey,
+    message: "Too many PIN attempts for this number. Use SMS verification or try again later.",
+  }),
+  async (req, res) => {
+    const parsed = PinLoginBody.safeParse(req.body);
+    if (!parsed.success) {
+      throw new BadRequestError("Enter a valid Gambian phone number and six-digit PIN.");
+    }
+    const { phoneNumber, pin } = parsed.data;
+    const { countryCode, number } = normalizeGambianPhone(phoneNumber);
+    const user = await getUserByPhone(countryCode, number);
+    const validPin = Boolean(
+      user?.pinHash && await verifyPin(user.pinHash, pin),
+    );
+
+    // Keep the visible failure response consistent for unknown phone numbers,
+    // accounts without a PIN, and incorrect PINs.
+    if (!user || !validPin || user.status !== "active") {
+      await recordAuthEvent({
+        actorType: user ? "user" : "unknown",
+        actorId: user?.id,
+        event: "user_pin_login_failed",
+        success: false,
+        ipAddress: req.ip,
+        userAgent: req.header("user-agent"),
+        metadata: { reason: "invalid_or_unavailable_credential" },
+      });
+      throw new UnauthorizedError("Invalid phone number or PIN. You can also sign in with SMS verification.");
+    }
+
+    await touchLastLogin(user.id);
+    const rawToken = generateSessionToken("usr");
+    await createUserSession({
+      userId: user.id,
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() + USER_SESSION_TTL_MS),
+      userAgent: req.header("user-agent") ?? null,
+      ipAddress: req.ip ?? null,
+    });
+    await recordAuthEvent({
+      actorType: "user",
+      actorId: user.id,
+      event: "user_pin_login",
+      success: true,
+      ipAddress: req.ip,
+      userAgent: req.header("user-agent"),
+    });
+
+    const refreshedUser = (await getUserById(user.id))!;
+    res.json(
+      VerifyOtpResponse.parse({
+        token: rawToken,
+        isNewUser: false,
+        user: serializeUser(refreshedUser),
+      }),
+    );
   },
 );
 

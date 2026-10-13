@@ -64,6 +64,9 @@ export default function OTPPage() {
         onSuccess: (result) => {
           setStatus('success');
           setToken(result.token);
+          // Remember the verified number on this device so the PIN screen can
+          // prefill it next time. The PIN itself is never stored client-side.
+          localStorage.setItem('kaira_last_phone', phone);
           setTimeout(() => {
             if (!result.user.firstName) {
               // New user, or an existing one who never finished

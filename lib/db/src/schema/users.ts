@@ -35,6 +35,9 @@ export const users = pgTable(
     lastName: text("last_name"),
     avatarUrl: text("avatar_url"),
 
+    // Argon2id hash for optional six-digit PIN sign-in. Never return this field from API serializers.
+    pinHash: text("pin_hash"),
+
     // Business-level permission role. See userRoleEnum — distinct from
     // admin_users.role, which governs the separate 🛡️ admin portal.
     role: userRoleEnum("role").notNull().default("owner"),
