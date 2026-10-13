@@ -85,6 +85,10 @@ const SetPinBody = z.object({
     isStrongPin,
     "Choose six digits that are not all the same or sequential.",
   ),
+  currentPin: z.string().refine(
+    isSixDigitPin,
+    "Enter your current six-digit PIN.",
+  ).optional(),
 });
 
 function pinPhoneKey(req: Request): string {
@@ -167,6 +171,26 @@ router.post(
     if (!user) throw new NotFoundError("User not found");
     if (user.status !== "active") {
       throw new ForbiddenError("This account is restricted.");
+    }
+
+    // Changing a previously configured PIN requires proof of the old PIN.
+    // First-time setup remains available after the user has authenticated.
+    if (user.pinHash) {
+      const currentPinIsValid = Boolean(
+        parsed.data.currentPin
+          && await verifyPassword(user.pinHash, parsed.data.currentPin),
+      );
+      if (!currentPinIsValid) {
+        await recordAuthEvent({
+          actorType: "user",
+          actorId: user.id,
+          event: "user_pin_change_failed",
+          success: false,
+          ipAddress: req.ip,
+          userAgent: req.header("user-agent"),
+        });
+        throw new UnauthorizedError("Enter your current PIN to change it.");
+      }
     }
 
     const pinHash = await hashPassword(parsed.data.pin);
