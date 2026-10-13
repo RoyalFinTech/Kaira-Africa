@@ -256,7 +256,11 @@ try {
   });
   const pinPage = await pinContext.newPage();
   const pinErrors = [];
+  const pinConsoleErrors = [];
   pinPage.on('pageerror', (error) => pinErrors.push(error.message));
+  pinPage.on('console', (message) => {
+    if (message.type() === 'error') pinConsoleErrors.push(message.text());
+  });
 
   const pinLoginRequests = [];
   const pinSetRequests = [];
@@ -438,7 +442,20 @@ try {
   await sidebarProfileLink.waitFor({ state: 'visible', timeout: 10_000 });
   await sidebarProfileLink.click();
   await pinPage.waitForURL((url) => url.pathname === '/profile', { timeout: 10_000 });
-  await pinPage.getByRole('heading', { name: /profile/i }).first().waitFor({ state: 'visible', timeout: 10_000 });
+  await sleep(1_000);
+  const profileRouteDiagnostics = await pinPage.evaluate(() => ({
+    pathname: window.location.pathname,
+    headings: Array.from(document.querySelectorAll('h1,h2,h3')).map((node) => node.textContent?.trim()).filter(Boolean),
+    mainText: document.querySelector('main')?.innerText?.slice(0, 1800) || '',
+    alerts: Array.from(document.querySelectorAll('[role="alert"]')).map((node) => node.textContent?.trim()).filter(Boolean),
+  }));
+  await pinPage.screenshot({ path: resolve(outputDir, 'profile-route-diagnostics.png'), fullPage: true });
+  console.log('PROFILE ROUTE DIAGNOSTICS:', JSON.stringify({ ...profileRouteDiagnostics, pinErrors, pinConsoleErrors }));
+  assert.ok(
+    profileRouteDiagnostics.headings.some((heading) => /profile/i.test(heading)),
+    'Profile route must render a visible profile heading. Diagnostics: ' +
+      JSON.stringify({ ...profileRouteDiagnostics, pinErrors, pinConsoleErrors }),
+  );
   await pinPage.getByRole('heading', { name: 'PIN sign-in' }).waitFor({ state: 'visible', timeout: 10_000 });
   assert.ok((await pinPage.locator('main').innerText()).trim().length > 40, 'Profile must show useful content rather than a blank white page');
   await pinPage.getByLabel('New six-digit PIN').fill('482951');
