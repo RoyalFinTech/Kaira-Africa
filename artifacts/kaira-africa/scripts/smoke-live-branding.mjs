@@ -439,7 +439,7 @@ try {
   // Header shortcuts that used to be dead ends now open their respective routes.
   await pinPage.getByRole('button', { name: 'Find customers' }).click();
   await pinPage.waitForURL((url) => url.pathname === '/customers', { timeout: 10_000 });
-  await pinPage.getByRole('button', { name: 'Notifications' }).click();
+  await pinPage.getByRole('link', { name: 'Notifications' }).click();
   await pinPage.waitForURL((url) => url.pathname === '/notifications', { timeout: 10_000 });
 
   // Check the dedicated PIN screen and authenticated dashboard on a 390px phone.
