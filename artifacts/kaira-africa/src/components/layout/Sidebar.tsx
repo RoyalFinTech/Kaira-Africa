@@ -139,7 +139,7 @@ export function Sidebar() {
 
       {/* Bottom Actions */}
       <div className="p-3 space-y-1">
-        <Link href="/profile">
+        <Link href="/profile" aria-current={location === "/profile" ? "page" : undefined}>
           <div
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
@@ -147,7 +147,6 @@ export function Sidebar() {
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
-            aria-current={location === "/profile" ? "page" : undefined}
           >
             <User className="h-5 w-5 flex-shrink-0" />
             <span>Profile</span>
