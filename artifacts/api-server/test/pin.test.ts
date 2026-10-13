@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isSixDigitPin, isStrongPin } from "../src/lib/pin";
-import { hashPassword, verifyPassword } from "../src/lib/password";
+import { hashPin, isSixDigitPin, isStrongPin, verifyPin } from "../src/lib/pin";
 
 test("PIN accepts exactly six digits and preserves leading zeroes", () => {
   assert.equal(isSixDigitPin("012984"), true);
@@ -21,9 +20,9 @@ test("PIN setup rejects repeated and sequential patterns", () => {
 
 test("PIN credential storage uses a one-way password hash", async () => {
   const pin = "482951";
-  const pinHash = await hashPassword(pin);
+  const pinHash = await hashPin(pin);
 
   assert.notEqual(pinHash, pin);
-  assert.equal(await verifyPassword(pinHash, pin), true);
-  assert.equal(await verifyPassword(pinHash, "482952"), false);
+  assert.equal(await verifyPin(pinHash, pin), true);
+  assert.equal(await verifyPin(pinHash, "482952"), false);
 });
