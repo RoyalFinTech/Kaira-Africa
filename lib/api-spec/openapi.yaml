@@ -118,7 +118,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OtpVerificationResult"
+                $ref: "#/components/schemas/VerifyOtpResponse"
         "400":
           description: Invalid or expired OTP
         "429":
@@ -181,7 +181,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OtpVerificationResult"
+                $ref: "#/components/schemas/VerifyOtpResponse"
         "400":
           description: Invalid phone number or PIN format
         "401":
