@@ -484,6 +484,52 @@ try {
   }));
   await pinContext.close();
 
+  // Explicit regression case for the reported white /profile screen:
+  // the current-user API fails, so the page must show a useful recovery state.
+  const profileFailureContext = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    deviceScaleFactor: 1,
+  });
+  await profileFailureContext.addInitScript(() => {
+    localStorage.setItem('kaira_token', 'usr_profile_failure_smoke');
+    localStorage.setItem('kaira_onboarding_done', 'true');
+  });
+  const profileFailurePage = await profileFailureContext.newPage();
+  const profileFailureErrors = [];
+  profileFailurePage.on('pageerror', (error) => profileFailureErrors.push(error.message));
+  await profileFailurePage.route('**/api/**', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 204,
+        headers: {
+          'access-control-allow-origin': baseUrl,
+          'access-control-allow-methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
+          'access-control-allow-headers': 'authorization,content-type',
+          'access-control-allow-credentials': 'true',
+          vary: 'Origin',
+        },
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 503,
+      headers: {
+        'access-control-allow-origin': baseUrl,
+        'access-control-allow-credentials': 'true',
+        'content-type': 'application/json; charset=utf-8',
+        vary: 'Origin',
+      },
+      body: JSON.stringify({ error: 'test_service_unavailable', message: 'The profile test API is deliberately unavailable.' }),
+    });
+  });
+  await profileFailurePage.goto(baseUrl + '/profile?profile-error-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await profileFailurePage.getByRole('heading', { name: "We couldn't load your profile" }).waitFor({ state: 'visible', timeout: 15_000 });
+  assert.ok((await profileFailurePage.locator('main').innerText()).includes('Try again'), 'Failed profile loads must show an actionable retry state');
+  assert.deepEqual(profileFailureErrors, [], 'Profile API failure must not crash the page: ' + profileFailureErrors.join(' | '));
+  await profileFailurePage.screenshot({ path: resolve(outputDir, 'profile-recovery-state.png'), fullPage: true });
+  await profileFailureContext.close();
+  console.log('PROFILE API FAILURE RECOVERY VERIFIED: no blank page or browser runtime error.');
+
   // Render the authenticated app shell with all API requests safely intercepted.
   // The fake token is never sent to the production API; requests receive a stub
   // response so this verifies navigation/layout without reading or mutating data.
