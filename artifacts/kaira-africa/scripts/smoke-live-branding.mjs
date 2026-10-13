@@ -374,6 +374,7 @@ try {
   });
   await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await pinPage.getByRole('heading', { name: 'Enter your PIN' }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
   const pinHero = pinPage.locator('img[src="/kaira-pin-login-hero.webp"]');
   await pinHero.waitFor({ state: 'visible', timeout: 10_000 });
   const pinHeroStats = await pinHero.evaluate(async (img) => {
