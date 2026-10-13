@@ -469,7 +469,7 @@ try {
   await pinPage.getByLabel('Full Name').fill('Awa Jallow');
   await pinPage.getByLabel('Six-digit PIN').fill('482951');
   await pinPage.getByLabel('Confirm PIN').fill('482951');
-  await pinPage.getByRole('button', { name: 'Continue' }).click();
+  await pinPage.locator('form button[type="submit"]').click();
   await pinPage.waitForURL((url) => url.pathname === '/business-onboarding' || url.pathname === '/dashboard', { timeout: 15_000 });
   assert.equal(pinSetRequests.length, 2, 'Registration must save the PIN after SMS-verified profile completion');
   assert.equal(pinSetRequests[1].pin, '482951', 'Registration must send only the PIN value to the protected API endpoint');
