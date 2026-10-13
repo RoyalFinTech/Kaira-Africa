@@ -77,7 +77,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         </Button>
 
         <Link href="/notifications">
-          <Button variant="ghost" size="icon" className="relative" aria-label="Notifications" title="Notifications">
+          <Button variant="ghost" size="icon" className="relative" aria-label="Notifications" title="Notifications" onClick={() => setLocation("/notifications")}>
             <Bell className={`h-5 w-5 ${shouldShake ? 'animate-bell-shake' : ''}`} />
             {unreadCount > 0 && (
               <Badge
