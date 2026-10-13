@@ -366,34 +366,73 @@ try {
     });
   });
 
-  const pinHeroResponsePromise = pinPage.waitForResponse(
-    (response) => new URL(response.url()).pathname === '/kaira-pin-login-hero.webp',
-    { timeout: 15_000 },
-  );
+  const heroImageFailures = [];
+  pinPage.on('requestfailed', (request) => {
+    if (request.url().includes('kaira-pin-login-hero.webp') || request.url().includes('kaira-dashboard-hero.webp')) {
+      heroImageFailures.push({ url: request.url(), error: request.failure()?.errorText || 'request failed' });
+    }
+  });
   await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await pinPage.getByRole('heading', { name: 'Enter your PIN' }).waitFor({ state: 'visible', timeout: 15_000 });
-  const pinHeroResponse = await pinHeroResponsePromise;
-  assert.equal(pinHeroResponse.status(), 200, 'PIN sign-in hero image must load');
+  await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
+  const pinHero = pinPage.locator('img[src="/kaira-pin-login-hero.webp"]');
+  await pinHero.waitFor({ state: 'visible', timeout: 10_000 });
+  const pinHeroStats = await pinHero.evaluate(async (img) => {
+    const waitForImage = () => new Promise((resolve) => {
+      const finish = () => resolve({
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        currentSrc: img.currentSrc,
+      });
+      img.addEventListener('load', finish, { once: true });
+      img.addEventListener('error', finish, { once: true });
+      window.setTimeout(finish, 5_000);
+    });
+    if (!img.complete) return await waitForImage();
+    return {
+      complete: img.complete,
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      currentSrc: img.currentSrc,
+    };
+  });
+  assert.ok(pinHeroStats.complete && pinHeroStats.naturalWidth > 0, 'PIN sign-in hero image must render in the browser: ' + JSON.stringify({ pinHeroStats, heroImageFailures }));
+  console.log('PIN LOGIN HERO RENDER VERIFIED:', JSON.stringify(pinHeroStats));
   const phoneInput = pinPage.getByLabel('Phone number');
   await phoneInput.fill('+220 87 1234567');
   await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
 
-  const dashboardHeroResponsePromise = pinPage.waitForResponse(
-    (response) => new URL(response.url()).pathname === '/kaira-dashboard-hero.webp',
-    { timeout: 15_000 },
-  );
   await pinPage.getByRole('button', { name: 'Continue to dashboard' }).click();
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
-  const dashboardHeroResponse = await dashboardHeroResponsePromise;
-  assert.equal(dashboardHeroResponse.status(), 200, 'Dashboard hero image must load after PIN sign-in');
   assert.equal(pinLoginRequests.length, 1, 'PIN sign-in must call the login endpoint once');
   assert.equal(pinLoginRequests[0].pin, '482951', 'PIN sign-in must submit exactly the six-digit PIN');
   assert.equal(pinLoginRequests[0].phoneNumber, '+220 87 1234567', 'PIN sign-in must submit the phone number linked to the account');
   const dashboardHero = pinPage.locator('img[src="/kaira-dashboard-hero.webp"]');
   await dashboardHero.waitFor({ state: 'visible', timeout: 10_000 });
-  assert.ok(await dashboardHero.evaluate((image) => image.complete && image.naturalWidth > 0), 'Dashboard hero must render real image pixels');
+  const dashboardHeroStats = await dashboardHero.evaluate(async (img) => {
+    const waitForImage = () => new Promise((resolve) => {
+      const finish = () => resolve({
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        currentSrc: img.currentSrc,
+      });
+      img.addEventListener('load', finish, { once: true });
+      img.addEventListener('error', finish, { once: true });
+      window.setTimeout(finish, 5_000);
+    });
+    if (!img.complete) return await waitForImage();
+    return {
+      complete: img.complete,
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      currentSrc: img.currentSrc,
+    };
+  });
+  assert.ok(dashboardHeroStats.complete && dashboardHeroStats.naturalWidth > 0, 'Dashboard hero must render real image pixels: ' + JSON.stringify({ dashboardHeroStats, heroImageFailures }));
   await pinPage.screenshot({ path: resolve(outputDir, 'dashboard-hero-desktop.png'), fullPage: true });
-  console.log('PIN LOGIN AND DASHBOARD HERO VERIFIED:', JSON.stringify({ loginRequests: pinLoginRequests.length, dashboardHeroStatus: dashboardHeroResponse.status() }));
+  console.log('PIN LOGIN AND DASHBOARD HERO VERIFIED:', JSON.stringify({ loginRequests: pinLoginRequests.length, dashboardHeroStats }));
 
   const sidebarProfileLink = pinPage.locator('a[href="/profile"]').first();
   await sidebarProfileLink.waitFor({ state: 'visible', timeout: 10_000 });

@@ -888,6 +888,12 @@ components:
           maxLength: 6
           pattern: "^[0-9]{6}$"
           description: Six-digit PIN; repeated or sequential patterns are rejected by the server.
+        currentPin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+          description: Required when changing a PIN that is already configured; omitted for first-time setup.
       required:
         - pin
 
