@@ -19,6 +19,8 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
 import { PageTransition } from '@/components/common/PageTransition';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { PinSettingsCard } from '@/components/common/PinSettingsCard';
 import { useGetMe, useGetMyBusiness, useUpdateProfile, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { formatDate, getInitials } from '@/lib/utils';
@@ -30,7 +32,7 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
-  const { data: user } = useGetMe();
+  const { data: user, isLoading: userLoading, isError: userIsError, refetch: refetchUser } = useGetMe();
   const { data: business } = useGetMyBusiness();
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
@@ -111,7 +113,47 @@ export default function ProfilePage() {
     updateProfile.mutate({ data });
   };
 
-  if (!user) return null;
+  if (userLoading) {
+    return (
+      <PageTransition>
+        <div role="status" className="flex min-h-[45vh] flex-col items-center justify-center gap-4 text-center">
+          <LoadingSpinner size={32} />
+          <div>
+            <h1 className="font-display text-xl font-bold text-foreground">Loading your profile</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Securely fetching your account and business details…</p>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  if (userIsError || !user) {
+    return (
+      <PageTransition>
+        <div className="mx-auto flex min-h-[45vh] max-w-xl flex-col items-center justify-center text-center">
+          <Card className="w-full">
+            <CardContent className="p-6 sm:p-8">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+                <User className="h-6 w-6" />
+              </div>
+              <h1 className="font-display text-xl font-bold text-foreground">We couldn't load your profile</h1>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Your information has not been removed. Check your connection and try again, or sign in again if your session has expired.
+              </p>
+              <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+                <Button type="button" onClick={() => void refetchUser()} className="gap-2">
+                  Try again
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setLocation('/login')}>
+                  Return to sign in
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>
@@ -312,6 +354,8 @@ export default function ProfilePage() {
                 </form>
               </CardContent>
             </Card>
+
+            <PinSettingsCard />
 
             {/* Security — note: business users authenticate via
                 phone/OTP only and have no password to change here.
