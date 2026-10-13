@@ -72,7 +72,7 @@ export default function DashboardPage() {
             src="/kaira-dashboard-hero.webp"
             alt="A small business owner reviewing work on a laptop in her shop"
             className="absolute inset-0 -z-20 h-full w-full object-cover object-[center_42%]"
-            fetchPriority="high"
+            loading="eager"
           />
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-[#062317]/95 via-[#062317]/78 to-[#062317]/10 sm:to-[#062317]/25" />
           <div className="relative flex min-h-[225px] items-center p-5 sm:min-h-[245px] sm:p-8 lg:p-10">
