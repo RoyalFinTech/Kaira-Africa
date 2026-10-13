@@ -17,6 +17,7 @@ function isStrongPin(pin: string) {
 
 export function PinSettingsCard() {
   const queryClient = useQueryClient();
+  const [currentPin, setCurrentPin] = useState("");
   const [pin, setPin] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +33,13 @@ export function PinSettingsCard() {
     mutationFn: () =>
       apiRequestJson<void>("/auth/set-pin", {
         method: "POST",
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({
+          pin,
+          ...(status.data?.enabled ? { currentPin } : {}),
+        }),
       }),
     onSuccess: async () => {
+      setCurrentPin("");
       setPin("");
       setConfirmation("");
       setError(null);
@@ -53,6 +58,10 @@ export function PinSettingsCard() {
     setError(null);
     if (!isStrongPin(pin)) {
       setError("Use six digits. Avoid repeated digits or simple sequences such as 123456.");
+      return;
+    }
+    if (status.data?.enabled && !/^[0-9]{6}$/.test(currentPin)) {
+      setError("Enter your current six-digit PIN before changing it.");
       return;
     }
     if (pin !== confirmation) {
@@ -101,8 +110,27 @@ export function PinSettingsCard() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {status.data?.enabled && (
+              <label className="space-y-1.5 text-sm font-medium sm:col-span-2">
+                Current six-digit PIN
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="current-password"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  minLength={6}
+                  required
+                  value={currentPin}
+                  onChange={(event) => setCurrentPin(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                  placeholder="••••••"
+                  aria-label="Current six-digit PIN"
+                  className="h-11 tracking-[0.35em]"
+                />
+              </label>
+            )}
             <label className="space-y-1.5 text-sm font-medium">
-              Six-digit PIN
+              New six-digit PIN
               <Input
                 type="password"
                 inputMode="numeric"
@@ -140,7 +168,7 @@ export function PinSettingsCard() {
           {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
           {saved && <p role="status" className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-primary">Your PIN was saved successfully.</p>}
 
-          <Button type="submit" disabled={savePin.isPending} className="w-full sm:w-auto">
+          <Button type="submit" disabled={savePin.isPending || status.isLoading || status.isError} className="w-full sm:w-auto">
             {savePin.isPending ? "Saving PIN…" : status.data?.enabled ? "Update PIN" : "Set my PIN"}
           </Button>
         </form>
