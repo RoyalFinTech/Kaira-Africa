@@ -158,15 +158,18 @@ router.post(
     keyFn: (req) => req.user?.id ?? ipKey(req),
     message: "Too many PIN updates. Please try again later.",
   }),
-  validate({ body: SetPinBody }),
   async (req, res) => {
+    const parsed = SetPinBody.safeParse(req.body);
+    if (!parsed.success) {
+      throw new BadRequestError("Choose a valid six-digit PIN that is not all the same or sequential.");
+    }
     const user = await getUserById(req.user!.id);
     if (!user) throw new NotFoundError("User not found");
     if (user.status !== "active") {
       throw new ForbiddenError("This account is restricted.");
     }
 
-    const pinHash = await hashPassword(req.body.pin);
+    const pinHash = await hashPassword(parsed.data.pin);
     await updateUserPinHash(user.id, pinHash);
     await recordAuthEvent({
       actorType: "user",
@@ -196,12 +199,16 @@ router.post(
     keyFn: pinPhoneKey,
     message: "Too many PIN attempts for this number. Use SMS verification or try again later.",
   }),
-  validate({ body: PinLoginBody }),
   async (req, res) => {
-    const { countryCode, number } = normalizeGambianPhone(req.body.phoneNumber);
+    const parsed = PinLoginBody.safeParse(req.body);
+    if (!parsed.success) {
+      throw new BadRequestError("Enter a valid Gambian phone number and six-digit PIN.");
+    }
+    const { phoneNumber, pin } = parsed.data;
+    const { countryCode, number } = normalizeGambianPhone(phoneNumber);
     const user = await getUserByPhone(countryCode, number);
     const validPin = Boolean(
-      user?.pinHash && await verifyPassword(user.pinHash, req.body.pin),
+      user?.pinHash && await verifyPassword(user.pinHash, pin),
     );
 
     // Keep the visible failure response consistent for unknown phone numbers,
