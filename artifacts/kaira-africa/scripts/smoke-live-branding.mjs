@@ -134,6 +134,16 @@ console.log('PUBLIC LOGO ASSET VERIFIED:', JSON.stringify({ status: assetRespons
 // Wait for Render to publish this specific commit before testing browser rendering.
 await waitForDeployedSplashBundle();
 
+// Verify the newly generated local hero assets are published with the app build.
+for (const heroPath of ['kaira-dashboard-hero.webp', 'kaira-pin-login-hero.webp']) {
+  const response = await fetch(baseUrl + '/' + heroPath + '?asset-smoke=' + Date.now(), { cache: 'no-store' });
+  assert.equal(response.status, 200, heroPath + ' must return HTTP 200');
+  assert.match(response.headers.get('content-type') || '', /image\/webp/i, heroPath + ' must be served as WebP');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.ok(bytes.length > 4_000, heroPath + ' must contain real generated image data');
+  console.log('GENERATED HERO ASSET VERIFIED:', JSON.stringify({ heroPath, bytes: bytes.length }));
+}
+
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 try {
   const context = await browser.newContext({
@@ -233,6 +243,246 @@ try {
   assert.deepEqual(mobileErrors, [], `Mobile browser runtime errors: ${mobileErrors.join(' | ')}`);
   await mobilePage.screenshot({ path: resolve(outputDir, 'login-mobile-screen.png'), fullPage: true });
   console.log('MOBILE LOGIN RESPONSIVE UI VERIFIED:', JSON.stringify({ mobileLogoStats, mobileLayout, features: ['CRM', 'Inventory', 'Analytics', 'AI Reports'] }));
+
+  // Returning-user PIN, registration setup, profile recovery, navigation and mobile smoke tests.
+  // All auth/data API calls in this block are intercepted, so no production
+  // users, PINs, ledger entries or business records are created or modified.
+  const pinContext = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: 1,
+  });
+  await pinContext.addInitScript(() => {
+    localStorage.setItem('kaira_onboarding_done', 'true');
+  });
+  const pinPage = await pinContext.newPage();
+  const pinErrors = [];
+  pinPage.on('pageerror', (error) => pinErrors.push(error.message));
+
+  const pinLoginRequests = [];
+  const pinSetRequests = [];
+  let pinEnabled = false;
+  const nowIso = new Date().toISOString();
+  const visualBusiness = {
+    id: 'business_visual_smoke',
+    name: 'Visual Smoke Shop',
+    type: 'retail',
+    industry: 'retail',
+    country: 'The Gambia',
+    city: 'Banjul',
+    phone: '+220871234567',
+    email: 'fatou@example.gm',
+    website: null,
+    description: 'Visual browser-test fixture',
+    logoUrl: null,
+    address: 'Banjul',
+    teamSize: '1-5',
+    status: 'active',
+    createdAt: nowIso,
+  };
+  const visualUser = {
+    id: 'user_visual_smoke',
+    email: 'fatou@example.gm',
+    firstName: 'Fatou',
+    lastName: 'Jallow',
+    phone: '+220871234567',
+    avatarUrl: null,
+    role: 'owner',
+    businessId: visualBusiness.id,
+    createdAt: nowIso,
+    lastLoginAt: null,
+  };
+  const corsHeaders = {
+    'access-control-allow-origin': baseUrl,
+    'access-control-allow-methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
+    'access-control-allow-headers': 'authorization,content-type',
+    'access-control-allow-credentials': 'true',
+    vary: 'Origin',
+    'content-type': 'application/json; charset=utf-8',
+  };
+
+  await pinPage.route('**/api/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const method = request.method();
+    const pathname = url.pathname;
+    if (method === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/login-pin') && method === 'POST') {
+      pinLoginRequests.push(JSON.parse(request.postData() || '{}'));
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ token: 'usr_visual_smoke_token', isNewUser: false, user: visualUser }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/pin-status') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ enabled: pinEnabled }) });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/set-pin') && method === 'POST') {
+      pinSetRequests.push(JSON.parse(request.postData() || '{}'));
+      pinEnabled = true;
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/me') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(visualUser) });
+      return;
+    }
+
+    if (pathname.endsWith('/api/businesses/me') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(visualBusiness) });
+      return;
+    }
+
+    if (method === 'PATCH' && pathname.includes('/api/auth/')) {
+      const input = JSON.parse(request.postData() || '{}');
+      const updated = {
+        ...visualUser,
+        firstName: input.firstName || 'Awa',
+        lastName: input.lastName || 'Jallow',
+        businessId: null,
+      };
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(updated) });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/logout') && method === 'POST') {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    await route.fulfill({
+      status: 503,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'smoke_fixture_unimplemented', message: 'This read-only smoke fixture is not configured for that endpoint.' }),
+    });
+  });
+
+  const pinHeroResponsePromise = pinPage.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/kaira-pin-login-hero.webp',
+    { timeout: 15_000 },
+  );
+  await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.getByRole('heading', { name: 'Enter your PIN' }).waitFor({ state: 'visible', timeout: 15_000 });
+  const pinHeroResponse = await pinHeroResponsePromise;
+  assert.equal(pinHeroResponse.status(), 200, 'PIN sign-in hero image must load');
+  const phoneInput = pinPage.getByLabel('Phone number');
+  await phoneInput.fill('+220 87 1234567');
+  await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
+
+  const dashboardHeroResponsePromise = pinPage.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/kaira-dashboard-hero.webp',
+    { timeout: 15_000 },
+  );
+  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
+  const dashboardHeroResponse = await dashboardHeroResponsePromise;
+  assert.equal(dashboardHeroResponse.status(), 200, 'Dashboard hero image must load after PIN sign-in');
+  assert.equal(pinLoginRequests.length, 1, 'PIN sign-in must call the login endpoint once');
+  assert.equal(pinLoginRequests[0].pin, '482951', 'PIN sign-in must submit exactly the six-digit PIN');
+  assert.equal(pinLoginRequests[0].phoneNumber, '+220 87 1234567', 'PIN sign-in must submit the phone number linked to the account');
+  const dashboardHero = pinPage.locator('img[src="/kaira-dashboard-hero.webp"]');
+  await dashboardHero.waitFor({ state: 'visible', timeout: 10_000 });
+  assert.ok(await dashboardHero.evaluate((image) => image.complete && image.naturalWidth > 0), 'Dashboard hero must render real image pixels');
+  await pinPage.screenshot({ path: resolve(outputDir, 'dashboard-hero-desktop.png'), fullPage: true });
+  console.log('PIN LOGIN AND DASHBOARD HERO VERIFIED:', JSON.stringify({ loginRequests: pinLoginRequests.length, dashboardHeroStatus: dashboardHeroResponse.status() }));
+
+  const sidebarProfileLink = pinPage.locator('a[href="/profile"]').first();
+  await sidebarProfileLink.waitFor({ state: 'visible', timeout: 10_000 });
+  await sidebarProfileLink.click();
+  await pinPage.waitForURL((url) => url.pathname === '/profile', { timeout: 10_000 });
+  await pinPage.getByRole('heading', { name: /profile/i }).first().waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByRole('heading', { name: 'PIN sign-in' }).waitFor({ state: 'visible', timeout: 10_000 });
+  assert.ok((await pinPage.locator('main').innerText()).trim().length > 40, 'Profile must show useful content rather than a blank white page');
+  await pinPage.getByLabel('New six-digit PIN').fill('482951');
+  await pinPage.getByLabel('Confirm six-digit PIN').fill('482951');
+  await pinPage.getByRole('button', { name: 'Set my PIN' }).click();
+  await pinPage.getByText('Your PIN was saved successfully.').waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByText('PIN sign-in is enabled').waitFor({ state: 'visible', timeout: 10_000 });
+  assert.equal(pinSetRequests.length, 1, 'Profile PIN setup should make one intercepted save request');
+  await pinPage.screenshot({ path: resolve(outputDir, 'profile-pin-settings.png'), fullPage: true });
+  console.log('PROFILE NON-BLANK STATE AND PIN SETTINGS VERIFIED');
+
+  // Exercise every primary desktop navigation destination through its actual link.
+  const navigationTargets = [
+    ['/dashboard', 'Dashboard'],
+    ['/team', 'Team'],
+    ['/customers', 'Customers'],
+    ['/transactions', 'Transactions'],
+    ['/daily-ledger', 'Daily Ledger'],
+    ['/crm', 'CRM'],
+    ['/inventory', 'Inventory'],
+    ['/analytics', 'Analytics'],
+    ['/reports', 'Reports'],
+    ['/activity', 'Activity'],
+    ['/ai-reports', 'AI Reports'],
+    ['/profile', 'Profile'],
+    ['/settings', 'Settings'],
+  ];
+  for (const [routePath, label] of navigationTargets) {
+    const link = pinPage.locator('a[href="' + routePath + '"]').first();
+    await link.waitFor({ state: 'visible', timeout: 10_000 });
+    await link.click();
+    await pinPage.waitForURL((url) => url.pathname === routePath, { timeout: 10_000 });
+    const mainText = (await pinPage.locator('main').innerText().catch(() => '')).trim();
+    assert.ok(mainText.length > 20, 'Navigation to ' + label + ' must render a non-empty page');
+  }
+
+  // Header shortcuts that used to be dead ends now open their respective routes.
+  await pinPage.getByRole('button', { name: 'Find customers' }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/customers', { timeout: 10_000 });
+  await pinPage.getByRole('button', { name: 'Notifications' }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/notifications', { timeout: 10_000 });
+
+  // Check the dedicated PIN screen and authenticated dashboard on a 390px phone.
+  await pinPage.setViewportSize({ width: 390, height: 844 });
+  await pinPage.goto(baseUrl + '/login/pin?mobile-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.getByRole('heading', { name: 'Enter your PIN' }).waitFor({ state: 'visible', timeout: 10_000 });
+  const pinMobileLayout = await pinPage.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  assert.ok(pinMobileLayout.documentWidth <= pinMobileLayout.viewportWidth, 'PIN sign-in must not overflow on mobile: ' + JSON.stringify(pinMobileLayout));
+
+  await pinPage.goto(baseUrl + '/dashboard?mobile-dashboard-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.locator('nav[aria-label="Primary mobile navigation"]').waitFor({ state: 'visible', timeout: 10_000 });
+  const dashboardMobileLayout = await pinPage.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  assert.ok(dashboardMobileLayout.documentWidth <= dashboardMobileLayout.viewportWidth, 'Dashboard must not overflow on mobile: ' + JSON.stringify(dashboardMobileLayout));
+  await pinPage.locator('nav[aria-label="Primary mobile navigation"] a[href="/daily-ledger"]').click();
+  await pinPage.waitForURL((url) => url.pathname === '/daily-ledger', { timeout: 10_000 });
+  await pinPage.screenshot({ path: resolve(outputDir, 'dashboard-mobile-screen.png'), fullPage: true });
+
+  // Registration PIN setup is tested with a fake user and fully intercepted API writes.
+  await pinPage.setViewportSize({ width: 1440, height: 900 });
+  await pinPage.goto(baseUrl + '/login/name?registration-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.getByLabel('Full Name').fill('Awa Jallow');
+  await pinPage.getByLabel('Six-digit PIN').fill('482951');
+  await pinPage.getByLabel('Confirm PIN').fill('482951');
+  await pinPage.getByRole('button', { name: 'Continue' }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/business-onboarding' || url.pathname === '/dashboard', { timeout: 15_000 });
+  assert.equal(pinSetRequests.length, 2, 'Registration must save the PIN after SMS-verified profile completion');
+  assert.equal(pinSetRequests[1].pin, '482951', 'Registration must send only the PIN value to the protected API endpoint');
+  await pinPage.screenshot({ path: resolve(outputDir, 'registration-pin-setup.png'), fullPage: true });
+  assert.deepEqual(pinErrors, [], 'PIN/profile/navigation runtime errors: ' + pinErrors.join(' | '));
+  console.log('PIN REGISTRATION, PROFILE, NAVIGATION AND MOBILE SMOKE TESTS PASSED:', JSON.stringify({
+    pinLoginRequests: pinLoginRequests.length,
+    pinSetRequests: pinSetRequests.length,
+    navigationTargets: navigationTargets.length,
+    mobilePin: pinMobileLayout,
+    mobileDashboard: dashboardMobileLayout,
+  }));
+  await pinContext.close();
 
   // Render the authenticated app shell with all API requests safely intercepted.
   // The fake token is never sent to the production API; requests receive a stub
