@@ -63,7 +63,7 @@ import { normalizeGambianPhone } from "../lib/phone";
 import { generateOtp, hashOtp, OTP_TTL_MINUTES, OTP_RESEND_COOLDOWN_SECONDS } from "../lib/otp";
 import { generateSessionToken, hashToken, hashResetToken, tokenKind } from "../lib/tokens";
 import { hashPassword, verifyPassword, validatePasswordComplexity } from "../lib/password";
-import { isSixDigitPin, isStrongPin } from "../lib/pin";
+import { hashPin, isSixDigitPin, isStrongPin, verifyPin } from "../lib/pin";
 import { sendOtpSms } from "../services/sms.service";
 import { sendPasswordResetEmail } from "../services/email.service";
 import { env, isProd } from "../config/env";
@@ -193,7 +193,7 @@ router.post(
       }
     }
 
-    const pinHash = await hashPassword(parsed.data.pin);
+    const pinHash = await hashPin(parsed.data.pin);
     await updateUserPinHash(user.id, pinHash);
     await recordAuthEvent({
       actorType: "user",
@@ -232,7 +232,7 @@ router.post(
     const { countryCode, number } = normalizeGambianPhone(phoneNumber);
     const user = await getUserByPhone(countryCode, number);
     const validPin = Boolean(
-      user?.pinHash && await verifyPassword(user.pinHash, pin),
+      user?.pinHash && await verifyPin(user.pinHash, pin),
     );
 
     // Keep the visible failure response consistent for unknown phone numbers,
