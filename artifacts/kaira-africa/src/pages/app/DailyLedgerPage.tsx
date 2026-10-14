@@ -286,14 +286,8 @@ export default function DailyLedgerPage() {
               <p className="max-w-xl text-sm leading-relaxed text-emerald-50/80">Turn your recorded sales, expenses and unpaid credit into a clear business picture. Review trends and get AI-assisted insights without doing the sums by hand.</p>
               <Button type="button" onClick={() => { window.location.assign("/ai-reports"); }} className="w-fit gap-2 bg-white text-emerald-900 hover:bg-emerald-50">Explore business insights <TrendingUp className="h-4 w-4" /></Button>
             </div>
-            <div aria-hidden="true" className="relative hidden min-h-[170px] items-center justify-center sm:flex">
-              <div className="absolute h-36 w-36 rounded-full bg-emerald-400/20 blur-2xl" />
-              <div className="relative w-full max-w-[300px] rounded-2xl border border-white/20 bg-white/10 p-4 shadow-2xl backdrop-blur">
-                <div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold tracking-wide text-emerald-50">MONTHLY SNAPSHOT</span><span className="rounded-full bg-emerald-300/20 px-2 py-1 text-[10px] text-emerald-100">LIVE DATA</span></div>
-                <div className="grid grid-cols-3 gap-2"><div className="rounded-lg bg-white/10 p-2"><div className="text-[10px] text-emerald-100">Sales</div><div className="mt-1 text-sm font-bold">↗</div></div><div className="rounded-lg bg-white/10 p-2"><div className="text-[10px] text-emerald-100">Costs</div><div className="mt-1 text-sm font-bold">▥</div></div><div className="rounded-lg bg-white/10 p-2"><div className="text-[10px] text-emerald-100">Cash flow</div><div className="mt-1 text-sm font-bold">✓</div></div></div>
-                <div className="mt-4 flex h-12 items-end gap-2">{[35,55,42,70,50,85,65,100,78,92].map((height,index)=><span key={index} className="flex-1 rounded-t bg-gradient-to-t from-amber-400 to-emerald-300" style={{height:height+"%"}} />)}</div>
-              </div>
-            </div>
+            <div className="hidden sm:block"><img src="/images/daily-ledger-insights.svg" alt="Illustrated business spreadsheet with sales, expense, transaction register and AI insights" className="mx-auto w-full max-w-[360px] rounded-2xl shadow-xl" loading="lazy" /></div>
+     </div>
           </CardContent>
         </Card>
 
