@@ -22,7 +22,12 @@ const TYPE_LABELS: Record<DailyLedgerType, string> = {
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 
 function todayDate() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+}
+function currentTime() {
+  const now = new Date();
+  return String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
 }
 function firstOfMonth() {
   return todayDate().slice(0, 7) + "-01";
@@ -42,6 +47,9 @@ export default function DailyLedgerPage() {
   const [customerName, setCustomerName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [recordedDate, setRecordedDate] = useState(todayDate());
+  const [recordedTime, setRecordedTime] = useState(currentTime());
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [remarks, setRemarks] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -77,6 +85,9 @@ export default function DailyLedgerPage() {
     setCustomerName("");
     setDueDate("");
     setRecordedDate(todayDate());
+    setRecordedTime(currentTime());
+    setPaymentMethod("cash");
+    setRemarks("");
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -109,6 +120,9 @@ export default function DailyLedgerPage() {
         quantity: entryType === "sale" && productId ? Number(quantity) : undefined,
         dueDate: dueDate || undefined,
         recordedDate,
+        recordedTime,
+        paymentMethod: paymentMethod as "cash" | "bank_transfer" | "mobile_money" | "card" | "credit" | "other",
+        remarks: remarks.trim() || undefined,
       });
       setEntryPage(1);
       await Promise.all([
@@ -146,13 +160,13 @@ export default function DailyLedgerPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="font-display flex items-center gap-2 text-3xl font-bold"><BookOpen className="h-7 w-7 text-primary" />Daily Sales & Expense Book</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Record each day's sales, business expenses, credit sales and debt repayments. These are private to your business and feed your reports.</p>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Your everyday business book: record each sale, expense, credit and repayment with its date, time, person, payment method and remarks. Entries feed your reports automatically.</p>
           </div>
           <Badge variant="outline" className="w-fit gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> GMD ledger</Badge>
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Add a daily record</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Write a new entry</CardTitle><p className="text-sm text-muted-foreground">Like a paper cashbook, every row tells you what happened, when it happened and how it was paid.</p></CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -174,6 +188,14 @@ export default function DailyLedgerPage() {
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Category
                   <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={entryType === "expense" ? "e.g. transport, rent" : "e.g. groceries, sales"} />
+                </label>
+                <label className="space-y-1.5 text-sm font-medium">Time of record
+                  <Input type="time" value={recordedTime} onChange={(e) => setRecordedTime(e.target.value)} required />
+                </label>
+                <label className="space-y-1.5 text-sm font-medium">Payment method
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="mobile_money">Mobile money</option><option value="card">Card / POS</option><option value="credit">Credit / unpaid</option><option value="other">Other</option>
+                  </select>
                 </label>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -220,10 +242,13 @@ export default function DailyLedgerPage() {
                   </label>
                 )}
               </div>
+              <label className="block space-y-1.5 text-sm font-medium">Remarks / receipt reference (optional)
+                <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} maxLength={500} placeholder="e.g. receipt number, reason for expense, who approved it" />
+              </label>
               {formError && <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{formError}</span></div>}
               {notice && <p className="text-sm font-medium text-primary" role="status">{notice}</p>}
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">Records are saved to your account. For a credit sale, mark it as debt so it appears in your outstanding-debt total.</p>
+                <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">Entries are saved to your business book. For a sale you have not collected payment for, choose “Credit sale / amount owed” and add the customer name.</p>
                 <Button type="submit" disabled={saving} className="gap-2"><Plus className="h-4 w-4" />{saving ? "Saving…" : "Save daily record"}</Button>
               </div>
             </form>
@@ -231,7 +256,7 @@ export default function DailyLedgerPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Report period</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Choose your book period</CardTitle><p className="text-sm text-muted-foreground">Filter the register by date to review a day, week or month.</p></CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label className="flex-1 space-y-1.5 text-sm font-medium">From<Input type="date" value={startDate} max={endDate} onChange={(e) => { setEntryPage(1); setStartDate(e.target.value); }} /></label>
             <label className="flex-1 space-y-1.5 text-sm font-medium">To<Input type="date" value={endDate} min={startDate} max={todayDate()} onChange={(e) => { setEntryPage(1); setEndDate(e.target.value); }} /></label>
@@ -261,7 +286,7 @@ export default function DailyLedgerPage() {
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Ledger entries ({summary?.totalRecords ?? 0})</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg">Your business book</CardTitle><p className="text-sm text-muted-foreground">A spreadsheet-style register of every recorded transaction. Scroll sideways on smaller screens.</p></CardHeader>
           <CardContent>
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
             {ledgerQuery.isLoading ? <div className="h-52 animate-pulse rounded-xl bg-muted" /> : !response?.entries.length ? <div className="py-12 text-center text-sm text-muted-foreground">No daily records in this period. Start by adding your first sale or expense above.</div> : (
