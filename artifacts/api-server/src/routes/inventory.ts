@@ -85,7 +85,7 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
     body: bytes,
   });
   if (!upload.ok) {
-    throw new ServiceUnavailableError("The photo could not be saved to storage. Please try again.");
+    throw new HttpError(503, "service_unavailable", "The photo could not be saved to storage. Please try again.");
   }
   const imageUrl = `${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/inventory-images/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
   const [updated] = await db.update(inventoryProducts).set({ imageUrl, updatedAt: new Date() })
