@@ -62,6 +62,13 @@ export default function PhoneAuthPage() {
         setLocation('/login/otp');
       },
       onError: (error) => {
+        if (error.message.toLowerCase().includes("already has pin sign-in enabled")) {
+          const phoneNumber = `+220${networkPrefix}${form.getValues("phone")}`;
+          sessionStorage.setItem("kaira_pending_phone", phoneNumber);
+          localStorage.setItem("kaira_last_phone", phoneNumber);
+          setLocation("/login/pin");
+          return;
+        }
         setFormError(error.message);
       },
     },
