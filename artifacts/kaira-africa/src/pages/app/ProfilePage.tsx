@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, Building2, Calendar, CheckCircle2, Edit2, Shield, LogOut } from 'lucide-react';
+import { User, Mail, Phone, Building2, Calendar, CheckCircle2, Edit2, Shield, LogOut, CircleHelp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -356,6 +356,42 @@ export default function ProfilePage() {
             </Card>
 
             <PinSettingsCard />
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CircleHelp className="h-4 w-4 text-primary" />
+                  Help & frequently asked questions
+                </CardTitle>
+                <p className="text-sm leading-5 text-muted-foreground">Short guides to help you use Kaira confidently. Tap a question to read the answer.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <details className="group rounded-lg border p-3">
+                  <summary className="cursor-pointer list-none text-sm font-semibold">How do I sign in next time?</summary>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">Set a six-digit PIN above. On the sign-in screen, enter the same Gambian phone number and PIN. Your PIN is stored as a secure hash on the server, never as plain text. If you forget it, use SMS verification to recover access.</p>
+                </details>
+                <details className="group rounded-lg border p-3">
+                  <summary className="cursor-pointer list-none text-sm font-semibold">What is the daily ledger?</summary>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">It is your digital cash book. Record sales, business expenses, credit given to customers and repayments received. Enter the date, amount, category and a clear description so reports make sense later.</p>
+                </details>
+                <details className="group rounded-lg border p-3">
+                  <summary className="cursor-pointer list-none text-sm font-semibold">How does inventory work, and what is a SKU?</summary>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">Add each item you sell or store, its current quantity, buying cost, selling price and low-stock alert. A SKU (Stock Keeping Unit) is a short unique item code, such as RICE-25KG. Use the same code for the same product every time.</p>
+                </details>
+                <details className="group rounded-lg border p-3">
+                  <summary className="cursor-pointer list-none text-sm font-semibold">Can I add product photos?</summary>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">Yes. Inventory photos are optional. Choose a photo and Kaira compresses it to 200 KB or less before upload to help conserve storage and mobile data. Photos require the inventory image storage service to be configured.</p>
+                </details>
+                <details className="group rounded-lg border p-3">
+                  <summary className="cursor-pointer list-none text-sm font-semibold">What should I do if a page or save action fails?</summary>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">Check your internet connection and retry once. Do not repeatedly submit a payment or record if you are unsure whether it saved. If the issue continues, contact support and include the page name and exact error message—never send your PIN or OTP.</p>
+                </details>
+                <details className="group rounded-lg border p-3">
+                  <summary className="cursor-pointer list-none text-sm font-semibold">How do I protect my account?</summary>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">Keep your PIN and SMS codes private, use a PIN that is not easy to guess, and choose “Log out of all devices” if you think someone else has access to your account.</p>
+                </details>
+              </CardContent>
+            </Card>
 
             {/* Security — note: business users authenticate via
                 phone/OTP only and have no password to change here.
