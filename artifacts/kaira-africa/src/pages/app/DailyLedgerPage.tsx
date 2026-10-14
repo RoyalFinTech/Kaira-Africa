@@ -289,7 +289,6 @@ export default function DailyLedgerPage() {
               <Button type="button" onClick={() => { window.location.assign("/ai-reports"); }} className="w-fit gap-2 bg-white text-emerald-900 hover:bg-emerald-50">Explore business insights <TrendingUp className="h-4 w-4" /></Button>
             </div>
             <div className="hidden sm:block"><img src="/images/daily-ledger-insights.svg" alt="Illustrated business spreadsheet with sales, expense, transaction register and AI insights" className="mx-auto w-full max-w-[360px] rounded-2xl shadow-xl" loading="lazy" /></div>
-     </div>
           </CardContent>
         </Card>
 
