@@ -24,6 +24,9 @@ const createEntryInput = z.object({
   quantity: z.number().int().positive().max(100000).optional(),
   dueDate: z.string().regex(datePattern, "Use YYYY-MM-DD for due date").optional(),
   recordedDate: z.string().regex(datePattern, "Use YYYY-MM-DD for record date").optional(),
+  recordedTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/, "Use HH:MM for record time").optional(),
+  paymentMethod: z.enum(["cash", "bank_transfer", "mobile_money", "card", "credit", "other"]).optional(),
+  remarks: z.string().trim().max(500).optional(),
 });
 
 function dateOnlyNow() {
@@ -47,6 +50,9 @@ function serialize(entry: typeof dailyLedgerEntries.$inferSelect) {
     dueDate: entry.dueDate,
     status: entry.status,
     recordedDate: entry.recordedDate,
+    recordedTime: entry.recordedTime,
+    paymentMethod: entry.paymentMethod,
+    remarks: entry.remarks,
     createdAt: entry.createdAt.toISOString(),
     updatedAt: entry.updatedAt.toISOString(),
   };
@@ -236,6 +242,9 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
       dueDate: input.dueDate || null,
       status: input.entryType === "debt" ? "unpaid" : "recorded",
       recordedDate,
+      recordedTime: input.recordedTime || null,
+      paymentMethod: input.paymentMethod || null,
+      remarks: input.remarks?.trim() || null,
     }).returning();
     return created;
   });
