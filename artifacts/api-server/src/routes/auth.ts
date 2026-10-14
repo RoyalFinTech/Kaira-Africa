@@ -289,6 +289,16 @@ router.post(
   async (req, res) => {
     const { countryCode, number } = normalizeGambianPhone(req.body.phoneNumber);
 
+    // Returning users with a configured PIN must use PIN sign-in instead of
+    // receiving a fresh OTP on every visit. Accounts without a PIN can still
+    // recover through verified SMS and configure one from their profile.
+    const existingUser = await getUserByPhone(countryCode, number);
+    if (existingUser?.pinHash) {
+      throw new BadRequestError(
+        "This number already has PIN sign-in enabled. Continue with your six-digit PIN instead.",
+      );
+    }
+
     const mostRecent = await getMostRecentOtp(countryCode, number);
     if (
       mostRecent &&
