@@ -138,6 +138,19 @@ export default function DailyLedgerPage() {
     }
   };
 
+  const exportCsv = () => {
+    const rows = response?.entries ?? [];
+    const header = ["Date", "Time", "Entry type", "Description", "Category", "Customer", "Payment method", "Remarks", "Status", "Amount (GMD)", "Balance (GMD)"];
+    const escapeCell = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    const csv = [header, ...rows.map((entry) => [entry.recordedDate, entry.recordedTime, TYPE_LABELS[entry.entryType], entry.description, entry.category, entry.customerName, entry.paymentMethod, entry.remarks, entry.status, entry.amount, entry.balance])].map((row) => row.map(escapeCell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "kaira-ledger-" + startDate + "-to-" + endDate + ".csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const markDebtPaid = async (id: string) => {
     setUpdatingId(id);
     setFormError(null);
@@ -265,6 +278,25 @@ export default function DailyLedgerPage() {
           </CardContent>
         </Card>
 
+        <Card className="overflow-hidden border-primary/15 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-800 text-white">
+          <CardContent className="grid gap-5 p-5 sm:grid-cols-[1.2fr_0.8fr] sm:items-center sm:p-7">
+            <div className="space-y-3">
+              <Badge className="w-fit border border-white/20 bg-white/10 text-white hover:bg-white/10">KAIRA SMART BOOKKEEPING</Badge>
+              <h2 className="font-display text-xl font-bold sm:text-2xl">Your numbers, easier to understand.</h2>
+              <p className="max-w-xl text-sm leading-relaxed text-emerald-50/80">Turn your recorded sales, expenses and unpaid credit into a clear business picture. Review trends and get AI-assisted insights without doing the sums by hand.</p>
+              <Button type="button" onClick={() => { window.location.assign("/ai-reports"); }} className="w-fit gap-2 bg-white text-emerald-900 hover:bg-emerald-50">Explore business insights <TrendingUp className="h-4 w-4" /></Button>
+            </div>
+            <div aria-hidden="true" className="relative hidden min-h-[170px] items-center justify-center sm:flex">
+              <div className="absolute h-36 w-36 rounded-full bg-emerald-400/20 blur-2xl" />
+              <div className="relative w-full max-w-[300px] rounded-2xl border border-white/20 bg-white/10 p-4 shadow-2xl backdrop-blur">
+                <div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold tracking-wide text-emerald-50">MONTHLY SNAPSHOT</span><span className="rounded-full bg-emerald-300/20 px-2 py-1 text-[10px] text-emerald-100">LIVE DATA</span></div>
+                <div className="grid grid-cols-3 gap-2"><div className="rounded-lg bg-white/10 p-2"><div className="text-[10px] text-emerald-100">Sales</div><div className="mt-1 text-sm font-bold">↗</div></div><div className="rounded-lg bg-white/10 p-2"><div className="text-[10px] text-emerald-100">Costs</div><div className="mt-1 text-sm font-bold">▥</div></div><div className="rounded-lg bg-white/10 p-2"><div className="text-[10px] text-emerald-100">Cash flow</div><div className="mt-1 text-sm font-bold">✓</div></div></div>
+                <div className="mt-4 flex h-12 items-end gap-2">{[35,55,42,70,50,85,65,100,78,92].map((height,index)=><span key={index} className="flex-1 rounded-t bg-gradient-to-t from-amber-400 to-emerald-300" style={{height:height+"%"}} />)}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Sales received <TrendingUp className="h-4 w-4 text-primary" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.sales ?? 0, "GMD")}</div></CardContent></Card>
           <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Business expenses <TrendingDown className="h-4 w-4 text-destructive" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.expenses ?? 0, "GMD")}</div></CardContent></Card>
@@ -286,30 +318,27 @@ export default function DailyLedgerPage() {
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-lg">Your business book</CardTitle><p className="text-sm text-muted-foreground">A spreadsheet-style register of every recorded transaction. Scroll sideways on smaller screens.</p></CardHeader>
+          <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="text-lg">Your business book</CardTitle><p className="mt-1 text-sm text-muted-foreground">A spreadsheet-style register of every recorded transaction. Scroll sideways on smaller screens.</p></div><Button type="button" size="sm" variant="outline" onClick={exportCsv} disabled={!response?.entries.length}><CalendarDays className="mr-1 h-4 w-4" />Export current page</Button></div></CardHeader>
           <CardContent>
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
             {ledgerQuery.isLoading ? <div className="h-52 animate-pulse rounded-xl bg-muted" /> : !response?.entries.length ? <div className="py-12 text-center text-sm text-muted-foreground">No daily records in this period. Start by adding your first sale or expense above.</div> : (
-              <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-sm">
-                <thead><tr className="border-b text-left text-muted-foreground"><th className="py-3 pr-3">Date</th><th className="py-3 pr-3">Type</th><th className="py-3 pr-3">Details</th><th className="py-3 pr-3">Customer / debtor</th><th className="py-3 pr-3">Status</th><th className="py-3 pr-3 text-right">Amount</th><th className="py-3 pr-3 text-right">Balance left</th><th className="py-3 text-right">Action</th></tr></thead>
-                <tbody>{response.entries.map((entry) => <tr key={entry.id} className="border-b last:border-0 align-top">
-                  <td className="py-3 pr-3 whitespace-nowrap">{entry.recordedDate}</td>
-                  <td className="py-3 pr-3"><Badge variant="outline">{TYPE_LABELS[entry.entryType]}</Badge></td>
-                  <td className="py-3 pr-3"><div className="font-medium">{entry.description}</div>{entry.category && <div className="mt-0.5 text-xs text-muted-foreground">{entry.category}</div>}</td>
-                  <td className="py-3 pr-3">{entry.customerName || "—"}{entry.dueDate && <div className="text-xs text-muted-foreground">Due {entry.dueDate}</div>}</td>
-                  <td className="py-3 pr-3">{entry.entryType === "debt" ? <Badge variant={entry.status === "paid" ? "default" : "destructive"}>{entry.status === "paid" ? "Paid" : "Unpaid"}</Badge> : <span className="text-xs text-muted-foreground">Recorded</span>}</td>
-                  <td className="py-3 pr-3 text-right font-semibold whitespace-nowrap">{formatCurrency(entry.amount, entry.currency)}</td>
-                  <td className="py-3 pr-3 text-right whitespace-nowrap">{entry.entryType === "debt" ? formatCurrency(entry.balance ?? entry.amount, entry.currency) : "—"}</td>
-                  <td className="py-3 text-right">{entry.entryType === "debt" && entry.status !== "paid" ? <Button type="button" size="sm" variant="outline" disabled={updatingId === entry.id} onClick={() => void markDebtPaid(entry.id)} className="gap-1"><CheckCircle2 className="h-3.5 w-3.5" />{updatingId === entry.id ? "Saving…" : "Mark paid"}</Button> : <span className="text-xs text-muted-foreground">—</span>}</td>
-                </tr>)}</tbody>
-              </table></div>
-            )}
-            {!ledgerQuery.isLoading && response && (
-              <PaginationControls
-                pagination={response.pagination}
-                onPageChange={setEntryPage}
-                itemLabel="ledger entries"
-              />
+              <div className="overflow-x-auto rounded-xl border">
+                <table className="w-full min-w-[1320px] border-collapse text-sm">
+                  <thead className="bg-muted/70"><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-3 py-3">Date</th><th className="px-3 py-3">Time</th><th className="px-3 py-3">Entry type</th><th className="px-3 py-3">Particulars / description</th><th className="px-3 py-3">Category</th><th className="px-3 py-3">Customer / name</th><th className="px-3 py-3">Payment method</th><th className="px-3 py-3">Remarks / reference</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Balance left</th><th className="px-3 py-3 text-right">Action</th>
+                  </tr></thead>
+                  <tbody>{response.entries.map((entry, index) => <tr key={entry.id} className={`border-b last:border-0 align-top transition-colors hover:bg-muted/40 ${index % 2 ? "bg-muted/15" : "bg-background"}`}>
+                    <td className="whitespace-nowrap px-3 py-3 tabular-nums">{entry.recordedDate}</td><td className="whitespace-nowrap px-3 py-3 tabular-nums text-muted-foreground">{entry.recordedTime || "—"}</td>
+                    <td className="px-3 py-3"><Badge variant="outline" className="whitespace-nowrap">{TYPE_LABELS[entry.entryType]}</Badge></td>
+                    <td className="max-w-[240px] px-3 py-3"><div className="font-medium text-foreground">{entry.description}</div>{entry.dueDate && <div className="mt-1 text-xs text-muted-foreground">Due {entry.dueDate}</div>}</td>
+                    <td className="px-3 py-3 text-muted-foreground">{entry.category || "—"}</td><td className="px-3 py-3">{entry.customerName || "—"}</td>
+                    <td className="px-3 py-3 capitalize text-muted-foreground">{(entry.paymentMethod || "—").replace("_", " ")}</td><td className="max-w-[200px] whitespace-normal px-3 py-3 text-muted-foreground">{entry.remarks || "—"}</td>
+                    <td className="px-3 py-3">{entry.entryType === "debt" ? <Badge variant={entry.status === "paid" ? "default" : "destructive"}>{entry.status === "paid" ? "Paid" : "Unpaid"}</Badge> : <span className="text-xs text-muted-foreground">Recorded</span>}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums">{formatCurrency(entry.amount, entry.currency)}</td><td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{entry.entryType === "debt" ? formatCurrency(entry.balance ?? entry.amount, entry.currency) : "—"}</td>
+                    <td className="px-3 py-3 text-right">{entry.entryType === "debt" && entry.status !== "paid" ? <Button type="button" size="sm" variant="outline" disabled={updatingId === entry.id} onClick={() => void markDebtPaid(entry.id)} className="gap-1 whitespace-nowrap"><CheckCircle2 className="h-3.5 w-3.5" />{updatingId === entry.id ? "Saving…" : "Mark paid"}</Button> : <span className="text-xs text-muted-foreground">—</span>}</td>
+                  </tr>)}</tbody>
+                </table>
+              </div>
             )}
             {!ledgerQuery.isLoading && response && (
               <PaginationControls
