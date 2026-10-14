@@ -5,7 +5,7 @@ import { db, inventoryProducts, inventoryMovements } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
-import { BadRequestError, NotFoundError, ServiceUnavailableError } from "../lib/http-errors";
+import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { env } from "../config/env";
 
 const router: IRouter = Router();
@@ -63,7 +63,7 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
   )).limit(1);
   if (!product) throw new NotFoundError("Inventory product not found");
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new ServiceUnavailableError("Product image storage is not configured yet. You can still save the product without a photo.");
+    throw new HttpError(503, "service_unavailable", "Product image storage is not configured yet. You can still save the product without a photo.");
   }
   const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
   const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
