@@ -13,6 +13,7 @@ export const inventoryProducts = pgTable(
     sku: text("sku").notNull(),
     category: text("category"),
     imageUrl: text("image_url"),
+    currency: text("currency").notNull().default("GMD"),
     imageUrl: text("image_url"),
     unit: text("unit").notNull().default("unit"),
     quantity: integer("quantity").notNull().default(0),
