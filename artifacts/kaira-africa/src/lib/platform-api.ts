@@ -45,7 +45,9 @@ export const createInventoryProduct = (input: {
   name: string; sku: string; category?: string; unit?: string; quantity?: number;
   reorderLevel?: number; unitCost?: number; salePrice?: number; currency?: "GMD" | "NGN" | "USD";
 }) => request<InventoryProduct>("/api/inventory/products", { method: "POST", body: JSON.stringify(input) });
-export const uploadInventoryProductImage = (id: string, dataUrl: string) =>\n  request<InventoryProduct>("/api/inventory/products/" + encodeURIComponent(id) + "/image", { method: "POST", body: JSON.stringify({ dataUrl }) });\nexport const adjustInventory = (id: string, input: { quantityDelta: number; type: string; reason?: string }) =>
+export const uploadInventoryProductImage = (id: string, dataUrl: string) =>
+  request<InventoryProduct>("/api/inventory/products/" + encodeURIComponent(id) + "/image", { method: "POST", body: JSON.stringify({ dataUrl }) });
+export const adjustInventory = (id: string, input: { quantityDelta: number; type: string; reason?: string }) =>
   request<InventoryProduct>("/api/inventory/products/" + id + "/adjust", { method: "POST", body: JSON.stringify(input) });
 
 export interface AiInsight {
