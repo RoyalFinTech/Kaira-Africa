@@ -142,9 +142,16 @@ export default function PinLoginPage() {
                   {showPin ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}{showPin ? "Hide" : "Show"}
                 </button>
               </div>
-              <div className="relative">
-                <Input ref={pinInputRef} id="pin-entry" type={showPin ? "text" : "password"} inputMode="numeric" autoComplete="current-password" pattern="[0-9]{6}" minLength={6} maxLength={6} value={pin} onChange={(event) => { setPin(event.target.value.replace(/\D/g, "").slice(0, 6)); setError(null); }} onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest", behavior: "smooth" })} placeholder="Enter your six digits" className="h-14 rounded-xl border-2 border-primary/20 bg-card pr-12 text-center text-xl font-bold tracking-[0.55em] shadow-sm transition focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/10 sm:h-16 sm:text-2xl sm:tracking-[0.7em]" aria-label="Six-digit sign-in PIN" required />
-                <KeyRound className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-primary/60" />
+              <div className="relative rounded-xl border-2 border-primary/20 bg-card p-2.5 shadow-sm transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 sm:p-3">
+                <div className="grid h-10 grid-cols-6 gap-2 sm:h-12 sm:gap-2.5" aria-hidden="true">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <div key={index} className={`flex min-w-0 items-center justify-center rounded-lg border transition-colors ${pin.length > index ? "border-primary/40 bg-primary/[0.07]" : "border-border bg-muted/40"}`}>
+                      {pin.length > index && (showPin ? <span className="text-base font-bold text-foreground">{pin[index]}</span> : <span className="h-2.5 w-2.5 rounded-full bg-primary sm:h-3 sm:w-3" />)}
+                    </div>
+                  ))}
+                </div>
+                <Input ref={pinInputRef} id="pin-entry" type={showPin ? "text" : "password"} inputMode="numeric" autoComplete="current-password" pattern="[0-9]{6}" minLength={6} maxLength={6} value={pin} onChange={(event) => { setPin(event.target.value.replace(/\D/g, "").slice(0, 6)); setError(null); }} onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest", behavior: "smooth" })} className="absolute inset-0 h-full w-full cursor-text opacity-0" aria-label="Six-digit sign-in PIN. Tap to enter digits." required />
+                <span className="sr-only" aria-live="polite">{pin.length} of 6 PIN digits entered</span>
               </div>
               <div className="grid grid-cols-6 gap-2 px-1" aria-hidden="true">
                 {Array.from({ length: 6 }, (_, index) => <div key={index} className={`h-1.5 rounded-full transition-colors ${pin.length > index ? "bg-primary" : "bg-muted"}`} />)}
