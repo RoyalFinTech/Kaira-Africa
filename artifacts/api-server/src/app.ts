@@ -62,7 +62,9 @@ app.use(
   }),
 );
 
-app.use(express.json());
+// Inventory images are resized in the browser and capped by the route at 200 KB.
+// Base64 adds overhead, so allow a bounded 350 KB JSON payload rather than an unbounded body.
+app.use(express.json({ limit: "350kb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Global default rate limit (defense-in-depth against basic abuse).
