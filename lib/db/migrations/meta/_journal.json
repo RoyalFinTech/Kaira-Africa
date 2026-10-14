@@ -50,6 +50,13 @@
       "when": 1791985440000,
       "tag": "0006_daily_ledger_bookkeeping_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791987000000,
+      "tag": "0007_inventory_product_images",
+      "breakpoints": true
     }
   ]
 }
