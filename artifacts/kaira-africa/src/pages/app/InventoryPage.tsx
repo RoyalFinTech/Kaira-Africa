@@ -8,8 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/PageTransition";
 import { getInventoryProducts, createInventoryProduct, adjustInventory, uploadInventoryProductImage } from "@/lib/platform-api";
 import type { InventoryProduct } from "@/lib/platform-api";
-import { formatCurrency } from "@/lib/utils";
-import { Link } from "wouter";
 
 const MAX_IMAGE_BYTES = 200 * 1024;
 type Currency = "GMD" | "NGN" | "USD";
