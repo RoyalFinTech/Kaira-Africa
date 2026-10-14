@@ -22,7 +22,12 @@ const TYPE_LABELS: Record<DailyLedgerType, string> = {
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 
 function todayDate() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+}
+function currentTime() {
+  const now = new Date();
+  return String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
 }
 function firstOfMonth() {
   return todayDate().slice(0, 7) + "-01";
@@ -42,6 +47,9 @@ export default function DailyLedgerPage() {
   const [customerName, setCustomerName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [recordedDate, setRecordedDate] = useState(todayDate());
+  const [recordedTime, setRecordedTime] = useState(currentTime());
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [remarks, setRemarks] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -77,6 +85,9 @@ export default function DailyLedgerPage() {
     setCustomerName("");
     setDueDate("");
     setRecordedDate(todayDate());
+    setRecordedTime(currentTime());
+    setPaymentMethod("cash");
+    setRemarks("");
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -109,6 +120,9 @@ export default function DailyLedgerPage() {
         quantity: entryType === "sale" && productId ? Number(quantity) : undefined,
         dueDate: dueDate || undefined,
         recordedDate,
+        recordedTime,
+        paymentMethod: paymentMethod as "cash" | "bank_transfer" | "mobile_money" | "card" | "credit" | "other",
+        remarks: remarks.trim() || undefined,
       });
       setEntryPage(1);
       await Promise.all([
@@ -122,6 +136,19 @@ export default function DailyLedgerPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const exportCsv = () => {
+    const rows = response?.entries ?? [];
+    const header = ["Date", "Time", "Entry type", "Description", "Category", "Customer", "Payment method", "Remarks", "Status", "Amount (GMD)", "Balance (GMD)"];
+    const escapeCell = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    const csv = [header, ...rows.map((entry) => [entry.recordedDate, entry.recordedTime, TYPE_LABELS[entry.entryType], entry.description, entry.category, entry.customerName, entry.paymentMethod, entry.remarks, entry.status, entry.amount, entry.balance])].map((row) => row.map(escapeCell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "kaira-ledger-" + startDate + "-to-" + endDate + ".csv";
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const markDebtPaid = async (id: string) => {
@@ -146,13 +173,13 @@ export default function DailyLedgerPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="font-display flex items-center gap-2 text-3xl font-bold"><BookOpen className="h-7 w-7 text-primary" />Daily Sales & Expense Book</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Record each day's sales, business expenses, credit sales and debt repayments. These are private to your business and feed your reports.</p>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Your everyday business book: record each sale, expense, credit and repayment with its date, time, person, payment method and remarks. Entries feed your reports automatically.</p>
           </div>
           <Badge variant="outline" className="w-fit gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> GMD ledger</Badge>
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Add a daily record</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Write a new entry</CardTitle><p className="text-sm text-muted-foreground">Like a paper cashbook, every row tells you what happened, when it happened and how it was paid.</p></CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -161,6 +188,8 @@ export default function DailyLedgerPage() {
                     const nextType = e.target.value as DailyLedgerType;
                     setEntryType(nextType);
                     if (nextType !== "sale") { setProductId(""); setQuantity("1"); }
+                    if (nextType === "debt") setPaymentMethod("credit");
+                    else if (paymentMethod === "credit") setPaymentMethod("cash");
                   }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                     {Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
@@ -174,6 +203,14 @@ export default function DailyLedgerPage() {
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Category
                   <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={entryType === "expense" ? "e.g. transport, rent" : "e.g. groceries, sales"} />
+                </label>
+                <label className="space-y-1.5 text-sm font-medium">Time of record
+                  <Input type="time" value={recordedTime} onChange={(e) => setRecordedTime(e.target.value)} required />
+                </label>
+                <label className="space-y-1.5 text-sm font-medium">Payment method
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="mobile_money">Mobile money</option><option value="card">Card / POS</option><option value="credit">Credit / unpaid</option><option value="other">Other</option>
+                  </select>
                 </label>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -220,10 +257,13 @@ export default function DailyLedgerPage() {
                   </label>
                 )}
               </div>
+              <label className="block space-y-1.5 text-sm font-medium">Remarks / receipt reference (optional)
+                <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} maxLength={500} placeholder="e.g. receipt number, reason for expense, who approved it" />
+              </label>
               {formError && <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{formError}</span></div>}
               {notice && <p className="text-sm font-medium text-primary" role="status">{notice}</p>}
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">Records are saved to your account. For a credit sale, mark it as debt so it appears in your outstanding-debt total.</p>
+                <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">Entries are saved to your business book. For a sale you have not collected payment for, choose “Credit sale / amount owed” and add the customer name.</p>
                 <Button type="submit" disabled={saving} className="gap-2"><Plus className="h-4 w-4" />{saving ? "Saving…" : "Save daily record"}</Button>
               </div>
             </form>
@@ -231,12 +271,24 @@ export default function DailyLedgerPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Report period</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Choose your book period</CardTitle><p className="text-sm text-muted-foreground">Filter the register by date to review a day, week or month.</p></CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label className="flex-1 space-y-1.5 text-sm font-medium">From<Input type="date" value={startDate} max={endDate} onChange={(e) => { setEntryPage(1); setStartDate(e.target.value); }} /></label>
             <label className="flex-1 space-y-1.5 text-sm font-medium">To<Input type="date" value={endDate} min={startDate} max={todayDate()} onChange={(e) => { setEntryPage(1); setEndDate(e.target.value); }} /></label>
             <Button type="button" variant="outline" onClick={() => { setEntryPage(1); setStartDate(todayDate()); setEndDate(todayDate()); }}>Today</Button>
             <Button type="button" variant="outline" onClick={() => { setEntryPage(1); setStartDate(firstOfMonth()); setEndDate(todayDate()); }}>This month</Button>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-primary/15 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-800 text-white">
+          <CardContent className="grid gap-5 p-5 sm:grid-cols-[1.2fr_0.8fr] sm:items-center sm:p-7">
+            <div className="space-y-3">
+              <Badge className="w-fit border border-white/20 bg-white/10 text-white hover:bg-white/10">KAIRA SMART BOOKKEEPING</Badge>
+              <h2 className="font-display text-xl font-bold sm:text-2xl">Your numbers, easier to understand.</h2>
+              <p className="max-w-xl text-sm leading-relaxed text-emerald-50/80">Turn your recorded sales, expenses and unpaid credit into a clear business picture. Review trends and get AI-assisted insights without doing the sums by hand.</p>
+              <Button type="button" onClick={() => { window.location.assign("/ai-reports"); }} className="w-fit gap-2 bg-white text-emerald-900 hover:bg-emerald-50">Explore business insights <TrendingUp className="h-4 w-4" /></Button>
+            </div>
+            <div className="hidden sm:block"><img src="/images/daily-ledger-insights.svg" alt="Illustrated business spreadsheet with sales, expense, transaction register and AI insights" className="mx-auto w-full max-w-[360px] rounded-2xl shadow-xl" loading="lazy" /></div>
           </CardContent>
         </Card>
 
@@ -261,30 +313,27 @@ export default function DailyLedgerPage() {
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Ledger entries ({summary?.totalRecords ?? 0})</CardTitle></CardHeader>
+          <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="text-lg">Your business book</CardTitle><p className="mt-1 text-sm text-muted-foreground">A spreadsheet-style register of every recorded transaction. Scroll sideways on smaller screens.</p></div><Button type="button" size="sm" variant="outline" onClick={exportCsv} disabled={!response?.entries.length}><CalendarDays className="mr-1 h-4 w-4" />Export current page</Button></div></CardHeader>
           <CardContent>
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
             {ledgerQuery.isLoading ? <div className="h-52 animate-pulse rounded-xl bg-muted" /> : !response?.entries.length ? <div className="py-12 text-center text-sm text-muted-foreground">No daily records in this period. Start by adding your first sale or expense above.</div> : (
-              <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-sm">
-                <thead><tr className="border-b text-left text-muted-foreground"><th className="py-3 pr-3">Date</th><th className="py-3 pr-3">Type</th><th className="py-3 pr-3">Details</th><th className="py-3 pr-3">Customer / debtor</th><th className="py-3 pr-3">Status</th><th className="py-3 pr-3 text-right">Amount</th><th className="py-3 pr-3 text-right">Balance left</th><th className="py-3 text-right">Action</th></tr></thead>
-                <tbody>{response.entries.map((entry) => <tr key={entry.id} className="border-b last:border-0 align-top">
-                  <td className="py-3 pr-3 whitespace-nowrap">{entry.recordedDate}</td>
-                  <td className="py-3 pr-3"><Badge variant="outline">{TYPE_LABELS[entry.entryType]}</Badge></td>
-                  <td className="py-3 pr-3"><div className="font-medium">{entry.description}</div>{entry.category && <div className="mt-0.5 text-xs text-muted-foreground">{entry.category}</div>}</td>
-                  <td className="py-3 pr-3">{entry.customerName || "—"}{entry.dueDate && <div className="text-xs text-muted-foreground">Due {entry.dueDate}</div>}</td>
-                  <td className="py-3 pr-3">{entry.entryType === "debt" ? <Badge variant={entry.status === "paid" ? "default" : "destructive"}>{entry.status === "paid" ? "Paid" : "Unpaid"}</Badge> : <span className="text-xs text-muted-foreground">Recorded</span>}</td>
-                  <td className="py-3 pr-3 text-right font-semibold whitespace-nowrap">{formatCurrency(entry.amount, entry.currency)}</td>
-                  <td className="py-3 pr-3 text-right whitespace-nowrap">{entry.entryType === "debt" ? formatCurrency(entry.balance ?? entry.amount, entry.currency) : "—"}</td>
-                  <td className="py-3 text-right">{entry.entryType === "debt" && entry.status !== "paid" ? <Button type="button" size="sm" variant="outline" disabled={updatingId === entry.id} onClick={() => void markDebtPaid(entry.id)} className="gap-1"><CheckCircle2 className="h-3.5 w-3.5" />{updatingId === entry.id ? "Saving…" : "Mark paid"}</Button> : <span className="text-xs text-muted-foreground">—</span>}</td>
-                </tr>)}</tbody>
-              </table></div>
-            )}
-            {!ledgerQuery.isLoading && response && (
-              <PaginationControls
-                pagination={response.pagination}
-                onPageChange={setEntryPage}
-                itemLabel="ledger entries"
-              />
+              <div className="overflow-x-auto rounded-xl border">
+                <table className="w-full min-w-[1320px] border-collapse text-sm">
+                  <thead className="bg-muted/70"><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-3 py-3">Date</th><th className="px-3 py-3">Time</th><th className="px-3 py-3">Entry type</th><th className="px-3 py-3">Particulars / description</th><th className="px-3 py-3">Category</th><th className="px-3 py-3">Customer / name</th><th className="px-3 py-3">Payment method</th><th className="px-3 py-3">Remarks / reference</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Balance left</th><th className="px-3 py-3 text-right">Action</th>
+                  </tr></thead>
+                  <tbody>{response.entries.map((entry, index) => <tr key={entry.id} className={`border-b last:border-0 align-top transition-colors hover:bg-muted/40 ${index % 2 ? "bg-muted/15" : "bg-background"}`}>
+                    <td className="whitespace-nowrap px-3 py-3 tabular-nums">{entry.recordedDate}</td><td className="whitespace-nowrap px-3 py-3 tabular-nums text-muted-foreground">{entry.recordedTime || "—"}</td>
+                    <td className="px-3 py-3"><Badge variant="outline" className="whitespace-nowrap">{TYPE_LABELS[entry.entryType]}</Badge></td>
+                    <td className="max-w-[240px] px-3 py-3"><div className="font-medium text-foreground">{entry.description}</div>{entry.dueDate && <div className="mt-1 text-xs text-muted-foreground">Due {entry.dueDate}</div>}</td>
+                    <td className="px-3 py-3 text-muted-foreground">{entry.category || "—"}</td><td className="px-3 py-3">{entry.customerName || "—"}</td>
+                    <td className="px-3 py-3 capitalize text-muted-foreground">{(entry.paymentMethod || "—").replace("_", " ")}</td><td className="max-w-[200px] whitespace-normal px-3 py-3 text-muted-foreground">{entry.remarks || "—"}</td>
+                    <td className="px-3 py-3">{entry.entryType === "debt" ? <Badge variant={entry.status === "paid" ? "default" : "destructive"}>{entry.status === "paid" ? "Paid" : "Unpaid"}</Badge> : <span className="text-xs text-muted-foreground">Recorded</span>}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums">{formatCurrency(entry.amount, entry.currency)}</td><td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{entry.entryType === "debt" ? formatCurrency(entry.balance ?? entry.amount, entry.currency) : "—"}</td>
+                    <td className="px-3 py-3 text-right">{entry.entryType === "debt" && entry.status !== "paid" ? <Button type="button" size="sm" variant="outline" disabled={updatingId === entry.id} onClick={() => void markDebtPaid(entry.id)} className="gap-1 whitespace-nowrap"><CheckCircle2 className="h-3.5 w-3.5" />{updatingId === entry.id ? "Saving…" : "Mark paid"}</Button> : <span className="text-xs text-muted-foreground">—</span>}</td>
+                  </tr>)}</tbody>
+                </table>
+              </div>
             )}
             {!ledgerQuery.isLoading && response && (
               <PaginationControls

@@ -103,6 +103,9 @@ export interface DailyLedgerEntry {
   dueDate: string | null;
   status: string;
   recordedDate: string;
+  recordedTime?: string | null;
+  paymentMethod?: string | null;
+  remarks?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -138,6 +141,9 @@ export const createDailyLedgerEntry = (input: {
   quantity?: number;
   dueDate?: string;
   recordedDate: string;
+  recordedTime?: string;
+  paymentMethod?: "cash" | "bank_transfer" | "mobile_money" | "card" | "credit" | "other";
+  remarks?: string;
 }) => request<DailyLedgerEntry>("/api/daily-ledger", { method: "POST", body: JSON.stringify(input) });
 export const updateDailyLedgerStatus = (id: string, status: "paid" | "unpaid") =>
   request<DailyLedgerEntry>("/api/daily-ledger/" + encodeURIComponent(id) + "/status", { method: "PATCH", body: JSON.stringify({ status }) });
