@@ -515,7 +515,7 @@ router.post(
       VerifyOtpResponse.parse({
         token: rawToken,
         isNewUser,
-        user: serializeUser(refreshedUser),
+        user: await serializeUser(refreshedUser),
       }),
     );
   },
