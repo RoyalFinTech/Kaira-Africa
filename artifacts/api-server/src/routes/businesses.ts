@@ -89,6 +89,7 @@ async function serializeReceiptSettings(business: Business) {
     showCustomerDetails: settings.showCustomerDetails ?? true,
     logoUrl: await signReceiptLogo(settings.logoPath),
     hasLogo: Boolean(settings.logoPath),
+    logoStorageConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY),
   };
 }
 
