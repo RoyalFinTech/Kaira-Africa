@@ -7,7 +7,8 @@ import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
-import { env } from "../config/env";
+import { requireSupabaseStorageConfig } from "../lib/supabase-storage";
+import { supabaseStorageHeaders } from "../lib/supabase-storage-headers";
 
 const router: IRouter = Router();
 const profileDataSchema = z.record(z.string(), z.unknown()).default({});
@@ -39,21 +40,15 @@ const interactionInput = z.object({
   nextActionAt: z.string().datetime().optional(),
 });
 
-function storageConfig() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Private photo storage is not configured. You can still save customer details without a photo.");
-  }
-  return { base: env.SUPABASE_URL.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY };
-}
 async function signCustomerPhoto(path: string | null) {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path; // legacy external URLs remain readable
   try {
-    const { base, key } = storageConfig();
+    const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
     const objectPath = path.split("/").map(encodeURIComponent).join("/");
     const response = await fetch(`${base}/storage/v1/object/sign/customer-photos/${objectPath}`, {
       method: "POST",
-      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
       body: JSON.stringify({ expiresIn: 3600 }),
     });
     if (!response.ok) return null;
@@ -74,10 +69,10 @@ async function uploadCustomerPhoto(businessId: string, customerId: string, dataU
   if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new BadRequestError("Customer photos must be 2 MB or smaller.");
   const ext = match[1] === "jpeg" ? "jpg" : match[1];
   const path = `${businessId}/${customerId}/${randomUUID()}.${ext}`;
-  const { base, key } = storageConfig();
+  const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
   const response = await fetch(`${base}/storage/v1/object/customer-photos/${path.split("/").map(encodeURIComponent).join("/")}`, {
     method: "POST",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mime, "x-upsert": "false" },
+    headers: supabaseStorageHeaders(key, { "Content-Type": mime, "x-upsert": "false" }),
     body: bytes,
   });
   if (!response.ok) throw new HttpError(502, "photo_upload_failed", "The customer photo could not be uploaded. Your customer record has not been changed.");
@@ -150,11 +145,11 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
   if (!customer) throw new NotFoundError("Customer not found");
   const path = customer.avatarUrl;
   if (path && !/^https?:\/\//i.test(path)) {
-    const { base, key } = storageConfig();
+    const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
     let response: Response;
     try {
       response = await fetch(`${base}/storage/v1/object/customer-photos`, {
-        method: "DELETE", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        method: "DELETE", headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
         body: JSON.stringify({ prefixes: [path] }),
       });
     } catch {

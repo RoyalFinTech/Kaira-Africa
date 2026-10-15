@@ -190,7 +190,7 @@ export default function ReceiptBrandingPage() {
           <KairaFeedbackCard
             variant="error"
             title="Receipt-logo storage needs configuration"
-            message="Kaira Africa can save your printed business details, but the logo cannot be persisted yet. Configure SUPABASE_URL and the server-only SUPABASE_SERVICE_ROLE_KEY on the Kaira Africa API service in Render, then reload this page. The secret key must never be added to the frontend."
+            message="Kaira Africa can save your printed business details, but logo storage is not configured. On the Kaira Africa API service in Render, set SUPABASE_URL and either the modern server-only SUPABASE_SECRET_KEY (recommended) or the legacy SUPABASE_SERVICE_ROLE_KEY. Keep the storage key out of the frontend, then reload this page."
           />
         )}
 
