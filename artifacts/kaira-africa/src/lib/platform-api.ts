@@ -4,7 +4,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000
 
 export function reportKairaFeedback(detail: { variant: "success" | "error" | "info"; title: string; message: string }) {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("kaira:feedback", { detail }));
+    const message = readableApiMessage(detail.message) ||
+      (detail.variant === "error"
+        ? "Kaira Africa received an unreadable error response. Please try again."
+        : "Kaira Africa completed the action, but there was no readable response detail.");
+    window.dispatchEvent(new CustomEvent("kaira:feedback", { detail: { ...detail, message } }));
   }
 }
 
@@ -12,7 +16,16 @@ function readableApiMessage(value: unknown, depth = 0): string | null {
   if (depth > 3 || value == null) return null;
   if (typeof value === "string") {
     const message = value.trim();
-    if (!message || message === "[object Object]" || message.startsWith("<!DOCTYPE") || message.startsWith("<html")) return null;
+    if (!message || /^\[object object\]$/i.test(message) || message.startsWith("<!DOCTYPE") || message.startsWith("<html")) return null;
+    if (message.startsWith("{") || message.startsWith("[")) {
+      try {
+        const parsedMessage = readableApiMessage(JSON.parse(message), depth + 1);
+        if (parsedMessage) return parsedMessage;
+      } catch {
+        // Keep ordinary text if it was not actually JSON.
+      }
+      if (/^[{[]/.test(message)) return null;
+    }
     return message.slice(0, 500);
   }
   if (typeof value === "number" || typeof value === "boolean") return String(value);

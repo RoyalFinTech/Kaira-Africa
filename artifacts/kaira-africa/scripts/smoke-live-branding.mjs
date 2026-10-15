@@ -1025,6 +1025,15 @@ try {
     }
 
     if (routePath === '/receipt-branding') {
+      await pinPage.evaluate(() => {
+        window.dispatchEvent(new CustomEvent('kaira:feedback', {
+          detail: { variant: 'error', title: 'Smoke unreadable API error', message: '[object Object]' },
+        }));
+      });
+      const globalFeedback = pinPage.getByTestId('kaira-global-feedback');
+      await globalFeedback.getByText('Kaira Africa received an unreadable error response. Please try again.').waitFor({ state: 'visible', timeout: 5_000 });
+      assert.ok(!(await globalFeedback.innerText()).includes('[object Object]'), 'Global Kaira feedback must never show a raw object serialization');
+      await globalFeedback.getByRole('button', { name: 'Dismiss notification' }).click();
       await pinPage.getByLabel('Printed company name').fill('Smoke Receipt Studio');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
       await pinPage.getByTestId('kaira-global-feedback').getByText('Receipt branding saved', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
