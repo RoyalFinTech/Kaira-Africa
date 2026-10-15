@@ -19,6 +19,7 @@ import { db, businesses, customers, teamMembers, type ReceiptBrandingSettings } 
 import { count, eq } from "drizzle-orm";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { env } from "../config/env";
+import { logger } from "../lib/logger";
 import { fromMinorUnits } from "../lib/money";
 import type { Business } from "@workspace/db";
 
@@ -36,10 +37,26 @@ const ReceiptSettingsInput = z.object({
 }).strict();
 
 function receiptStorageConfig() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Private receipt-logo storage is not configured yet.");
+  const missingEnvironmentVariables = [
+    !env.SUPABASE_URL ? "SUPABASE_URL" : null,
+    !env.SUPABASE_SERVICE_ROLE_KEY ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+  ].filter((key): key is string => Boolean(key));
+
+  if (missingEnvironmentVariables.length > 0) {
+    // Log names/presence only. Never log the URL's credentials, API keys or
+    // request body; the client needs a clear message without leaking secrets.
+    logger.error(
+      { component: "receipt-logo-storage", missingEnvironmentVariables },
+      "Secure receipt logo storage is not configured",
+    );
+    throw new HttpError(
+      503,
+      "receipt_logo_storage_unconfigured",
+      "Logo upload is temporarily unavailable because secure storage is not configured. No logo was saved. Please contact Kaira Africa support.",
+    );
   }
-  return { base: env.SUPABASE_URL.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY };
+
+  return { base: env.SUPABASE_URL!.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY! };
 }
 
 async function signReceiptLogo(path: string | null | undefined): Promise<string | null> {
