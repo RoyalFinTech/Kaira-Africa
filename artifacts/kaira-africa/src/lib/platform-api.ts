@@ -2,6 +2,75 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
+function nestedResponseMessage(value: unknown, depth = 0): string | null {
+  if (depth > 4 || value == null) return null;
+  if (typeof value === "string") {
+    const message = value.trim();
+    if (!message || message === "[object Object]" || message === "[object Array]") return null;
+    return message;
+  }
+  if (Array.isArray(value)) {
+    const messages = value
+      .map((item) => nestedResponseMessage(item, depth + 1))
+      .filter((item): item is string => Boolean(item));
+    return messages.length ? [...new Set(messages)].join("; ") : null;
+  }
+  if (typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  for (const key of ["message", "detail", "description", "error_description", "title"]) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim() && candidate !== "[object Object]") {
+      return candidate.trim();
+    }
+  }
+
+  for (const key of ["issues", "errors"]) {
+    if (Array.isArray(record[key])) {
+      const messages = (record[key] as unknown[])
+        .map((issue) => {
+          if (issue && typeof issue === "object" && !Array.isArray(issue)) {
+            const item = issue as Record<string, unknown>;
+            const message = nestedResponseMessage(item.message, depth + 1);
+            const field = typeof item.path === "string" && item.path.trim() ? item.path.trim() : "";
+            return message ? (field ? field + ": " : "") + message : null;
+          }
+          return nestedResponseMessage(issue, depth + 1);
+        })
+        .filter((item): item is string => Boolean(item));
+      if (messages.length) return [...new Set(messages)].join("; ");
+    }
+  }
+
+  for (const key of ["error", "data", "response"]) {
+    if (record[key] !== undefined) {
+      const message = nestedResponseMessage(record[key], depth + 1);
+      if (message) return message;
+    }
+  }
+  return null;
+}
+
+/** Extract a readable message from native Errors and nested API error payloads. */
+export function getApiErrorMessage(error: unknown, fallback = "The request could not be completed. Please try again."): string {
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message && message !== "[object Object]" && message !== "[object Array]") return message;
+  }
+  return nestedResponseMessage(error) ?? fallback;
+}
+
+function statusFallback(status: number): string {
+  if (status === 400) return "Please check the information and try again.";
+  if (status === 401) return "Your session has expired. Sign in again and retry.";
+  if (status === 403) return "You don't have permission to complete this action.";
+  if (status === 404) return "The requested record or service could not be found.";
+  if (status === 413) return "This upload is too large for the server. Choose a smaller file and try again.";
+  if (status === 429) return "Too many requests were sent. Please wait a moment and try again.";
+  if (status >= 500) return "Kaira Africa couldn't complete this request because of a server problem. Please try again.";
+  return "The request failed (HTTP " + status + "). Please try again.";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(API_BASE_URL + path, {
@@ -12,9 +81,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...(options.headers || {}),
     },
   });
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message || data?.error || "Request failed with status " + response.status);
+
+  const responseText = await response.text();
+  let data: unknown = null;
+  let parsedJson = true;
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText) as unknown;
+    } catch {
+      parsedJson = false;
+      data = responseText;
+    }
+  }
+
+  if (!response.ok) {
+    const bodyMessage = nestedResponseMessage(data);
+    const safeText = typeof data === "string" && data.length < 240 && !/^\\s*</.test(data) ? data.trim() : null;
+    throw new Error(bodyMessage ?? safeText ?? statusFallback(response.status));
+  }
+
+  if (!parsedJson) {
+    throw new Error("Kaira Africa received an unreadable server response. Refresh the page and try again.");
+  }
   return data as T;
 }
 
