@@ -309,6 +309,7 @@ export interface ReceiptBrandingSettings {
   showCustomerDetails: boolean;
   logoUrl: string | null;
   hasLogo: boolean;
+  logoStorageConfigured: boolean;
 }
 export type ReceiptBrandingInput = Partial<Pick<ReceiptBrandingSettings,
   "companyName" | "address" | "phone" | "email" | "website" | "footerNote" | "showReceiptNumber" | "showCustomerDetails"
