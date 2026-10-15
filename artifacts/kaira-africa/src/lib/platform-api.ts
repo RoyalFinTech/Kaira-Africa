@@ -2,6 +2,28 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
+function readableApiMessage(value: unknown, depth = 0): string | null {
+  if (depth > 3 || value == null) return null;
+  if (typeof value === "string") {
+    const message = value.trim();
+    if (!message || message === "[object Object]" || message.startsWith("<!DOCTYPE") || message.startsWith("<html")) return null;
+    return message.slice(0, 500);
+  }
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    const messages = value.map((item) => readableApiMessage(item, depth + 1)).filter(Boolean);
+    return messages.length ? messages.join(" · ") : null;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["message", "error_description", "detail", "details", "error", "title"]) {
+      const message = readableApiMessage(record[key], depth + 1);
+      if (message) return message;
+    }
+  }
+  return null;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(API_BASE_URL + path, {
@@ -13,8 +35,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message || data?.error || "Request failed with status " + response.status);
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (response.ok) throw new Error("The server returned an unreadable response. Please try again.");
+      data = { message: text };
+    }
+  }
+  if (!response.ok) {
+    throw new Error(readableApiMessage(data) || "Request failed with status " + response.status + ". Please try again.");
+  }
   return data as T;
 }
 
