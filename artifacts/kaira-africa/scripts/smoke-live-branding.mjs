@@ -902,7 +902,7 @@ try {
       await pinPage.getByRole('button', { name: 'Remove photo' }).click();
       await pinPage.getByRole('button', { name: 'Remove photo' }).waitFor({ state: 'detached', timeout: 10_000 });
       assert.equal(crmPhotoDeleteRequests.length, 1, 'CRM photo removal should call the delete endpoint');
-      await pinPage.getByLabel('CustomerChoose', { exact: true }).selectOption('crm-customer-smoke');
+      await pinPage.locator('main.min-w-0.flex-1 select:has(option[value="crm-customer-smoke"])').selectOption('crm-customer-smoke');
       await pinPage.getByPlaceholder('Activity title (e.g. Delivery feedback)').fill('Smoke test feedback');
       await pinPage.getByPlaceholder('What happened? What did the customer say? What should happen next?').fill('Customer confirmed the service was helpful.');
       await pinPage.getByRole('button', { name: 'Save activity' }).click();
