@@ -1,8 +1,9 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getReceiptBranding } from "@/lib/platform-api";
 
 type PrintableBusinessDocumentProps = {
+  id?: string;
   title: string;
   documentNumber?: string | null;
   issuedAt?: string | null;
@@ -10,8 +11,12 @@ type PrintableBusinessDocumentProps = {
   children: ReactNode;
 };
 
-export function printKairaDocument() {
-  const images = Array.from(document.querySelectorAll<HTMLImageElement>(".kaira-print-target img"));
+export function printKairaDocument(targetId: string) {
+  document.querySelectorAll(".kaira-print-target").forEach((target) => target.classList.remove("kaira-print-active"));
+  const target = document.getElementById(targetId);
+  if (!target || !target.classList.contains("kaira-print-target")) return;
+  target.classList.add("kaira-print-active");
+  const images = Array.from(target.querySelectorAll<HTMLImageElement>("img"));
   void Promise.all(images.map((image) => {
     if (image.complete) return Promise.resolve();
     if (typeof image.decode === "function") return image.decode().catch(() => undefined);
@@ -19,12 +24,18 @@ export function printKairaDocument() {
       image.addEventListener("load", () => resolve(), { once: true });
       image.addEventListener("error", () => resolve(), { once: true });
     });
-  })).then(() => window.print());
+  })).then(() => {
+    const cleanup = () => target.classList.remove("kaira-print-active");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+  });
 }
 
 export function PrintableBusinessDocument({
-  title, documentNumber, issuedAt, status, children,
+  id, title, documentNumber, issuedAt, status, children,
 }: PrintableBusinessDocumentProps) {
+  const generatedId = useId().replace(/:/g, "");
+  const documentId = id || `kaira-print-${generatedId}`;
   const { data: branding } = useQuery({
     queryKey: ["receipt-branding"],
     queryFn: getReceiptBranding,
@@ -40,7 +51,7 @@ export function PrintableBusinessDocument({
   ].filter(Boolean);
 
   return (
-    <section className="kaira-print-target" aria-label="Printable business document">
+    <section id={documentId} className="kaira-print-target" aria-label="Printable business document">
       <article className="kaira-print-paper">
         <header className="kaira-print-header">
           <div className="kaira-print-company">
