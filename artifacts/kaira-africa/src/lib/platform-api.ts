@@ -219,3 +219,7 @@ export const uploadCrmCustomerPhoto = (id: string, dataUrl: string) =>
   request<ManagedCrmCustomer>("/api/crm/customers/" + encodeURIComponent(id) + "/photo", { method: "POST", body: JSON.stringify({ dataUrl }) });
 export const removeCrmCustomerPhoto = (id: string) =>
   request<ManagedCrmCustomer>("/api/crm/customers/" + encodeURIComponent(id) + "/photo", { method: "DELETE" });
+export const uploadProfileAvatar = (dataUrl: string) =>
+  request<{ avatarUrl: string | null }>("/api/auth/profile/avatar", { method: "POST", body: JSON.stringify({ dataUrl }) });
+export const removeProfileAvatar = () =>
+  request<{ avatarUrl: string | null }>("/api/auth/profile/avatar", { method: "DELETE" });
