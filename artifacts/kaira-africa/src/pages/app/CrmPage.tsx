@@ -71,6 +71,7 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
 }) {
   const [draft, setDraft] = useState(initial);
   const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
   const uploadPhotoRef = useRef<HTMLInputElement>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -79,6 +80,8 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
     if (next && !["image/jpeg", "image/png", "image/webp"].includes(next.type)) { setPhotoError("Choose a JPEG, PNG or WebP image."); return; }
     if (next && next.size > 2 * 1024 * 1024) { setPhotoError("The photo must be 2 MB or smaller."); return; }
     setPhoto(next);
+    if (!next) { setPhotoPreview(null); return; }
+    void readImage(next).then(setPhotoPreview).catch(() => { setPhotoPreview(null); setPhotoError("Photo preview failed. Please choose the image again."); });
   };
   const update = (key: keyof CustomerDraft, value: string) => setDraft((old) => ({ ...old, [key]: value } as CustomerDraft));
   const field = (key: keyof CustomerDraft, label: string, hint?: string, type = "text") => (
@@ -133,7 +136,7 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
         <input ref={uploadPhotoRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { choosePhoto(e.target.files?.[0] ?? null); e.target.value = ""; }} />
       </div>
       {photo && <p className="mt-2 text-xs text-muted-foreground">Selected: {photo.name} · {(photo.size / 1024).toFixed(0)} KB</p>}
-      {photo && <img src={URL.createObjectURL(photo)} alt="Selected customer photo preview" className="mt-3 h-20 w-20 rounded-xl border object-cover" />}
+      {photo && <img src={photoPreview || undefined} alt="Selected customer photo preview" className="mt-3 h-20 w-20 rounded-xl border object-cover" />}
       <CameraCaptureDialog
         open={cameraOpen}
         onOpenChange={setCameraOpen}
