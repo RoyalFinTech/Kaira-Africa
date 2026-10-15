@@ -125,6 +125,7 @@ async function serializeReceiptSettings(business: Business) {
     showCustomerDetails: settings.showCustomerDetails ?? true,
     logoUrl: await signReceiptLogo(settings.logoPath),
     hasLogo: Boolean(settings.logoPath),
+    storageConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY),
   };
 }
 
@@ -231,11 +232,16 @@ router.post("/businesses/me/receipt-logo", requireUser, requireRole("owner"), as
   const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/png" ? "png" : "webp";
   const path = `${businessId}/${Date.now()}-${randomUUID()}.${extension}`;
   const url = `${base}/storage/v1/object/receipt-logos/${path.split("/").map(encodeURIComponent).join("/")}`;
-  const upload = await fetch(url, {
-    method: "POST",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
-    body: bytes,
-  });
+  let upload: Response;
+  try {
+    upload = await fetch(url, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
+      body: bytes,
+    });
+  } catch {
+    throw new HttpError(502, "receipt_storage_unreachable", "Kaira Africa could not reach Supabase Storage. Verify SUPABASE_URL and that the Kaira Africa API can connect to the configured Supabase project.");
+  }
   if (!upload.ok) {
     throw new HttpError(502, "receipt_logo_upload_failed", await describeReceiptLogoUploadFailure(upload));
   }
