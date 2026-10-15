@@ -380,7 +380,7 @@ function TransactionDetailDialog({
 
 export default function TransactionsPage() {
   const queryClient = useReactQueryClient();
-  const { data: receiptBranding } = useQuery({ queryKey: ["receipt-branding"], queryFn: getReceiptBranding, staleTime: 60_000 });
+  const { data: receiptBranding, refetch: refreshReceiptBranding } = useQuery({ queryKey: ["receipt-branding"], queryFn: getReceiptBranding, staleTime: 60_000 });
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -388,6 +388,10 @@ export default function TransactionsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [activeTransaction, setActiveTransaction] = useState<ManagedTransaction | null>(null);
   const [notice, setNotice] = useState<{ message: string; error: boolean } | null>(null);
+
+  useEffect(() => {
+    if (activeTransaction) void refreshReceiptBranding();
+  }, [activeTransaction?.id, refreshReceiptBranding]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
