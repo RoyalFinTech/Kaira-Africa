@@ -275,8 +275,8 @@ export default function ReceiptBrandingPage() {
                         </div>
                         <div className="min-w-0 flex-1"><p className="font-semibold">Company logo</p><p className="mt-1 text-xs leading-5 text-muted-foreground">JPEG, PNG or WebP. Recommended landscape logo with a transparent or white background. Maximum file size 2 MB.</p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" disabled={!canEdit || logoBusy} onClick={() => logoInputRef.current?.click()}><UploadCloud className="mr-2 h-4 w-4"/>{logoBusy ? "Uploading…" : "Upload logo"}</Button>
-                            {branding?.hasLogo && <Button type="button" variant="ghost" disabled={!canEdit || removingLogo} onClick={() => void deleteLogo()}><Trash2 className="mr-2 h-4 w-4"/>{removingLogo ? "Removing…" : "Remove logo"}</Button>}
+                            <Button type="button" variant="outline" disabled={!canEdit || logoBusy || branding?.logoStorageConfigured === false} onClick={() => logoInputRef.current?.click()}><UploadCloud className="mr-2 h-4 w-4"/>{logoBusy ? "Uploading…" : "Upload logo"}</Button>
+                            {branding?.hasLogo && <Button type="button" variant="ghost" disabled={!canEdit || removingLogo || branding.logoStorageConfigured === false} onClick={() => void deleteLogo()}><Trash2 className="mr-2 h-4 w-4"/>{removingLogo ? "Removing…" : "Remove logo"}</Button>}
                             <input ref={logoInputRef} className="hidden" type="file" accept={LOGO_TYPES.join(",")} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void uploadLogo(file); }}/>
                           </div>
                           {logoFeedback && (
