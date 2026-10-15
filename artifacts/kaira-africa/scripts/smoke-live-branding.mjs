@@ -11,6 +11,30 @@ async function sleep(ms) {
   await new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 }
 
+async function assertPrintDocumentReady(page, id) {
+  await page.emulateMedia({ media: 'print' });
+  const styles = await page.locator('#' + id).evaluate((target) => {
+    const logo = target.querySelector('img.kaira-print-logo');
+    return {
+      display: window.getComputedStyle(target).display,
+      visibility: window.getComputedStyle(target).visibility,
+      logoDisplay: logo ? window.getComputedStyle(logo).display : '',
+      logoVisibility: logo ? window.getComputedStyle(logo).visibility : '',
+      logoNaturalWidth: logo?.naturalWidth || 0,
+      companyName: target.querySelector('.kaira-print-company h1')?.textContent?.trim() || '',
+      footer: target.querySelector('.kaira-print-footer')?.textContent || '',
+    };
+  });
+  await page.emulateMedia({ media: 'screen' });
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  assert.equal(styles.display, 'block', id + ' must be visible in browser print media');
+  assert.equal(styles.visibility, 'visible', id + ' must not inherit hidden app visibility in print media');
+  assert.equal(styles.logoDisplay, 'block', id + ' logo must be displayed in print media');
+  assert.equal(styles.logoVisibility, 'visible', id + ' logo must be visible in print media');
+  assert.ok(styles.logoNaturalWidth > 0, id + ' logo must be decoded before printing');
+  return styles;
+}
+
 async function waitForDeployedSplashBundle() {
   const deadline = Date.now() + 5 * 60 * 1000;
   let lastProblem = 'The new splash bundle has not been published yet.';
@@ -316,8 +340,8 @@ try {
     footerNote: "Thank you for your business.",
     showReceiptNumber: true,
     showCustomerDetails: true,
-    logoUrl: null,
-    hasLogo: false,
+    logoUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+    hasLogo: true,
   };
   const premiumTransactionFixture = {
     id: "transaction-visual-smoke",
@@ -466,11 +490,21 @@ try {
       const endDate = url.searchParams.get('endDate') || startDate;
       const page = Number(url.searchParams.get('page') || 1);
       const pageSize = Number(url.searchParams.get('pageSize') || 50);
-      const entry = { ...dailyEntryFixture, recordedDate: startDate };
+      const isPrintRequest = pageSize === 100;
+      const total = isPrintRequest ? 101 : 1;
+      const allEntries = isPrintRequest
+        ? Array.from({ length: total }, (_, index) => ({
+            ...dailyEntryFixture,
+            id: 'ledger-print-' + (index + 1),
+            description: 'Ledger print fixture ' + (index + 1),
+            recordedDate: startDate,
+          }))
+        : [{ ...dailyEntryFixture, recordedDate: startDate }];
+      const entries = allEntries.slice((page - 1) * pageSize, page * pageSize);
       await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
-        startDate, endDate, entries: [entry],
-        pagination: { page, pageSize, total: 1, totalPages: 1 },
-        summary: { sales: 1250, expenses: 0, outstandingDebt: 0, debtPayments: 0, otherIncome: 0, salesLessExpenses: 1250, totalRecords: 1 },
+        startDate, endDate, entries,
+        pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+        summary: { sales: 1250, expenses: 0, outstandingDebt: 0, debtPayments: 0, otherIncome: 0, salesLessExpenses: 1250, totalRecords: total },
         dailyTrend: [{ date: startDate, sales: 1250, expenses: 0 }], expensesByCategory: [],
       }) });
       return;
@@ -808,9 +842,20 @@ try {
   // Exercise every primary desktop navigation destination through its actual link.
   await pinPage.evaluate(() => {
     window.__kairaPrintCalls = 0;
+    window.__lastKairaPrintedDocument = null;
     window.print = () => {
+      const target = document.querySelector('.kaira-print-target.kaira-print-active');
+      const logo = target?.querySelector('img.kaira-print-logo');
+      window.__lastKairaPrintedDocument = target ? {
+        id: target.id,
+        companyName: target.querySelector('.kaira-print-company h1')?.textContent?.trim() || '',
+        logoSrc: logo?.getAttribute('src') || '',
+        logoNaturalWidth: logo?.naturalWidth || 0,
+        reference: target.querySelector('.kaira-print-document-heading')?.textContent || '',
+        contentText: target.querySelector('.kaira-print-content')?.textContent || '',
+        footer: target.querySelector('.kaira-print-footer')?.textContent || '',
+      } : null;
       window.__kairaPrintCalls += 1;
-      window.dispatchEvent(new Event('afterprint'));
     };
   });
   const navigationTargets = [
@@ -880,10 +925,20 @@ try {
       await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 });
       const crmPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print / PDF' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, crmPrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, crmPrintBefore, { timeout: 10_000 });
+      const crmDirectoryPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.equal(crmDirectoryPrinted.id, 'crm-directory-print', 'CRM directory uses the shared branded print layout');
+      assert.ok(crmDirectoryPrinted.logoSrc.startsWith('data:image/png;base64,'), 'CRM directory print includes the saved logo');
+      assert.ok(crmDirectoryPrinted.logoNaturalWidth > 0, 'CRM directory print waits for the logo to decode');
+      await assertPrintDocumentReady(pinPage, 'crm-directory-print');
       const customerPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print customer card' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customerPrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customerPrintBefore, { timeout: 10_000 });
+      const crmCustomerPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.equal(crmCustomerPrinted.id, 'crm-customer-print', 'CRM customer card uses the shared branded print layout');
+      assert.ok(crmCustomerPrinted.logoSrc.startsWith('data:image/png;base64,'), 'CRM customer card print includes the saved logo');
+      assert.ok(crmCustomerPrinted.logoNaturalWidth > 0, 'CRM customer card print waits for the logo to decode');
+      await assertPrintDocumentReady(pinPage, 'crm-customer-print');
       assert.equal(crmCustomerRequests.filter((item) => item.method === 'POST').length, 1, 'CRM add customer should make one intercepted create request');
       assert.equal(crmCustomerRequests[0].input.profileData.dateOfBirth, '1990-05-12', 'CRM should persist optional date of birth');
       assert.equal(crmCustomerRequests[0].input.profileData.maritalStatus, 'Married', 'CRM should persist optional marital status');
@@ -932,7 +987,16 @@ try {
       await pinPage.getByRole('button', { name: 'Details' }).first().click();
       const transactionPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print receipt / record' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, transactionPrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, transactionPrintBefore, { timeout: 10_000 });
+      const transactionPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.equal(transactionPrinted.id, 'transaction-receipt-print', 'Transaction dialog prints the shared branded receipt document');
+      assert.equal(transactionPrinted.companyName, receiptBrandingFixture.companyName, 'Transaction print uses the saved business name');
+      assert.ok(transactionPrinted.logoSrc.startsWith('data:image/png;base64,'), 'Transaction print must include the saved logo');
+      assert.ok(transactionPrinted.logoNaturalWidth > 0, 'Transaction print waits for the logo to decode before opening the print dialog');
+      assert.ok(transactionPrinted.reference.includes('TXN-SMOKE-001'), 'Transaction receipt includes its transaction reference');
+      assert.ok(transactionPrinted.footer.includes('Prepared by Kaira Africa'), 'Transaction print carries the Kaira Africa footer');
+      const transactionPrintCss = await assertPrintDocumentReady(pinPage, 'transaction-receipt-print');
+      assert.equal(transactionPrintCss.companyName, receiptBrandingFixture.companyName, 'Transaction receipt displays the configured brand name in print CSS');
       assert.ok(premiumTransactionFixture.reference === 'TXN-SMOKE-001', 'Transaction receipt uses the intercepted transaction fixture');
       await pinPage.getByRole('button', { name: 'Close' }).first().click();
     }
@@ -940,7 +1004,14 @@ try {
     if (routePath === '/daily-ledger') {
       const ledgerPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print / PDF' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, ledgerPrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, ledgerPrintBefore, { timeout: 10_000 });
+      const ledgerPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.equal(ledgerPrinted.id, 'daily-ledger-print', 'Daily ledger uses the shared branded document');
+      assert.ok(ledgerPrinted.logoSrc.startsWith('data:image/png;base64,'), 'Daily ledger print includes the saved logo');
+      assert.ok(ledgerPrinted.logoNaturalWidth > 0, 'Daily ledger print waits for its logo to decode');
+      await assertPrintDocumentReady(pinPage, 'daily-ledger-print');
+      const printedLedgerRows = await pinPage.locator('#daily-ledger-print tbody tr').count();
+      assert.equal(printedLedgerRows, 101, 'Daily ledger print should include all records across pages in the selected date range');
     }
 
     if (routePath === '/receipt-branding') {
@@ -952,7 +1023,29 @@ try {
       await pinPage.getByText('Logo uploaded to private storage and saved for future printouts.').waitFor({ state: 'visible', timeout: 10_000 });
       const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 10_000 });
+      const samplePrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.equal(samplePrinted.companyName, 'Smoke Receipt Studio', 'Printed sample reflects the current company name, not a stale template');
+      assert.ok(samplePrinted.logoSrc.startsWith('data:image/png;base64,'), 'Printed sample reflects the uploaded logo');
+      assert.ok(samplePrinted.logoNaturalWidth > 0, 'Printed sample waits for the uploaded logo to decode');
+      await assertPrintDocumentReady(pinPage, 'receipt-preview-print');
+      assert.ok(samplePrinted.reference.includes('SAMPLE-0001'), 'Printed sample includes its reference number');
+      assert.ok(samplePrinted.footer.includes('Thank you for your business.'), 'Printed sample includes its configured footer');
+      assert.ok(samplePrinted.footer.includes('Prepared by Kaira Africa'), 'Printed sample carries Kaira Africa attribution');
+
+      await pinPage.getByRole('checkbox', { name: /Show receipt or document reference/ }).uncheck();
+      await pinPage.getByRole('checkbox', { name: /Show linked customer details on transaction receipts/ }).uncheck();
+      await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
+      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      const customizedPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
+      await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customizedPrintBefore, { timeout: 10_000 });
+      const customizedPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.ok(!customizedPrinted.reference.includes('SAMPLE-0001'), 'Receipt-reference setting hides the reference from printed output');
+      assert.ok(!customizedPrinted.contentText.includes('Sample customer'), 'Customer-details setting applies to printed output');
+      await assertPrintDocumentReady(pinPage, 'receipt-preview-print');
+      assert.equal(receiptBrandingFixture.showReceiptNumber, false, 'Receipt reference setting is saved');
+      assert.equal(receiptBrandingFixture.showCustomerDetails, false, 'Customer-detail setting is saved');
       assert.equal(receiptBrandingFixture.companyName, 'Smoke Receipt Studio', 'Receipt branding form should persist the company name via the intercepted save API');
       assert.equal(receiptBrandingFixture.hasLogo, true, 'Receipt logo should be sent to the authenticated upload endpoint');
     }
