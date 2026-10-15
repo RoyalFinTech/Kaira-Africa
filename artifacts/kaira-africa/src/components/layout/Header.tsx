@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Bell, Search, Menu } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ProfileAvatar } from '@/components/common/ProfileAvatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useGetMe, useListNotifications, useLogout } from '@workspace/api-client-react';
-import { getInitials } from '@/lib/utils';
 import { clearToken } from '@/lib/api-client';
 import { Link, useLocation } from 'wouter';
 
@@ -122,11 +121,12 @@ export function Header({ onMenuClick }: HeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" aria-label="Open profile and account menu" title="Account menu" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-10 w-10 bg-primary">
-                <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-                  {user && getInitials(user.firstName, user.lastName)}
-                </AvatarFallback>
-              </Avatar>
+              <ProfileAvatar
+                photoUrl={user?.avatarUrl}
+                firstName={user?.firstName}
+                lastName={user?.lastName}
+                className="h-10 w-10 bg-primary ring-1 ring-border"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
