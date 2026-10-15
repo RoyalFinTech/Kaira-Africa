@@ -163,8 +163,28 @@ router.post(
     message: "Too many PIN updates. Please try again later.",
   }),
   async (req, res) => {
+    const userId = req.user!.id;
+    await recordAuthEvent({
+      actorType: "user",
+      actorId: userId,
+      event: "user_pin_set_started",
+      success: true,
+      ipAddress: req.ip,
+      userAgent: req.header("user-agent"),
+      metadata: { stage: "request_received" },
+    });
+
     const parsed = SetPinBody.safeParse(req.body);
     if (!parsed.success) {
+      await recordAuthEvent({
+        actorType: "user",
+        actorId: userId,
+        event: "user_pin_set_failed",
+        success: false,
+        ipAddress: req.ip,
+        userAgent: req.header("user-agent"),
+        metadata: { reason: "invalid_pin_format" },
+      });
       throw new BadRequestError("Choose a valid six-digit PIN that is not all the same or sequential.");
     }
     const user = await getUserById(req.user!.id);
@@ -193,8 +213,30 @@ router.post(
       }
     }
 
-    const pinHash = await hashPin(parsed.data.pin);
-    await updateUserPinHash(user.id, pinHash);
+    try {
+      const pinHash = await hashPin(parsed.data.pin);
+      const persisted = await updateUserPinHash(user.id, pinHash);
+      if (!persisted) {
+        throw new NotFoundError("Your account could not be updated. Please sign in again.");
+      }
+    } catch (cause) {
+      // Keep enough audit detail to distinguish a request timeout from a
+      // successful write, but never record the entered PIN or its hash.
+      try {
+        await recordAuthEvent({
+          actorType: "user",
+          actorId: user.id,
+          event: "user_pin_set_failed",
+          success: false,
+          ipAddress: req.ip,
+          userAgent: req.header("user-agent"),
+          metadata: { reason: "hash_or_persistence_failed" },
+        });
+      } catch {
+        // Preserve the original hashing/database failure if the audit write fails.
+      }
+      throw cause;
+    }
     await recordAuthEvent({
       actorType: "user",
       actorId: user.id,
