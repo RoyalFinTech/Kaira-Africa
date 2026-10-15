@@ -449,7 +449,7 @@ try {
       return;
     }
     if (pathname.endsWith('/api/analytics/transactions') && method === 'GET') {
-      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ total: 1, change: 0, changePercent: 0, data: [{ label: 'Today', value: 1, previousValue: 0 }] }) });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ total: 1, volume: 1250, change: 0, changePercent: 0, data: [{ label: 'Today', value: 1, previousValue: 0 }], byStatus: [{ label: 'Completed', value: 1, previousValue: 0 }], byType: [{ label: 'Payment', value: 1, previousValue: 0 }] }) });
       return;
     }
     if (pathname.endsWith('/api/customers') && method === 'GET') {
@@ -850,6 +850,15 @@ try {
       };
       console.log('NAVIGATION RENDER DIAGNOSTICS:', JSON.stringify(diagnostic));
       throw new Error('Navigation to ' + label + ' did not render a non-empty main area: ' + String(error));
+    }
+    const expectedPageMarkers = {
+      '/crm': () => pinPage.getByRole('heading', { name: 'Customer CRM' }),
+      '/transactions': () => pinPage.getByRole('heading', { name: 'Transactions', exact: true }),
+      '/daily-ledger': () => pinPage.getByText('Your business book', { exact: true }),
+      '/receipt-branding': () => pinPage.getByRole('heading', { name: 'Receipt & Print Branding' }),
+    };
+    if (expectedPageMarkers[routePath]) {
+      await expectedPageMarkers[routePath]().waitFor({ state: 'visible', timeout: 10_000 });
     }
     const mainText = (await pinPage.locator('main').innerText().catch(() => '')).trim();
     assert.ok(mainText.length > 20, 'Navigation to ' + label + ' must render a non-empty page');
