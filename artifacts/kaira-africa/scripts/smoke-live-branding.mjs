@@ -331,6 +331,7 @@ try {
     createdAt: nowIso,
     lastLoginAt: null,
   };
+  let receiptLogoUploadFailuresRemaining = 1;
   let receiptBrandingFixture = {
     companyName: visualBusiness.name,
     address: visualBusiness.address,
@@ -449,6 +450,18 @@ try {
     }
     if (pathname.endsWith('/api/businesses/me/receipt-logo') && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
+      if (receiptLogoUploadFailuresRemaining > 0) {
+        receiptLogoUploadFailuresRemaining -= 1;
+        await route.fulfill({
+          status: 503,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: {
+            code: 'receipt_logo_storage_unconfigured',
+            message: 'Logo upload is temporarily unavailable because secure storage is not configured. No logo was saved. Please contact Kaira Africa support.',
+          } }),
+        });
+        return;
+      }
       receiptBrandingFixture = { ...receiptBrandingFixture, logoUrl: input.dataUrl || null, hasLogo: Boolean(input.dataUrl) };
       await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
       return;
@@ -1017,10 +1030,21 @@ try {
     if (routePath === '/receipt-branding') {
       await pinPage.getByLabel('Printed company name').fill('Smoke Receipt Studio');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
-      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('heading', { name: 'Your receipt template is saved' }).waitFor({ state: 'visible', timeout: 10_000 });
       const logoFile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
       await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
-      await pinPage.getByText('Logo uploaded to private storage and saved for future printouts.').waitFor({ state: 'visible', timeout: 10_000 });
+      const logoFailureCard = pinPage.getByRole('alert').filter({ hasText: 'Logo was not saved' });
+      await logoFailureCard.waitFor({ state: 'visible', timeout: 10_000 });
+      const logoFailureText = await logoFailureCard.innerText();
+      assert.ok(logoFailureText.includes('No logo was saved'), 'Logo error card should explain the failed save');
+      assert.ok(!logoFailureText.includes('[object Object]'), 'Nested API errors must be displayed as readable messages, not [object Object]');
+      assert.ok(await logoFailureCard.locator('img[alt="Kaira Africa"]').count() === 1, 'Logo error card is branded with the Kaira Africa logo');
+
+      // The second intercepted upload succeeds so the same run verifies both failure and success feedback.
+      await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
+      await pinPage.getByRole('heading', { name: 'Logo uploaded and verified' }).waitFor({ state: 'visible', timeout: 10_000 });
+      const logoSuccessCard = pinPage.getByRole('status').filter({ hasText: 'Logo uploaded and verified' });
+      assert.ok(await logoSuccessCard.locator('img[alt="Kaira Africa"]').count() === 1, 'Logo success card is branded with the Kaira Africa logo');
       const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 10_000 });
@@ -1039,7 +1063,7 @@ try {
       await pinPage.getByRole('checkbox', { name: /Show linked customer details on transaction receipts/ }).uncheck();
       assert.ok(!(await visibleReceiptPreview.innerText()).includes('SAMPLE-0001'), 'On-screen sample immediately hides the reference when the option is disabled');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
-      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('heading', { name: 'Your receipt template is saved' }).waitFor({ state: 'visible', timeout: 10_000 });
       const customizedPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customizedPrintBefore, { timeout: 10_000 });
