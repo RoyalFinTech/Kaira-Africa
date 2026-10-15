@@ -11,6 +11,14 @@ import { env } from "../config/env";
 
 const router: IRouter = Router();
 const profileDataSchema = z.record(z.string(), z.unknown()).default({});
+function cleanProfileData(value: Record<string, unknown> | undefined) {
+  if (!value) return {};
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => {
+    if (typeof item === "string") return item.trim().length > 0;
+    if (Array.isArray(item)) return item.length > 0;
+    return item !== null && item !== undefined;
+  }).map(([key, item]) => [key, typeof item === "string" ? item.trim() : item]));
+}
 const customerInput = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
@@ -98,7 +106,7 @@ router.post("/crm/customers", requireUser, requireRole("owner", "admin", "manage
     businessId, firstName: input.firstName, lastName: input.lastName,
     email: input.email || null, phone: input.phone || null, company: input.company || null,
     country: input.country || null, city: input.city || null, status: input.status ?? "active",
-    profileData: input.profileData ?? {},
+    profileData: cleanProfileData(input.profileData),
   }).returning();
   await recordActivity({ businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
     entityType: "customer", entityId: created.id, entityName: `${created.firstName} ${created.lastName}`,
@@ -114,7 +122,7 @@ router.put("/crm/customers/:id", requireUser, requireRole("owner", "admin", "man
   const { profileData, ...basic } = input;
   const [updated] = await db.update(customers).set({
     ...basic,
-    ...(profileData !== undefined ? { profileData } : {}),
+    ...(profileData !== undefined ? { profileData: cleanProfileData(profileData) } : {}),
     email: basic.email === undefined ? undefined : basic.email === "" ? null : basic.email,
     phone: basic.phone === undefined ? undefined : basic.phone === "" ? null : basic.phone,
     company: basic.company === undefined ? undefined : basic.company === "" ? null : basic.company,
