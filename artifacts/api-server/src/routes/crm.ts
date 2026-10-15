@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { randomUUID } from "node:crypto";
 import { and, count, desc, eq, gte, ilike, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, crmInteractions, customers, transactions, users } from "@workspace/db";
@@ -64,7 +65,7 @@ async function uploadCustomerPhoto(businessId: string, customerId: string, dataU
   const bytes = Buffer.from(match[2], "base64");
   if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new BadRequestError("Customer photos must be 2 MB or smaller.");
   const ext = match[1] === "jpeg" ? "jpg" : match[1];
-  const path = `${businessId}/${customerId}/${crypto.randomUUID()}.${ext}`;
+  const path = `${businessId}/${customerId}/${randomUUID()}.${ext}`;
   const { base, key } = storageConfig();
   const response = await fetch(`${base}/storage/v1/object/customer-photos/${path.split("/").map(encodeURIComponent).join("/")}`, {
     method: "POST",
@@ -113,8 +114,12 @@ router.put("/crm/customers/:id", requireUser, requireRole("owner", "admin", "man
   const { profileData, ...basic } = input;
   const [updated] = await db.update(customers).set({
     ...basic,
-    ...(profileData ? { profileData: { ...(existing.profileData ?? {}), ...profileData } } : {}),
-    email: basic.email === "" ? null : basic.email,
+    ...(profileData !== undefined ? { profileData } : {}),
+    email: basic.email === undefined ? undefined : basic.email === "" ? null : basic.email,
+    phone: basic.phone === undefined ? undefined : basic.phone === "" ? null : basic.phone,
+    company: basic.company === undefined ? undefined : basic.company === "" ? null : basic.company,
+    country: basic.country === undefined ? undefined : basic.country === "" ? null : basic.country,
+    city: basic.city === undefined ? undefined : basic.city === "" ? null : basic.city,
     updatedAt: new Date(),
   }).where(and(eq(customers.id, existing.id), eq(customers.businessId, businessId))).returning();
   res.json(await serializeCustomer(updated));
@@ -140,7 +145,7 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
     try {
       const { base, key } = storageConfig();
       await fetch(`${base}/storage/v1/object/customer-photos`, {
-        method: "DELETE", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({ prefixes: [path] }),
       });
     } catch { /* Keep the profile usable; object cleanup can be retried later. */ }
