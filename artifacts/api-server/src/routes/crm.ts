@@ -150,13 +150,17 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
   if (!customer) throw new NotFoundError("Customer not found");
   const path = customer.avatarUrl;
   if (path && !/^https?:\/\//i.test(path)) {
+    const { base, key } = storageConfig();
+    let response: Response;
     try {
-      const { base, key } = storageConfig();
-      await fetch(`${base}/storage/v1/object/customer-photos`, {
+      response = await fetch(`${base}/storage/v1/object/customer-photos`, {
         method: "DELETE", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({ prefixes: [path] }),
       });
-    } catch { /* Keep the profile usable; object cleanup can be retried later. */ }
+    } catch {
+      throw new HttpError(502, "photo_remove_failed", "The customer photo could not be removed from private storage. Please try again.");
+    }
+    if (!response.ok) throw new HttpError(502, "photo_remove_failed", "The customer photo could not be removed from private storage. Please try again.");
   }
   const [updated] = await db.update(customers).set({ avatarUrl: null, updatedAt: new Date() })
     .where(and(eq(customers.id, customer.id), eq(customers.businessId, businessId))).returning();
