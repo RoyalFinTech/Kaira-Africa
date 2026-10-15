@@ -69,14 +69,22 @@ function KairaFeedbackHost() {
   const [feedback, setFeedback] = useState<KairaFeedbackDetail | null>(null);
 
   useEffect(() => {
+    let dismissTimer: ReturnType<typeof setTimeout> | undefined;
     const onFeedback = (event: Event) => {
       const detail = (event as CustomEvent<KairaFeedbackDetail>).detail;
       if (!detail || !['success', 'error', 'info'].includes(detail.variant) ||
           typeof detail.title !== 'string' || typeof detail.message !== 'string') return;
       setFeedback(detail);
+      if (dismissTimer) clearTimeout(dismissTimer);
+      // Feedback cards should never remain over controls and block the app.
+      // Users can dismiss earlier; longer errors remain visible briefly.
+      dismissTimer = setTimeout(() => setFeedback(null), detail.variant === 'error' ? 9000 : 6000);
     };
     window.addEventListener('kaira:feedback', onFeedback);
-    return () => window.removeEventListener('kaira:feedback', onFeedback);
+    return () => {
+      window.removeEventListener('kaira:feedback', onFeedback);
+      if (dismissTimer) clearTimeout(dismissTimer);
+    };
   }, []);
 
   if (!feedback) return null;
