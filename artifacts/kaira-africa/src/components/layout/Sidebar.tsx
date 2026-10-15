@@ -11,6 +11,7 @@ import {
   Package,
   ClipboardList,
   BrainCircuit,
+  ReceiptText,
   Settings2,
   LogOut,
   User,
@@ -46,6 +47,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Daily Ledger', href: '/daily-ledger', icon: ClipboardList },
       { label: 'CRM', href: '/crm', icon: UserCheck },
       { label: 'Inventory', href: '/inventory', icon: Package },
+      { label: 'Receipt Branding', href: '/receipt-branding', icon: ReceiptText },
     ],
   },
   {
