@@ -657,6 +657,8 @@ try {
 
     if (routePath === '/crm') {
       await pinPage.getByRole('button', { name: 'Add customer' }).click();
+      await pinPage.getByRole('button', { name: 'Upload from device' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Take photo' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('First name *').fill('Aminata');
       await pinPage.getByLabel('Last name *').fill('SmokeCustomer');
       await pinPage.getByLabel('Date of birth').fill('1990-05-12');
@@ -664,7 +666,7 @@ try {
       const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
       await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'customer-photo.png', mimeType: 'image/png', buffer: onePixelPng });
       await pinPage.getByRole('button', { name: 'Save customer' }).click();
-      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(crmCustomerRequests.filter((item) => item.method === 'POST').length, 1, 'CRM add customer should make one intercepted create request');
       assert.equal(crmCustomerRequests[0].input.profileData.dateOfBirth, '1990-05-12', 'CRM should persist optional date of birth');
       assert.equal(crmCustomerRequests[0].input.profileData.maritalStatus, 'Married', 'CRM should persist optional marital status');
@@ -705,6 +707,8 @@ try {
     }
 
     if (routePath === '/profile') {
+      await pinPage.getByRole('button', { name: 'Upload profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Take profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Upload profile photo' }).click();
       const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
       await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'profile-avatar.png', mimeType: 'image/png', buffer: onePixelPng });
