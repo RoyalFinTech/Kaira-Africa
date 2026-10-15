@@ -574,9 +574,9 @@ try {
     if (routePath === '/inventory') {
       await pinPage.getByRole('heading', { name: 'Inventory & stock book' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByText(/SKU means.*Stock Keeping Unit/i).waitFor({ state: 'visible', timeout: 10_000 });
-      await pinPage.getByText(/maximum of 200 KB/i).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Go back' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Add product' }).click();
+      await pinPage.getByText(/maximum of 200 KB/i).waitFor({ state: 'visible', timeout: 10_000 });
 
       await pinPage.getByPlaceholder('e.g. 25 kg bag of rice').fill('Rice 25 kg bag');
       await pinPage.getByPlaceholder('e.g. RICE-25KG').fill('RICE-SMOKE-25KG');
