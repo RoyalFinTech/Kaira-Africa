@@ -828,6 +828,7 @@ try {
         logoSrc: logo?.getAttribute('src') || '',
         logoNaturalWidth: logo?.naturalWidth || 0,
         reference: target.querySelector('.kaira-print-document-heading')?.textContent || '',
+        contentText: target.querySelector('.kaira-print-content')?.textContent || '',
         footer: target.querySelector('.kaira-print-footer')?.textContent || '',
       } : null;
       window.__kairaPrintCalls += 1;
@@ -1001,6 +1002,19 @@ try {
       assert.ok(samplePrinted.logoNaturalWidth > 0, 'Printed sample waits for the uploaded logo to decode');
       assert.ok(samplePrinted.reference.includes('SAMPLE-0001'), 'Printed sample includes its reference number');
       assert.ok(samplePrinted.footer.includes('Thank you for your business.'), 'Printed sample includes its configured footer');
+
+      await pinPage.getByRole('checkbox', { name: /Show receipt or document reference/ }).uncheck();
+      await pinPage.getByRole('checkbox', { name: /Show linked customer details on transaction receipts/ }).uncheck();
+      await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
+      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      const customizedPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
+      await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customizedPrintBefore, { timeout: 10_000 });
+      const customizedPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.ok(!customizedPrinted.reference.includes('SAMPLE-0001'), 'Receipt-reference setting hides the reference from printed output');
+      assert.ok(!customizedPrinted.contentText.includes('Sample customer'), 'Customer-details setting applies to printed output');
+      assert.equal(receiptBrandingFixture.showReceiptNumber, false, 'Receipt reference setting is saved');
+      assert.equal(receiptBrandingFixture.showCustomerDetails, false, 'Customer-detail setting is saved');
       assert.equal(receiptBrandingFixture.companyName, 'Smoke Receipt Studio', 'Receipt branding form should persist the company name via the intercepted save API');
       assert.equal(receiptBrandingFixture.hasLogo, true, 'Receipt logo should be sent to the authenticated upload endpoint');
     }
