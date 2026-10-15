@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, ArrowDown, ArrowUp, AlertTriangle, ArrowLeft, ImagePlus, Package, Boxes, CircleHelp, X, LoaderCircle } from "lucide-react";
+import { Plus, ArrowDown, ArrowUp, AlertTriangle, ImagePlus, Package, Boxes, CircleHelp, X, LoaderCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,8 +138,7 @@ export default function InventoryPage() {
   return <PageTransition><div className="mx-auto max-w-7xl space-y-5 pb-8 sm:space-y-6">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
-        <Button variant="outline" size="icon" aria-label="Back to dashboard" title="Back to dashboard" onClick={() => { window.location.href = "/dashboard"; }} className="mt-1 shrink-0"><ArrowLeft className="h-4 w-4" /></Button>
-        <div className="min-w-0"><div className="flex items-center gap-2"><Package className="h-6 w-6 text-primary" /><h1 className="font-display text-2xl font-bold sm:text-3xl">Inventory & stock book</h1></div><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Keep a clear record of the goods your business owns, what each item costs, what you sell it for, and when stock is running low.</p></div>
+        <div className="min-w-0"><div className="flex items-center gap-2"><Package className="h-6 w-6 text-primary" /><h1 className="font-display text-2xl font-bold sm:text-3xl">Inventory & stock book</h1></div><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Keep a clear record of the goods your business owns, what each item costs, what you sell it for, and when stock is running low. Use the back arrow in the top bar to return to your previous page.</p></div>
       </div>
       <Button className="h-11 w-full shrink-0 gap-2 sm:w-auto" onClick={() => { setOpen((value) => !value); setFormError(null); }} title="Open the form to add a product"><Plus className="h-4 w-4" />{open ? "Close form" : "Add product"}</Button>
     </div>
