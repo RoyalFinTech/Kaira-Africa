@@ -36,8 +36,19 @@ const ReceiptSettingsInput = z.object({
 }).strict();
 
 function receiptStorageConfig() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Private receipt-logo storage is not configured yet.");
+  if (!env.SUPABASE_URL) {
+    throw new HttpError(
+      503,
+      "receipt_logo_storage_url_missing",
+      "Logo upload is not ready because SUPABASE_URL is missing from the Kaira Africa API service configuration in Render. The logo was not saved.",
+    );
+  }
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new HttpError(
+      503,
+      "receipt_logo_storage_key_missing",
+      "Logo upload is not ready because SUPABASE_SERVICE_ROLE_KEY is missing from the Kaira Africa API service configuration in Render. The logo was not saved.",
+    );
   }
   return { base: env.SUPABASE_URL.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY };
 }
