@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
 import { AppShell } from '@/components/layout/AppShell';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { KairaFeedbackCard } from '@/components/common/PrintableBusinessDocument';
 import { ApiError } from '@workspace/api-client-react';
 import { initApiClient, getToken, clearToken, isUserToken, isAdminToken } from '@/lib/api-client';
 
@@ -57,6 +58,40 @@ const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage')
 
 // 404
 const NotFoundPage       = lazy(() => import('@/pages/not-found'));
+
+
+type KairaFeedbackDetail = {
+  variant: 'success' | 'error' | 'info';
+  title: string;
+  message: string;
+};
+
+function KairaFeedbackHost() {
+  const [feedback, setFeedback] = useState<KairaFeedbackDetail | null>(null);
+
+  useEffect(() => {
+    const onFeedback = (event: Event) => {
+      const detail = (event as CustomEvent<KairaFeedbackDetail>).detail;
+      if (!detail || !['success', 'error', 'info'].includes(detail.variant) ||
+          typeof detail.title !== 'string' || typeof detail.message !== 'string') return;
+      setFeedback(detail);
+    };
+    window.addEventListener('kaira:feedback', onFeedback);
+    return () => window.removeEventListener('kaira:feedback', onFeedback);
+  }, []);
+
+  if (!feedback) return null;
+  return (
+    <div className="fixed right-4 top-4 z-[200] w-[min(92vw,30rem)]" data-testid="kaira-global-feedback">
+      <KairaFeedbackCard
+        variant={feedback.variant}
+        title={feedback.title}
+        message={feedback.message}
+        onDismiss={() => setFeedback(null)}
+      />
+    </div>
+  );
+}
 
 // ─── Auth helpers ────────────────────────────────────────────────────────────
 export function isAuthenticated(): boolean {
@@ -261,6 +296,7 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Router />
         </WouterRouter>
+        <KairaFeedbackHost />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
