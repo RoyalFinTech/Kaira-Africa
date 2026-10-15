@@ -958,7 +958,7 @@ try {
     }
 
     if (routePath === '/profile') {
-      await pinPage.getByRole('img', { name: 'Default 3D profile avatar' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('img', { name: 'Default 3D profile avatar' }).first().waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Upload profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Take profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Take profile photo' }).click();
