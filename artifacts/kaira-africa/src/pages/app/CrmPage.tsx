@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Plus, Phone, Mail, CalendarDays, MessageSquare, CheckCircle2, UserRound, Camera, Trash2, Pencil, Download, Printer, X, Save, Users, Clock3 } from "lucide-react";
+import { Search, Plus, Phone, Mail, CalendarDays, MessageSquare, CheckCircle2, UserRound, Camera, Upload, Trash2, Pencil, Download, Printer, X, Save, Users, Clock3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ const toInput = (d: CustomerDraft) => {
     if (value) Object.assign(profileData, { [key]: value });
   });
   const tags = d.tags.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 30);
-  if (tags.length) profileData.tags = tags;
+  profileData.tags = tags;
   return {
     firstName: d.firstName.trim(), lastName: d.lastName.trim(), email: d.email.trim() || undefined,
     phone: d.phone.trim() || undefined, company: d.company.trim() || undefined,
@@ -71,6 +71,14 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
   const [draft, setDraft] = useState(initial);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
+  const uploadPhotoRef = useRef<HTMLInputElement>(null);
+  const cameraPhotoRef = useRef<HTMLInputElement>(null);
+  const choosePhoto = (next: File | null) => {
+    setPhotoError("");
+    if (next && !["image/jpeg", "image/png", "image/webp"].includes(next.type)) { setPhotoError("Choose a JPEG, PNG or WebP image."); return; }
+    if (next && next.size > 2 * 1024 * 1024) { setPhotoError("The photo must be 2 MB or smaller."); return; }
+    setPhoto(next);
+  };
   const update = (key: keyof CustomerDraft, value: string) => setDraft((old) => ({ ...old, [key]: value } as CustomerDraft));
   const field = (key: keyof CustomerDraft, label: string, hint?: string, type = "text") => (
     <label className="block space-y-1.5 text-sm font-medium" key={key}>
@@ -118,12 +126,12 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
     </div>
     <div className="rounded-xl border p-4">
       <p className="font-semibold">Customer photo</p><p className="mb-3 mt-1 text-xs leading-5 text-muted-foreground">Choose a face photo from your device or take one using your camera. JPEG, PNG or WebP, up to 2 MB.</p>
-      <Input type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(e) => {
-        const next = e.target.files?.[0] ?? null; setPhotoError("");
-        if (next && !["image/jpeg","image/png","image/webp"].includes(next.type)) { setPhotoError("Choose a JPEG, PNG or WebP image."); e.target.value = ""; return; }
-        if (next && next.size > 2 * 1024 * 1024) { setPhotoError("The photo must be 2 MB or smaller."); e.target.value = ""; return; }
-        setPhoto(next);
-      }} />
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" onClick={() => uploadPhotoRef.current?.click()}><Upload className="mr-2 h-4 w-4"/>Upload from device</Button>
+        <Button type="button" variant="outline" onClick={() => cameraPhotoRef.current?.click()}><Camera className="mr-2 h-4 w-4"/>Take photo</Button>
+        <input ref={uploadPhotoRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { choosePhoto(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+        <input ref={cameraPhotoRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(e) => { choosePhoto(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+      </div>
       {photo && <p className="mt-2 text-xs text-muted-foreground">Selected: {photo.name} · {(photo.size / 1024).toFixed(0)} KB</p>}
       {photoError && <p role="alert" className="mt-2 text-sm text-destructive">{photoError}</p>}
     </div>
