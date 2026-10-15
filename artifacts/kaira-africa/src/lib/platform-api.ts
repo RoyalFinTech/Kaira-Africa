@@ -2,19 +2,75 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
+type ErrorPayload = Record<string, unknown>;
+
+function responseErrorMessage(payload: unknown, depth = 0): string | null {
+  if (depth > 5 || payload == null) return null;
+  if (typeof payload === "string") return payload.trim() || null;
+
+  if (Array.isArray(payload)) {
+    const details = payload
+      .map((item) => {
+        if (!item || typeof item !== "object") return typeof item === "string" ? item : null;
+        const issue = item as ErrorPayload;
+        const message = typeof issue.message === "string" ? issue.message : null;
+        const path = Array.isArray(issue.path) ? issue.path.filter((part) => typeof part === "string" || typeof part === "number").join(".") : "";
+        return message ? (path ? path + ": " + message : message) : responseErrorMessage(item, depth + 1);
+      })
+      .filter((item): item is string => Boolean(item));
+    return details.length ? details.join(" · ") : null;
+  }
+
+  if (typeof payload !== "object") return null;
+  const body = payload as ErrorPayload;
+  for (const key of ["message", "detail", "description", "error_description"]) {
+    const value = body[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  for (const key of ["error", "errors", "issues", "details", "data"]) {
+    if (body[key] != null) {
+      const nested = responseErrorMessage(body[key], depth + 1);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const response = await fetch(API_BASE_URL + path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(API_BASE_URL + path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: "Bearer " + token } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    throw new Error("Kaira Africa could not reach the server. Check your connection and try again.");
+  }
+
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message || data?.error || "Request failed with status " + response.status);
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text) as unknown;
+    } catch {
+      data = text;
+    }
+  }
+  if (!response.ok) {
+    const message = responseErrorMessage(data);
+    if (message) throw new Error(message);
+    if (response.status === 413) throw new Error("This file or request is too large. Choose a smaller file and try again.");
+    if (response.status === 401) throw new Error("Your session may have expired. Sign in again and retry.");
+    if (response.status === 403) throw new Error("You do not have permission to complete this action.");
+    if (response.status === 503) throw new Error("This service is temporarily unavailable. Please try again shortly.");
+    throw new Error("Kaira Africa could not complete the request (HTTP " + response.status + "). Please try again.");
+  }
+  if (typeof data === "string") throw new Error("The server returned an unreadable response. Please try again.");
   return data as T;
 }
 
