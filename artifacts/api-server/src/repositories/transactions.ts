@@ -6,39 +6,6 @@ import {
   customers,
   type Transaction,
 
-export async function updateTransaction(
-  businessId: string,
-  id: string,
-  data: {
-    status?: Transaction["status"];
-    description?: string | null;
-    notes?: string | null;
-    paymentMethod?: string | null;
-  },
-): Promise<TransactionWithCustomer | undefined> {
-  const [existing] = await db.select().from(transactions).where(
-    and(eq(transactions.id, id), eq(transactions.businessId, businessId)),
-  ).limit(1);
-  if (!existing) return undefined;
-
-  const patch: Partial<typeof transactions.$inferInsert> = { updatedAt: new Date() };
-  if (data.status !== undefined) {
-    patch.status = data.status;
-    patch.completedAt = data.status === "completed"
-      ? existing.completedAt ?? new Date()
-      : null;
-  }
-  if (data.description !== undefined) patch.description = data.description;
-  if (data.notes !== undefined) patch.notes = data.notes;
-  if (data.paymentMethod !== undefined) patch.paymentMethod = data.paymentMethod;
-
-  const [updated] = await db.update(transactions).set(patch).where(
-    and(eq(transactions.id, id), eq(transactions.businessId, businessId)),
-  ).returning();
-  if (!updated) return undefined;
-  const [withName] = await attachCustomerNames([updated]);
-  return withName;
-}
 
 } from "@workspace/db";
 
@@ -175,5 +142,39 @@ export async function createTransaction(
     })
     .returning();
   const [withName] = await attachCustomerNames([row]);
+  return withName;
+}
+
+export async function updateTransaction(
+  businessId: string,
+  id: string,
+  data: {
+    status?: Transaction["status"];
+    description?: string | null;
+    notes?: string | null;
+    paymentMethod?: string | null;
+  },
+): Promise<TransactionWithCustomer | undefined> {
+  const [existing] = await db.select().from(transactions).where(
+    and(eq(transactions.id, id), eq(transactions.businessId, businessId)),
+  ).limit(1);
+  if (!existing) return undefined;
+
+  const patch: Partial<typeof transactions.$inferInsert> = { updatedAt: new Date() };
+  if (data.status !== undefined) {
+    patch.status = data.status;
+    patch.completedAt = data.status === "completed"
+      ? existing.completedAt ?? new Date()
+      : null;
+  }
+  if (data.description !== undefined) patch.description = data.description;
+  if (data.notes !== undefined) patch.notes = data.notes;
+  if (data.paymentMethod !== undefined) patch.paymentMethod = data.paymentMethod;
+
+  const [updated] = await db.update(transactions).set(patch).where(
+    and(eq(transactions.id, id), eq(transactions.businessId, businessId)),
+  ).returning();
+  if (!updated) return undefined;
+  const [withName] = await attachCustomerNames([updated]);
   return withName;
 }
