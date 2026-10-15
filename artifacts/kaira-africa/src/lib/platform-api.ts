@@ -1,20 +1,46 @@
 import { getToken } from "./api-client";
+import { getReadableErrorMessage } from "./error-message";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const response = await fetch(API_BASE_URL + path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(API_BASE_URL + path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: "Bearer " + token } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    throw new Error("Kaira Africa could not reach the server. Check your connection and try again.");
+  }
+
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message || data?.error || "Request failed with status " + response.status);
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text) as unknown;
+    } catch {
+      if (!response.ok) {
+        data = text;
+      } else {
+        throw new Error("Kaira Africa received an unreadable server response. Please try again.");
+      }
+    }
+  }
+
+  if (!response.ok) {
+    // The API error handler returns nested payloads like
+    // { error: { code, message } }. Never stringify that object into
+    // the unhelpful "[object Object]" message shown to customers.
+    throw new Error(
+      getReadableErrorMessage(data, "Kaira Africa could not complete the request (HTTP " + response.status + "). Please try again."),
+    );
+  }
   return data as T;
 }
 
