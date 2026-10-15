@@ -608,7 +608,7 @@ try {
       assert.equal(inventoryImageRequests[0].jpegDataUrl, true, 'Product photo should be converted to JPEG before upload');
       assert.ok(inventoryImageRequests[0].imageBytes > 0 && inventoryImageRequests[0].imageBytes <= 200 * 1024, 'Compressed JPEG upload must be 200 KB or smaller after base64 decoding');
       await pinPage.getByRole('button', { name: 'Receive one bag of Rice 25 kg bag' }).click();
-      await pinPage.getByText('13 bag', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('13 bag', { exact: true }).last().waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(inventoryAdjustmentRequests.length, 1, 'Stock receive button should send one intercepted stock-movement request');
       assert.equal(inventoryAdjustmentRequests[0].quantityDelta, 1, 'Stock receive button should add one unit');
       console.log('INVENTORY STOCK BOOK, CURRENCY, COMPRESSED PHOTO AND MOVEMENT VERIFIED:', JSON.stringify({
