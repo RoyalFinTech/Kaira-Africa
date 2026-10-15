@@ -268,6 +268,13 @@ try {
   const inventoryImageRequests = [];
   const inventoryAdjustmentRequests = [];
   const inventoryFixtureProducts = [];
+  const crmCustomerRequests = [];
+  const crmPhotoRequests = [];
+  const crmPhotoDeleteRequests = [];
+  const crmInteractionRequests = [];
+  const crmFixtureCustomers = [];
+  const profileAvatarRequests = [];
+  let profileAvatarDeleteCount = 0;
   let pinEnabled = false;
   const nowIso = new Date().toISOString();
   const visualBusiness = {
@@ -364,6 +371,83 @@ try {
 
     if (pathname.endsWith('/api/auth/logout') && method === 'POST') {
       await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/profile/avatar') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
+      profileAvatarRequests.push({ dataUrlPrefix: dataUrl.slice(0, 30), bytes: dataUrl.includes(',') ? Buffer.from(dataUrl.split(',')[1], 'base64').byteLength : 0 });
+      visualUser.avatarUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(visualUser) });
+      return;
+    }
+    if (pathname.endsWith('/api/auth/profile/avatar') && method === 'DELETE') {
+      profileAvatarDeleteCount++;
+      visualUser.avatarUrl = null;
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(visualUser) });
+      return;
+    }
+
+    if (pathname.endsWith('/api/crm/overview') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
+        customers: crmFixtureCustomers.map((customer) => ({ ...customer, totalSpend: 0, transactionCount: 0 })),
+        interactions: crmInteractionRequests.map((item, index) => ({ id: 'crm-interaction-' + index, customerId: item.customerId, customerName: (crmFixtureCustomers.find((customer) => customer.id === item.customerId)?.firstName || 'Test') + ' ' + (crmFixtureCustomers.find((customer) => customer.id === item.customerId)?.lastName || 'Customer'), userName: 'Smoke Test', type: item.type, title: item.title, note: item.note, nextActionAt: item.nextActionAt || null, completedAt: null, createdAt: nowIso })),
+        metrics: { totalCustomers: crmFixtureCustomers.length, activeCustomers: crmFixtureCustomers.filter((customer) => customer.status === 'active').length, openFollowUps: crmInteractionRequests.filter((item) => item.nextActionAt).length },
+      }) });
+      return;
+    }
+    if (pathname.endsWith('/api/crm/customers') && method === 'GET') {
+      const searchTerm = (url.searchParams.get('search') || '').toLowerCase();
+      const matches = crmFixtureCustomers.filter((customer) => JSON.stringify(customer).toLowerCase().includes(searchTerm));
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ customers: matches, total: matches.length }) });
+      return;
+    }
+    if (pathname.endsWith('/api/crm/customers') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      crmCustomerRequests.push({ method: 'POST', input });
+      const created = { id: 'crm-customer-smoke', ...input, email: input.email || null, phone: input.phone || null, company: input.company || null, country: input.country || null, city: input.city || null, avatarUrl: null, profileData: input.profileData || {}, status: input.status || 'active', totalSpend: 0, transactionCount: 0, createdAt: nowIso, updatedAt: nowIso };
+      crmFixtureCustomers.push(created);
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(created) });
+      return;
+    }
+    const crmCustomerRoute = pathname.match(/\/api\/crm\/customers\/([^/]+)$/);
+    if (crmCustomerRoute && method === 'PUT') {
+      const input = JSON.parse(request.postData() || '{}');
+      crmCustomerRequests.push({ method: 'PUT', id: crmCustomerRoute[1], input });
+      const customer = crmFixtureCustomers.find((item) => item.id === crmCustomerRoute[1]);
+      if (!customer) { await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'CRM fixture customer not found' }) }); return; }
+      Object.assign(customer, input, { profileData: { ...(customer.profileData || {}), ...(input.profileData || {}) }, updatedAt: new Date().toISOString() });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(customer) });
+      return;
+    }
+    const crmPhotoRoute = pathname.match(/\/api\/crm\/customers\/([^/]+)\/photo$/);
+    if (crmPhotoRoute && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
+      crmPhotoRequests.push({ id: crmPhotoRoute[1], isImageDataUrl: /^data:image\/(jpeg|png|webp);base64,/.test(dataUrl), bytes: dataUrl.includes(',') ? Buffer.from(dataUrl.split(',')[1], 'base64').byteLength : 0 });
+      const customer = crmFixtureCustomers.find((item) => item.id === crmPhotoRoute[1]);
+      if (!customer) { await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'CRM fixture customer not found' }) }); return; }
+      customer.avatarUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(customer) });
+      return;
+    }
+    if (crmPhotoRoute && method === 'DELETE') {
+      crmPhotoDeleteRequests.push(crmPhotoRoute[1]);
+      const customer = crmFixtureCustomers.find((item) => item.id === crmPhotoRoute[1]);
+      if (customer) customer.avatarUrl = null;
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(customer || {}) });
+      return;
+    }
+    if (pathname.endsWith('/api/crm/interactions') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      crmInteractionRequests.push(input);
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify({ id: 'crm-interaction-' + crmInteractionRequests.length, ...input, customerName: 'Test Customer', userName: 'Smoke Test', nextActionAt: input.nextActionAt || null, completedAt: null, createdAt: nowIso }) });
+      return;
+    }
+    const crmCompleteRoute = pathname.match(/\/api\/crm\/interactions\/([^/]+)\/complete$/);
+    if (crmCompleteRoute && method === 'PATCH') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ id: crmCompleteRoute[1], completedAt: nowIso }) });
       return;
     }
 
