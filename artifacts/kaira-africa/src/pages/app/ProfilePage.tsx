@@ -211,7 +211,7 @@ export default function ProfilePage() {
                   finally { setAvatarBusy(false); }
                 }} />
               </div>
-              <p className="mb-2 text-xs text-muted-foreground">JPEG, PNG or WebP · maximum 2 MB</p>
+              <p className="mb-2 text-xs text-muted-foreground">JPEG, PNG or WebP · recommended 256×256 px or larger · maximum 2 MB</p>
               {avatarBusy && <p role="status" className="mb-2 text-xs text-muted-foreground">Uploading photo securely…</p>}
               {avatarMessage && <p role="status" className="mb-2 text-xs text-primary">{avatarMessage}</p>}
               {avatarError && <p role="alert" className="mb-2 max-w-[220px] text-xs text-destructive">{avatarError}</p>}
