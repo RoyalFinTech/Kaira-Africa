@@ -20,15 +20,16 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { PageTransition } from "@/components/common/PageTransition";
 import { EmptyState } from "@/components/common/EmptyState";
 import { CameraCaptureDialog } from "@/components/common/CameraCaptureDialog";
+import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import {
   useListTransactions, useListCustomers, getListTransactionsQueryKey,
   getGetBusinessStatsQueryKey, getListCustomersQueryKey,
   getGetRevenueAnalyticsQueryKey, getGetTransactionAnalyticsQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient as useReactQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient as useReactQueryClient } from "@tanstack/react-query";
 import {
   createManagedTransaction, updateManagedTransaction, uploadManagedTransactionAttachment,
-  removeManagedTransactionAttachment, type ManagedTransaction, type TransactionCurrency,
+  removeManagedTransactionAttachment, getReceiptBranding, type ManagedTransaction, type TransactionCurrency,
   type TransactionPaymentMethod, type ManagedTransactionStatus,
 } from "@/lib/platform-api";
 import { formatDate } from "@/lib/utils";
@@ -365,6 +366,7 @@ function TransactionDetailDialog({
             </div>
             {error && <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
             <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => printKairaDocument("transaction-receipt-print")}><ReceiptText className="mr-2 h-4 w-4" />Print receipt / record</Button>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
               <Button type="button" onClick={saveDetails} disabled={busy || attachmentBusy}><Save className="mr-2 h-4 w-4" />{busy ? "Saving updates…" : "Save transaction updates"}</Button>
             </DialogFooter>
@@ -378,6 +380,7 @@ function TransactionDetailDialog({
 
 export default function TransactionsPage() {
   const queryClient = useReactQueryClient();
+  const { data: receiptBranding } = useQuery({ queryKey: ["receipt-branding"], queryFn: getReceiptBranding, staleTime: 60_000 });
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -534,6 +537,28 @@ export default function TransactionsPage() {
           onOpenChange={(next) => { if (!next) setActiveTransaction(null); }}
           onUpdated={handleUpdated}
         />
+        {activeTransaction && (
+          <PrintableBusinessDocument
+            id="transaction-receipt-print"
+            title={activeTransaction.status === "completed" ? "Transaction Receipt" : "Transaction Record"}
+            documentNumber={activeTransaction.reference}
+            issuedAt={formatDate(activeTransaction.createdAt, "MMM dd, yyyy HH:mm")}
+            status={activeTransaction.status.toUpperCase()}
+          >
+            {receiptBranding?.showCustomerDetails !== false && <div className="grid grid-cols-2 gap-4">
+              <div><p><strong>Customer</strong></p><p>{activeTransaction.customerName || "No customer linked"}</p></div>
+              <div><p><strong>Payment method</strong></p><p>{METHOD_LABELS[(activeTransaction.paymentMethod as TransactionPaymentMethod) || "manual_entry"]}</p></div>
+            </div>}
+            <table className="mt-5">
+              <thead><tr><th>Transaction type</th><th>Description / reference</th><th>Amount</th></tr></thead>
+              <tbody><tr><td>{TYPE_LABELS[activeTransaction.type] || activeTransaction.type}</td><td>{activeTransaction.description || "—"}</td><td>{money(activeTransaction.amount, activeTransaction.currency)}</td></tr></tbody>
+            </table>
+            {activeTransaction.notes && <div className="mt-4"><h3>Notes</h3><p className="whitespace-pre-wrap">{activeTransaction.notes}</p></div>}
+            <div className="kaira-print-total flex items-center justify-between"><strong>Recorded amount · {activeTransaction.currency}</strong><strong>{money(activeTransaction.amount, activeTransaction.currency)}</strong></div>
+            <p className="mt-3 text-xs">This document reflects the transaction status shown above. It is not confirmation from a bank or external payment gateway.</p>
+            {activeTransaction.attachmentUrl && <p className="mt-2 text-xs">Supporting receipt/proof: attachment saved in Kaira Africa.</p>}
+          </PrintableBusinessDocument>
+        )}
       </div>
     </PageTransition>
   );
