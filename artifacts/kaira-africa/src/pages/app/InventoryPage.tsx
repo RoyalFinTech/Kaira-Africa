@@ -26,10 +26,11 @@ async function compressProductPhoto(file: File): Promise<string> {
   const source = URL.createObjectURL(file);
   try {
     const image = new Image();
-    image.src = source;
     await new Promise<void>((resolve, reject) => {
+      // Register handlers before starting the load to avoid a fast-cache race.
       image.onload = () => resolve();
       image.onerror = () => reject(new Error("This image could not be opened. Try another photo."));
+      image.src = source;
     });
     const scale = Math.min(1, 900 / Math.max(image.naturalWidth, image.naturalHeight));
     const canvas = document.createElement("canvas");
