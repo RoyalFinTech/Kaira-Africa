@@ -189,3 +189,33 @@ export const getAdminPlatformRecords = (params: AdminPlatformPageParams) =>
     transactionsPage: String(params.transactionsPage),
     pageSize: String(params.pageSize ?? 50),
   }).toString());
+
+export interface CrmProfileData {
+  dateOfBirth?: string; preferredName?: string; gender?: string; maritalStatus?: string;
+  occupation?: string; customerType?: string; preferredContactMethod?: string;
+  preferredLanguage?: string; addressLine1?: string; addressLine2?: string;
+  postalCode?: string; region?: string; source?: string; tags?: string[];
+  interests?: string; preferences?: string; consentNotes?: string; internalNotes?: string;
+  emergencyContactName?: string; emergencyContactPhone?: string;
+  organizationSpecific?: Record<string, string>;
+}
+export interface ManagedCrmCustomer extends CrmCustomer {
+  country: string | null; city: string | null; avatarUrl: string | null;
+  updatedAt: string; profileData: CrmProfileData;
+}
+export interface ManagedCrmCustomerInput {
+  firstName: string; lastName: string; email?: string; phone?: string; company?: string;
+  country?: string; city?: string; status?: "active" | "inactive"; profileData?: CrmProfileData;
+}
+export const searchCrmCustomers = (search = "") =>
+  request<{ customers: ManagedCrmCustomer[]; total: number }>(
+    "/api/crm/customers" + (search ? "?" + new URLSearchParams({ search }).toString() : "")
+  );
+export const createManagedCrmCustomer = (input: ManagedCrmCustomerInput) =>
+  request<ManagedCrmCustomer>("/api/crm/customers", { method: "POST", body: JSON.stringify(input) });
+export const updateManagedCrmCustomer = (id: string, input: Partial<ManagedCrmCustomerInput>) =>
+  request<ManagedCrmCustomer>("/api/crm/customers/" + encodeURIComponent(id), { method: "PUT", body: JSON.stringify(input) });
+export const uploadCrmCustomerPhoto = (id: string, dataUrl: string) =>
+  request<ManagedCrmCustomer>("/api/crm/customers/" + encodeURIComponent(id) + "/photo", { method: "POST", body: JSON.stringify({ dataUrl }) });
+export const removeCrmCustomerPhoto = (id: string) =>
+  request<ManagedCrmCustomer>("/api/crm/customers/" + encodeURIComponent(id) + "/photo", { method: "DELETE" });
