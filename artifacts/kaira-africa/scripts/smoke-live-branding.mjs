@@ -319,7 +319,7 @@ try {
     logoUrl: null,
     hasLogo: false,
   };
-  const transactionFixture = {
+  const premiumTransactionFixture = {
     id: "transaction-visual-smoke",
     reference: "TXN-SMOKE-001",
     amount: 1250,
@@ -410,7 +410,7 @@ try {
       await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
         totalRevenue: 1250, revenueChange: 0, totalTransactions: 1, transactionsChange: 0,
         totalCustomers: crmFixtureCustomers.length, customersChange: 0, teamMembers: 1, teamChange: 0,
-        recentTransactions: [transactionFixture], recentActivity: [],
+        recentTransactions: [premiumTransactionFixture], recentActivity: [],
       }) });
       return;
     }
@@ -489,7 +489,7 @@ try {
       const searchTerm = (url.searchParams.get('search') || '').toLowerCase();
       const status = url.searchParams.get('status');
       const type = url.searchParams.get('type');
-      const matches = [transactionFixture].filter((tx) =>
+      const matches = [premiumTransactionFixture].filter((tx) =>
         (!searchTerm || JSON.stringify(tx).toLowerCase().includes(searchTerm)) &&
         (!status || tx.status === status) && (!type || tx.type === type)
       );
@@ -501,31 +501,31 @@ try {
     }
     if (pathname.endsWith('/api/transactions') && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
-      Object.assign(transactionFixture, input, { id: 'transaction-created-smoke', reference: 'TXN-CREATED-SMOKE', status: 'pending', createdAt: nowIso, updatedAt: nowIso, completedAt: null });
-      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(transactionFixture) });
+      Object.assign(premiumTransactionFixture, input, { id: 'transaction-created-smoke', reference: 'TXN-CREATED-SMOKE', status: 'pending', createdAt: nowIso, updatedAt: nowIso, completedAt: null });
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
       return;
     }
     const txAttachmentRoute = pathname.match(/\/api\/transactions\/([^/]+)\/attachment$/);
     if (txAttachmentRoute && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
-      Object.assign(transactionFixture, { attachmentUrl: input.dataUrl || null, updatedAt: new Date().toISOString() });
-      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(transactionFixture) });
+      Object.assign(premiumTransactionFixture, { attachmentUrl: input.dataUrl || null, updatedAt: new Date().toISOString() });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
       return;
     }
     if (txAttachmentRoute && method === 'DELETE') {
-      Object.assign(transactionFixture, { attachmentUrl: null, updatedAt: new Date().toISOString() });
-      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(transactionFixture) });
+      Object.assign(premiumTransactionFixture, { attachmentUrl: null, updatedAt: new Date().toISOString() });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
       return;
     }
     const txRoute = pathname.match(/\/api\/transactions\/([^/]+)$/);
     if (txRoute && method === 'GET') {
-      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(transactionFixture) });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
       return;
     }
     if (txRoute && method === 'PATCH') {
-      Object.assign(transactionFixture, JSON.parse(request.postData() || '{}'), { updatedAt: new Date().toISOString() });
-      if (transactionFixture.status === 'completed' && !transactionFixture.completedAt) transactionFixture.completedAt = nowIso;
-      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(transactionFixture) });
+      Object.assign(premiumTransactionFixture, JSON.parse(request.postData() || '{}'), { updatedAt: new Date().toISOString() });
+      if (premiumTransactionFixture.status === 'completed' && !premiumTransactionFixture.completedAt) premiumTransactionFixture.completedAt = nowIso;
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
       return;
     }
 
@@ -933,7 +933,7 @@ try {
       const transactionPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print receipt / record' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, transactionPrintBefore, { timeout: 5_000 });
-      assert.ok(transactionFixture.reference === 'TXN-SMOKE-001', 'Transaction receipt uses the intercepted transaction fixture');
+      assert.ok(premiumTransactionFixture.reference === 'TXN-SMOKE-001', 'Transaction receipt uses the intercepted transaction fixture');
       await pinPage.getByRole('button', { name: 'Close' }).click();
     }
 
