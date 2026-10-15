@@ -230,6 +230,7 @@ export default function ReceiptBrandingPage() {
                   <div className="border-y border-slate-200 py-4 text-sm"><div className="flex justify-between gap-3"><span>Consultation / service</span><span>GMD 1,250.00</span></div><div className="mt-2 flex justify-between gap-3 text-slate-500"><span>Payment method</span><span>Bank transfer</span></div>{form.showCustomerDetails && <div className="mt-3 border-t border-dashed pt-3 text-xs text-slate-500">Customer: Sample customer</div>}</div>
                   <div className="my-4 flex justify-between rounded-lg bg-emerald-50 p-3 font-semibold text-emerald-950"><span>Total</span><span>GMD 1,250.00</span></div>
                   <p className="text-center text-xs text-slate-500">{form.footerNote || "Thank you for your business."}</p>
+                  <p className="mt-2 text-center text-[9px] font-medium text-slate-400">Prepared by Kaira Africa</p>
                 </div>
               </CardContent>
             </Card>
