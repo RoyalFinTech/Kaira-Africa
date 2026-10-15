@@ -193,7 +193,7 @@ router.delete("/auth/profile/avatar", requireUser, async (req, res) => {
   if (user.avatarUrl && !/^https?:\/\//i.test(user.avatarUrl)) {
     try {
       await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/profile-avatars`, {
-        method: "POST",
+        method: "DELETE",
         headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({ prefixes: [user.avatarUrl] }),
       });
