@@ -191,13 +191,17 @@ router.delete("/auth/profile/avatar", requireUser, async (req, res) => {
   const user = await getUserById(req.user!.id);
   if (!user) throw new NotFoundError("User not found");
   if (user.avatarUrl && !/^https?:\/\//i.test(user.avatarUrl)) {
+    let response: Response;
     try {
-      await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/profile-avatars`, {
+      response = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/profile-avatars`, {
         method: "DELETE",
         headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({ prefixes: [user.avatarUrl] }),
       });
-    } catch { /* Removing the profile reference is more important than best-effort object cleanup. */ }
+    } catch {
+      throw new HttpError(502, "photo_remove_failed", "Your profile photo could not be removed from private storage. Please try again.");
+    }
+    if (!response.ok) throw new HttpError(502, "photo_remove_failed", "Your profile photo could not be removed from private storage. Please try again.");
   }
   // Explicitly clear the column rather than leaving a stale storage path.
   const [cleared] = await db.update(users).set({ avatarUrl: null, updatedAt: new Date() }).where(eq(users.id, req.user!.id)).returning();
