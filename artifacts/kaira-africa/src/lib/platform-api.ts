@@ -2,7 +2,7 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
-function emitKairaFeedback(detail: { variant: "success" | "error" | "info"; title: string; message: string }) {
+export function reportKairaFeedback(detail: { variant: "success" | "error" | "info"; title: string; message: string }) {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("kaira:feedback", { detail }));
   }
@@ -44,7 +44,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     });
   } catch {
     const message = "Kaira Africa could not reach the server. Check your connection and try again.";
-    emitKairaFeedback({ variant: "error", title: "Connection problem", message });
+    reportKairaFeedback({ variant: "error", title: "Connection problem", message });
     throw new Error(message);
   }
   const text = await response.text();
@@ -59,13 +59,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (!response.ok) {
     const message = readableApiMessage(data) || "Request failed with status " + response.status + ". Please try again.";
-    emitKairaFeedback({ variant: "error", title: "Kaira Africa couldn't complete that request", message });
+    reportKairaFeedback({ variant: "error", title: "Kaira Africa couldn't complete that request", message });
     throw new Error(message);
   }
 
   const method = (options.method || "GET").toUpperCase();
   if (path.endsWith("/receipt-settings") && method === "PATCH") {
-    emitKairaFeedback({
+    reportKairaFeedback({
       variant: "success",
       title: "Receipt branding saved",
       message: "Your business details and print preferences were saved successfully.",
@@ -76,16 +76,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       const message = branding?.hasLogo
         ? "The logo may be stored, but its secure preview link could not be verified. Refresh the page and retry."
         : "The server did not confirm that your logo was saved. Please try uploading it again.";
-      emitKairaFeedback({ variant: "error", title: "Logo upload could not be verified", message });
+      reportKairaFeedback({ variant: "error", title: "Logo upload could not be verified", message });
       throw new Error(message);
     }
-    emitKairaFeedback({
+    reportKairaFeedback({
       variant: "success",
       title: "Logo uploaded successfully",
       message: "Kaira Africa verified the saved logo and secure preview link. It is ready for printouts.",
     });
   } else if (path.endsWith("/receipt-logo") && method === "DELETE") {
-    emitKairaFeedback({
+    reportKairaFeedback({
       variant: "success",
       title: "Logo removed",
       message: "The custom logo was removed from your receipt branding.",
