@@ -67,7 +67,7 @@ import { hashPin, isSixDigitPin, isStrongPin, verifyPin } from "../lib/pin";
 import { sendOtpSms } from "../services/sms.service";
 import { sendPasswordResetEmail } from "../services/email.service";
 import { env, isProd } from "../config/env";
-import type { User } from "@workspace/db";
+import { db, users, type User } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -103,14 +103,31 @@ function pinPhoneKey(req: Request): string {
   }
 }
 
-function serializeUser(user: User) {
+async function serializeUser(user: User) {
+  let avatarUrl = user.avatarUrl;
+  if (avatarUrl && !/^https?:\/\//i.test(avatarUrl) && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const base = env.SUPABASE_URL.replace(/\/$/, "");
+      const path = avatarUrl.split("/").map(encodeURIComponent).join("/");
+      const response = await fetch(`${base}/storage/v1/object/sign/profile-avatars/${path}`, {
+        method: "POST", headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresIn: 3600 }),
+      });
+      if (response.ok) {
+        const signed = await response.json() as { signedURL?: string; signedUrl?: string };
+        const url = signed.signedURL ?? signed.signedUrl;
+        if (url) avatarUrl = url.startsWith("http") ? url : url.startsWith("/storage/v1/") ? base + url : `${base}/storage/v1${url.startsWith("/") ? "" : "/"}${url}`;
+        else avatarUrl = null;
+      } else avatarUrl = null;
+    } catch { avatarUrl = null; }
+  }
   return {
     id: user.id,
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
     phone: `${user.phoneCountryCode}${user.phoneNumber}`,
-    avatarUrl: user.avatarUrl,
+    avatarUrl,
     role: user.role,
     businessId: user.businessId,
     createdAt: user.createdAt.toISOString(),
@@ -123,7 +140,7 @@ function serializeUser(user: User) {
 router.get("/auth/me", requireUser, async (req, res) => {
   const user = await getUserById(req.user!.id);
   if (!user) throw new NotFoundError("User not found");
-  res.json(GetMeResponse.parse(serializeUser(user)));
+  res.json(GetMeResponse.parse(await serializeUser(user)));
 });
 
 router.patch(
@@ -137,9 +154,54 @@ router.patch(
       avatarUrl: req.body.avatarUrl,
     });
     if (!updated) throw new NotFoundError("User not found");
-    res.json(UpdateProfileResponse.parse(serializeUser(updated)));
+    res.json(UpdateProfileResponse.parse(await serializeUser(updated)));
   },
 );
+
+
+router.post("/auth/profile/avatar", requireUser, async (req, res) => {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new HttpError(503, "service_unavailable", "Profile photo storage is not configured. You can still use your account without a photo.");
+  }
+  const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
+  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
+  if (!match) throw new BadRequestError("Choose a JPEG, PNG or WebP image.");
+  const bytes = Buffer.from(match[2], "base64");
+  if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new BadRequestError("Profile photos must be 2 MB or smaller.");
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const ext = match[1] === "jpeg" ? "jpg" : match[1];
+  const path = `${req.user!.id}/${crypto.randomUUID()}.${ext}`;
+  const upload = await fetch(`${base}/storage/v1/object/profile-avatars/${path.split("/").map(encodeURIComponent).join("/")}`, {
+    method: "POST",
+    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": `image/${match[1]}`, "x-upsert": "false" },
+    body: bytes,
+  });
+  if (!upload.ok) throw new HttpError(502, "photo_upload_failed", "Your profile photo could not be uploaded. Please try another image.");
+  const updated = await updateUserProfile(req.user!.id, { avatarUrl: path });
+  if (!updated) throw new NotFoundError("User not found");
+  res.json(UpdateProfileResponse.parse(await serializeUser(updated)));
+});
+
+router.delete("/auth/profile/avatar", requireUser, async (req, res) => {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new HttpError(503, "service_unavailable", "Profile photo storage is not configured.");
+  }
+  const user = await getUserById(req.user!.id);
+  if (!user) throw new NotFoundError("User not found");
+  if (user.avatarUrl && !/^https?:\/\//i.test(user.avatarUrl)) {
+    try {
+      await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/profile-avatars`, {
+        method: "DELETE",
+        headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ prefixes: [user.avatarUrl] }),
+      });
+    } catch { /* Removing the profile reference is more important than best-effort object cleanup. */ }
+  }
+  const updated = await updateUserProfile(req.user!.id, { avatarUrl: undefined });
+  // Explicitly clear the column rather than leaving a stale storage path.
+  const [cleared] = await db.update(users).set({ avatarUrl: null, updatedAt: new Date() }).where(eq(users.id, req.user!.id)).returning();
+  res.json(UpdateProfileResponse.parse(await serializeUser(cleared ?? updated!)));
+});
 
 // ─── PIN sign-in (business users) ────────────────────────────────────────────
 // PINs are hashed with Argon2id and never returned to the browser. The PIN
