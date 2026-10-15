@@ -369,8 +369,8 @@
   @page { size: auto; margin: 13mm; }
   html, body { background: #fff !important; min-height: 0 !important; }
   body * { visibility: hidden !important; }
-  .kaira-print-target, .kaira-print-target * { visibility: visible !important; }
-  .kaira-print-target {
+  .kaira-print-target.kaira-print-active, .kaira-print-target.kaira-print-active * { visibility: visible !important; }
+  .kaira-print-target.kaira-print-active {
     display: block !important;
     position: fixed !important;
     inset: 0 !important;
