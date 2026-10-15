@@ -46,7 +46,7 @@ const toInput = (d: CustomerDraft) => {
   const profileData: CrmProfileData = {};
   (["dateOfBirth","preferredName","gender","maritalStatus","occupation","customerType","preferredContactMethod","preferredLanguage","addressLine1","addressLine2","postalCode","region","source","interests","preferences","consentNotes","internalNotes","emergencyContactName","emergencyContactPhone"] as const).forEach((key) => {
     const value = d[key].trim();
-    if (value) profileData[key] = value;
+    if (value) Object.assign(profileData, { [key]: value });
   });
   const tags = d.tags.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 30);
   if (tags.length) profileData.tags = tags;
@@ -71,7 +71,7 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
   const [draft, setDraft] = useState(initial);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
-  const update = (key: keyof CustomerDraft, value: string) => setDraft((old) => ({ ...old, [key]: value }));
+  const update = (key: keyof CustomerDraft, value: string) => setDraft((old) => ({ ...old, [key]: value } as CustomerDraft));
   const field = (key: keyof CustomerDraft, label: string, hint?: string, type = "text") => (
     <label className="block space-y-1.5 text-sm font-medium" key={key}>
       <span>{label}</span>
