@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageTransition } from "@/components/common/PageTransition";
 import { KairaFeedbackCard } from "@/components/common/KairaFeedbackCard";
+import { normalizeKairaMessage } from "@/lib/kaira-feedback";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { useGetMe, useGetMyBusiness } from "@workspace/api-client-react";
 import {
@@ -24,11 +25,7 @@ type BrandForm = Required<Pick<ReceiptBrandingSettings,
 >>;
 
 function readableActionError(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message.trim() && error.message !== "[object Object]") {
-    return error.message;
-  }
-  if (typeof error === "string" && error.trim() && error !== "[object Object]") return error;
-  return fallback;
+  return normalizeKairaMessage(error, fallback);
 }
 
 function initialForm(branding?: ReceiptBrandingSettings, businessName?: string): BrandForm {
@@ -204,8 +201,14 @@ export default function ReceiptBrandingPage() {
           <div className="pointer-events-none absolute bottom-0 right-8 hidden h-24 w-24 rotate-12 rounded-2xl border border-white/15 bg-white/5 sm:block"/>
         </section>
 
-        {isError && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-950">
-          <span>Receipt settings could not be loaded. Use the Kaira Africa notification above for the reason, then retry.</span>
+        {isError && <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="min-w-0 flex-1">
+            <KairaFeedbackCard
+              variant="error"
+              title="Receipt settings could not be loaded"
+              message="Kaira Africa could not retrieve the saved receipt settings. Check the branded notification for details, then retry."
+            />
+          </div>
           <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>Retry settings</Button>
         </div>}
 
