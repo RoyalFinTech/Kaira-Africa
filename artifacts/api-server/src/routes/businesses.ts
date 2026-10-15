@@ -19,6 +19,7 @@ import { db, businesses, customers, teamMembers, type ReceiptBrandingSettings } 
 import { count, eq } from "drizzle-orm";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { env } from "../config/env";
+import { logger } from "../lib/logger";
 import { fromMinorUnits } from "../lib/money";
 import type { Business } from "@workspace/db";
 
@@ -184,17 +185,57 @@ router.post("/businesses/me/receipt-logo", requireUser, requireRole("owner"), as
   const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/png" ? "png" : "webp";
   const path = `${businessId}/${Date.now()}-${randomUUID()}.${extension}`;
   const url = `${base}/storage/v1/object/receipt-logos/${path.split("/").map(encodeURIComponent).join("/")}`;
-  const upload = await fetch(url, {
-    method: "POST",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
-    body: bytes,
-  });
-  if (!upload.ok) throw new HttpError(502, "receipt_logo_upload_failed", "The logo could not be saved. Please try again.");
+  let upload: Response;
+  try {
+    upload = await fetch(url, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
+      body: bytes,
+    });
+  } catch (error) {
+    logger.error({ err: error }, "Receipt logo upload could not reach private storage");
+    throw new HttpError(502, "receipt_logo_storage_unreachable", "Kaira Africa could not reach private logo storage. The logo was not saved; please try again.");
+  }
+  if (!upload.ok) {
+    let providerCode: string | undefined;
+    try {
+      const body = await upload.clone().json() as { code?: unknown; error?: unknown };
+      const nested = body.error && typeof body.error === "object" ? body.error as Record<string, unknown> : null;
+      const code = typeof body.code === "string" ? body.code : nested && typeof nested.code === "string" ? nested.code : undefined;
+      providerCode = code;
+    } catch {
+      // Storage can also return a plain-text error body; the HTTP status is sufficient to diagnose its class.
+    }
+    logger.error({ status: upload.status, providerCode }, "Private storage rejected a receipt-logo upload");
+    const message = upload.status === 401 || upload.status === 403
+      ? "Private logo storage refused the upload (HTTP " + upload.status + "). The logo was not saved. Please retry; if it continues, support needs to check storage access."
+      : upload.status === 404
+        ? "The private receipt-logo bucket could not be found. The logo was not saved; support needs to check storage setup."
+        : upload.status === 413
+          ? "Private storage rejected the logo as too large. Choose an image no larger than 2 MB."
+          : upload.status === 400 || upload.status === 415
+            ? "Private storage rejected this image. Choose a valid JPEG, PNG or WebP file no larger than 2 MB."
+            : "Private logo storage returned HTTP " + upload.status + ". The logo was not saved; please retry.";
+    throw new HttpError(502, "receipt_logo_upload_failed", message);
+  }
+
   const previousPath = business.receiptSettings?.logoPath ?? null;
   const next: ReceiptBrandingSettings = { ...(business.receiptSettings ?? {}), logoPath: path };
-  const [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
-    .where(eq(businesses.id, businessId)).returning();
-  if (!updated) throw new NotFoundError("Business not found");
+  let updated: Business | undefined;
+  try {
+    [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
+      .where(eq(businesses.id, businessId)).returning();
+    if (!updated) throw new NotFoundError("Business not found");
+  } catch (error) {
+    // Storage was uploaded but its reference could not be committed. Clean up
+    // that orphan object so the next upload starts from a known state.
+    try {
+      await removeReceiptLogoObject(path);
+    } catch {
+      logger.error({ status: "cleanup_failed" }, "Could not remove an unreferenced receipt logo after the database write failed");
+    }
+    throw error;
+  }
   if (previousPath && previousPath !== path) {
     try { await removeReceiptLogoObject(previousPath); } catch { /* New logo and database reference are already saved. */ }
   }
