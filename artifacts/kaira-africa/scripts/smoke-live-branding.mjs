@@ -307,6 +307,55 @@ try {
     createdAt: nowIso,
     lastLoginAt: null,
   };
+  let receiptBrandingFixture = {
+    companyName: visualBusiness.name,
+    address: visualBusiness.address,
+    phone: visualBusiness.phone,
+    email: visualBusiness.email,
+    website: "",
+    footerNote: "Thank you for your business.",
+    showReceiptNumber: true,
+    showCustomerDetails: true,
+    logoUrl: null,
+    hasLogo: false,
+  };
+  const premiumTransactionFixture = {
+    id: "transaction-visual-smoke",
+    reference: "TXN-SMOKE-001",
+    amount: 1250,
+    currency: "GMD",
+    type: "payment",
+    status: "completed",
+    customerId: null,
+    customerName: "Smoke Customer",
+    description: "Smoke-test customer payment",
+    paymentMethod: "bank_transfer",
+    notes: "Fixture transaction only",
+    attachmentUrl: null,
+    createdAt: nowIso,
+    completedAt: nowIso,
+    updatedAt: nowIso,
+  };
+  const dailyEntryFixture = {
+    id: "ledger-visual-smoke",
+    entryType: "sale",
+    description: "Smoke-test sale",
+    category: "Sales",
+    amount: 1250,
+    balance: null,
+    currency: "GMD",
+    customerName: "Smoke Customer",
+    productId: null,
+    quantity: 1,
+    dueDate: null,
+    status: "recorded",
+    recordedDate: nowIso.slice(0, 10),
+    recordedTime: "10:30",
+    paymentMethod: "bank_transfer",
+    remarks: "Browser smoke fixture only",
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
   const corsHeaders = {
     'access-control-allow-origin': baseUrl,
     'access-control-allow-methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
@@ -357,6 +406,129 @@ try {
       await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(visualBusiness) });
       return;
     }
+    if (pathname.endsWith('/api/businesses/me/stats') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
+        totalRevenue: 1250, revenueChange: 0, totalTransactions: 1, transactionsChange: 0,
+        totalCustomers: crmFixtureCustomers.length, customersChange: 0, teamMembers: 1, teamChange: 0,
+        recentTransactions: [premiumTransactionFixture], recentActivity: [],
+      }) });
+      return;
+    }
+    if (pathname.endsWith('/api/businesses/me/receipt-settings') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
+      return;
+    }
+    if (pathname.endsWith('/api/businesses/me/receipt-settings') && method === 'PATCH') {
+      receiptBrandingFixture = { ...receiptBrandingFixture, ...JSON.parse(request.postData() || '{}') };
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
+      return;
+    }
+    if (pathname.endsWith('/api/businesses/me/receipt-logo') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      receiptBrandingFixture = { ...receiptBrandingFixture, logoUrl: input.dataUrl || null, hasLogo: Boolean(input.dataUrl) };
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
+      return;
+    }
+    if (pathname.endsWith('/api/businesses/me/receipt-logo') && method === 'DELETE') {
+      receiptBrandingFixture = { ...receiptBrandingFixture, logoUrl: null, hasLogo: false };
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
+      return;
+    }
+    if (pathname.endsWith('/api/notifications') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify([]) });
+      return;
+    }
+    if (pathname.endsWith('/api/analytics/revenue') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
+        total: 1250, change: 0, changePercent: 0, data: [{ label: 'Today', value: 1250, previousValue: 0 }], topCustomers: [],
+      }) });
+      return;
+    }
+    if (pathname.endsWith('/api/analytics/customers') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ total: crmFixtureCustomers.length, change: 0, changePercent: 0, data: [], byCountry: [] }) });
+      return;
+    }
+    if (pathname.endsWith('/api/analytics/transactions') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ total: 1, volume: 1250, change: 0, changePercent: 0, data: [{ label: 'Today', value: 1, previousValue: 0 }], byStatus: [{ label: 'Completed', value: 1, previousValue: 0 }], byType: [{ label: 'Payment', value: 1, previousValue: 0 }] }) });
+      return;
+    }
+    if (pathname.endsWith('/api/customers') && method === 'GET') {
+      const searchTerm = (url.searchParams.get('search') || '').toLowerCase();
+      const all = crmFixtureCustomers.map((customer) => ({ ...customer, totalSpend: 0, transactionCount: 0 }));
+      const matches = all.filter((customer) => JSON.stringify(customer).toLowerCase().includes(searchTerm));
+      const page = Number(url.searchParams.get('page') || 1);
+      const limit = Number(url.searchParams.get('limit') || 20);
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ customers: matches, total: matches.length, page, limit }) });
+      return;
+    }
+    if (pathname.endsWith('/api/daily-ledger') && method === 'GET') {
+      const startDate = url.searchParams.get('startDate') || nowIso.slice(0, 10);
+      const endDate = url.searchParams.get('endDate') || startDate;
+      const page = Number(url.searchParams.get('page') || 1);
+      const pageSize = Number(url.searchParams.get('pageSize') || 50);
+      const entry = { ...dailyEntryFixture, recordedDate: startDate };
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
+        startDate, endDate, entries: [entry],
+        pagination: { page, pageSize, total: 1, totalPages: 1 },
+        summary: { sales: 1250, expenses: 0, outstandingDebt: 0, debtPayments: 0, otherIncome: 0, salesLessExpenses: 1250, totalRecords: 1 },
+        dailyTrend: [{ date: startDate, sales: 1250, expenses: 0 }], expensesByCategory: [],
+      }) });
+      return;
+    }
+    if (pathname.endsWith('/api/daily-ledger') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify({ ...dailyEntryFixture, ...input, id: 'ledger-created-smoke' }) });
+      return;
+    }
+    const dailyStatusRoute = pathname.match(/\/api\/daily-ledger\/([^/]+)\/status$/);
+    if (dailyStatusRoute && method === 'PATCH') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ ...dailyEntryFixture, id: dailyStatusRoute[1], status: (JSON.parse(request.postData() || '{}')).status || 'paid' }) });
+      return;
+    }
+    if (pathname.endsWith('/api/transactions') && method === 'GET') {
+      const searchTerm = (url.searchParams.get('search') || '').toLowerCase();
+      const status = url.searchParams.get('status');
+      const type = url.searchParams.get('type');
+      const matches = [premiumTransactionFixture].filter((tx) =>
+        (!searchTerm || JSON.stringify(tx).toLowerCase().includes(searchTerm)) &&
+        (!status || tx.status === status) && (!type || tx.type === type)
+      );
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
+        transactions: matches, total: matches.length,
+        page: Number(url.searchParams.get('page') || 1), limit: Number(url.searchParams.get('limit') || 20),
+      }) });
+      return;
+    }
+    if (pathname.endsWith('/api/transactions') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      Object.assign(premiumTransactionFixture, input, { id: 'transaction-created-smoke', reference: 'TXN-CREATED-SMOKE', status: 'pending', createdAt: nowIso, updatedAt: nowIso, completedAt: null });
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
+      return;
+    }
+    const txAttachmentRoute = pathname.match(/\/api\/transactions\/([^/]+)\/attachment$/);
+    if (txAttachmentRoute && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      Object.assign(premiumTransactionFixture, { attachmentUrl: input.dataUrl || null, updatedAt: new Date().toISOString() });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
+      return;
+    }
+    if (txAttachmentRoute && method === 'DELETE') {
+      Object.assign(premiumTransactionFixture, { attachmentUrl: null, updatedAt: new Date().toISOString() });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
+      return;
+    }
+    const txRoute = pathname.match(/\/api\/transactions\/([^/]+)$/);
+    if (txRoute && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
+      return;
+    }
+    if (txRoute && method === 'PATCH') {
+      Object.assign(premiumTransactionFixture, JSON.parse(request.postData() || '{}'), { updatedAt: new Date().toISOString() });
+      if (premiumTransactionFixture.status === 'completed' && !premiumTransactionFixture.completedAt) premiumTransactionFixture.completedAt = nowIso;
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(premiumTransactionFixture) });
+      return;
+    }
+
 
     if (method === 'PATCH' && pathname.includes('/api/auth/')) {
       const input = JSON.parse(request.postData() || '{}');
@@ -634,6 +806,13 @@ try {
   console.log('PROFILE NON-BLANK STATE, PIN CREATION AND PIN UPDATE VERIFIED');
 
   // Exercise every primary desktop navigation destination through its actual link.
+  await pinPage.evaluate(() => {
+    window.__kairaPrintCalls = 0;
+    window.print = () => {
+      window.__kairaPrintCalls += 1;
+      window.dispatchEvent(new Event('afterprint'));
+    };
+  });
   const navigationTargets = [
     ['/dashboard', 'Dashboard'],
     ['/team', 'Team'],
@@ -647,6 +826,7 @@ try {
     ['/activity', 'Activity'],
     ['/ai-reports', 'AI Reports'],
     ['/profile', 'Profile'],
+    ['/receipt-branding', 'Receipt Branding'],
     ['/settings', 'Settings'],
   ];
   for (const [routePath, label] of navigationTargets) {
@@ -654,6 +834,32 @@ try {
     await link.waitFor({ state: 'visible', timeout: 10_000 });
     await link.click();
     await pinPage.waitForURL((url) => url.pathname === routePath, { timeout: 10_000 });
+    await pinPage.locator('main').waitFor({ state: 'visible', timeout: 10_000 });
+    try {
+      await pinPage.waitForFunction(() => {
+        const main = document.querySelector('main');
+        return Boolean(main && main.innerText.trim().length > 20);
+      }, null, { timeout: 10_000 });
+    } catch (error) {
+      const diagnostic = {
+        routePath, url: pinPage.url(),
+        headings: await pinPage.locator('h1,h2').allTextContents().catch(() => []),
+        mainText: (await pinPage.locator('main').innerText().catch(() => '')).trim().slice(0, 1800),
+        alerts: await pinPage.locator('[role="alert"]').allTextContents().catch(() => []),
+        unhandledApiRequests,
+      };
+      console.log('NAVIGATION RENDER DIAGNOSTICS:', JSON.stringify(diagnostic));
+      throw new Error('Navigation to ' + label + ' did not render a non-empty main area: ' + String(error));
+    }
+    const expectedPageMarkers = {
+      '/crm': () => pinPage.getByRole('heading', { name: 'Customer CRM' }),
+      '/transactions': () => pinPage.getByRole('heading', { name: 'Transactions', exact: true }),
+      '/daily-ledger': () => pinPage.getByText('Your business book', { exact: true }),
+      '/receipt-branding': () => pinPage.getByRole('heading', { name: 'Receipt & Print Branding' }),
+    };
+    if (expectedPageMarkers[routePath]) {
+      await expectedPageMarkers[routePath]().waitFor({ state: 'visible', timeout: 10_000 });
+    }
     const mainText = (await pinPage.locator('main').innerText().catch(() => '')).trim();
     assert.ok(mainText.length > 20, 'Navigation to ' + label + ' must render a non-empty page');
 
@@ -661,6 +867,9 @@ try {
       await pinPage.getByRole('button', { name: 'Add customer' }).click();
       await pinPage.getByRole('button', { name: 'Upload from device' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Take photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Take photo' }).click();
+      await pinPage.getByRole('heading', { name: 'Take customer photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Cancel' }).last().click();
       await pinPage.getByLabel('First name *').fill('Aminata');
       await pinPage.getByLabel('Last name *').fill('SmokeCustomer');
       await pinPage.getByLabel('Date of birth').fill('1990-05-12');
@@ -669,6 +878,12 @@ try {
       await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'customer-photo.png', mimeType: 'image/png', buffer: onePixelPng });
       await pinPage.getByRole('button', { name: 'Save customer' }).click();
       await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 });
+      const crmPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
+      await pinPage.getByRole('button', { name: 'Print / PDF' }).click();
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, crmPrintBefore, { timeout: 5_000 });
+      const customerPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
+      await pinPage.getByRole('button', { name: 'Print customer card' }).click();
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customerPrintBefore, { timeout: 5_000 });
       assert.equal(crmCustomerRequests.filter((item) => item.method === 'POST').length, 1, 'CRM add customer should make one intercepted create request');
       assert.equal(crmCustomerRequests[0].input.profileData.dateOfBirth, '1990-05-12', 'CRM should persist optional date of birth');
       assert.equal(crmCustomerRequests[0].input.profileData.maritalStatus, 'Married', 'CRM should persist optional marital status');
@@ -708,14 +923,52 @@ try {
       }));
     }
 
+    if (routePath === '/transactions') {
+      await pinPage.getByRole('button', { name: 'New transaction' }).click();
+      await pinPage.getByLabel('Transaction currency').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByLabel('Transaction type').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Cancel' }).last().click();
+      await pinPage.getByRole('button', { name: 'Details' }).first().click();
+      const transactionPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
+      await pinPage.getByRole('button', { name: 'Print receipt / record' }).click();
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, transactionPrintBefore, { timeout: 5_000 });
+      assert.ok(premiumTransactionFixture.reference === 'TXN-SMOKE-001', 'Transaction receipt uses the intercepted transaction fixture');
+      await pinPage.getByRole('button', { name: 'Close' }).click();
+    }
+
+    if (routePath === '/daily-ledger') {
+      const ledgerPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
+      await pinPage.getByRole('button', { name: 'Print / PDF' }).click();
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, ledgerPrintBefore, { timeout: 5_000 });
+    }
+
+    if (routePath === '/receipt-branding') {
+      await pinPage.getByLabel('Printed company name').fill('Smoke Receipt Studio');
+      await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
+      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      const logoFile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
+      await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
+      await pinPage.getByText('Logo uploaded to private storage and saved for future printouts.').waitFor({ state: 'visible', timeout: 10_000 });
+      const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
+      await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 5_000 });
+      assert.equal(receiptBrandingFixture.companyName, 'Smoke Receipt Studio', 'Receipt branding form should persist the company name via the intercepted save API');
+      assert.equal(receiptBrandingFixture.hasLogo, true, 'Receipt logo should be sent to the authenticated upload endpoint');
+    }
+
     if (routePath === '/profile') {
       await pinPage.getByRole('img', { name: 'Default 3D profile avatar' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Upload profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Take profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Take profile photo' }).click();
+      await pinPage.getByRole('heading', { name: 'Take profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Cancel' }).last().click();
       await pinPage.getByRole('button', { name: 'Upload profile photo' }).click();
       const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
       await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'profile-avatar.png', mimeType: 'image/png', buffer: onePixelPng });
       await pinPage.getByText('Profile photo updated.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.locator('header img[alt="Fatou Jallow profile photo"]').first().waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(profileAvatarRequests.length, 1, 'Profile avatar upload should call the authenticated avatar endpoint');
       assert.ok(profileAvatarRequests[0].bytes > 0, 'Profile avatar should submit non-empty image data');
       await pinPage.getByRole('button', { name: 'Remove photo' }).click();
