@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { KairaFeedbackCard } from '@/components/common/KairaFeedbackCard';
 import { ApiError } from '@workspace/api-client-react';
+import { normalizeKairaMessage } from '@/lib/kaira-feedback';
 import { initApiClient, getToken, clearToken, isUserToken, isAdminToken } from '@/lib/api-client';
 
 initApiClient();
@@ -71,14 +72,28 @@ function KairaFeedbackHost() {
   useEffect(() => {
     let dismissTimer: ReturnType<typeof setTimeout> | undefined;
     const onFeedback = (event: Event) => {
-      const detail = (event as CustomEvent<KairaFeedbackDetail>).detail;
-      if (!detail || !['success', 'error', 'info'].includes(detail.variant) ||
-          typeof detail.title !== 'string' || typeof detail.message !== 'string') return;
-      setFeedback(detail);
+      const raw = (event as CustomEvent<unknown>).detail;
+      if (!raw || typeof raw !== 'object') return;
+      const detail = raw as Record<string, unknown>;
+      const variant = detail.variant;
+      if (variant !== 'success' && variant !== 'error' && variant !== 'info') return;
+
+      // The feedback host is the final safety net: never render raw objects,
+      // "[object Object]" or unhelpful JSON/HTML as a user-facing message.
+      const safeDetail: KairaFeedbackDetail = {
+        variant,
+        title: normalizeKairaMessage(detail.title,
+          variant === 'error' ? "Kaira Africa · Something went wrong" :
+          variant === 'success' ? "Kaira Africa · Completed" : "Kaira Africa · Update"),
+        message: normalizeKairaMessage(detail.message,
+          variant === 'error' ? "Kaira Africa couldn't complete that request. Please try again." :
+          "Kaira Africa has processed your request."),
+      };
+      setFeedback(safeDetail);
       if (dismissTimer) clearTimeout(dismissTimer);
       // Feedback cards should never remain over controls and block the app.
       // Users can dismiss earlier; longer errors remain visible briefly.
-      dismissTimer = setTimeout(() => setFeedback(null), detail.variant === 'error' ? 9000 : 6000);
+      dismissTimer = setTimeout(() => setFeedback(null), safeDetail.variant === 'error' ? 12000 : 7000);
     };
     window.addEventListener('kaira:feedback', onFeedback);
     return () => {
@@ -160,9 +175,10 @@ function handleUnauthorized(error: unknown): boolean {
 }
 
 function showKairaApiError(error: unknown, title = "Kaira Africa couldn't complete that request") {
-  const message = error instanceof Error && error.message.trim()
-    ? error.message
-    : 'Please check your connection and try again.';
+  const message = normalizeKairaMessage(
+    error,
+    "Kaira Africa could not complete that request. Please check your connection and try again.",
+  );
   window.dispatchEvent(new CustomEvent('kaira:feedback', {
     detail: { variant: 'error', title, message },
   }));
