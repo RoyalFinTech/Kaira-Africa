@@ -140,7 +140,7 @@ export default function ReceiptBrandingPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">Free during early access</Badge>
-            <Button type="button" variant="outline" onClick={printKairaDocument}><Printer className="mr-2 h-4 w-4"/>Print sample / Save PDF</Button>
+            <Button type="button" variant="outline" onClick={() => printKairaDocument("receipt-preview-print")}><Printer className="mr-2 h-4 w-4"/>Print sample / Save PDF</Button>
           </div>
         </div>
 
@@ -224,7 +224,7 @@ export default function ReceiptBrandingPage() {
             <Card><CardHeader><CardTitle>Where the template is used</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><div><p className="font-semibold">Transactions</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Print a transaction receipt or record with amount, currency, status, payment method and reference.</p></div><div><p className="font-semibold">Customer CRM</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Print a clean customer profile card using the same business header and saved footer.</p></div><div><p className="font-semibold">Daily ledger</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Print the selected register period, summary and entries with a consistent branded heading.</p></div></CardContent></Card>
           </div>
         </div>
-        <PrintableBusinessDocument title="Sample transaction receipt" documentNumber="SAMPLE-0001" issuedAt={new Date().toLocaleString()} status="COMPLETED">
+        <PrintableBusinessDocument id="receipt-preview-print" title="Sample transaction receipt" documentNumber="SAMPLE-0001" issuedAt={new Date().toLocaleString()} status="COMPLETED">
           <div className="grid grid-cols-2 gap-4"><div><p><strong>Customer</strong></p><p>Sample customer</p></div><div><p><strong>Payment method</strong></p><p>Bank transfer</p></div></div>
           <table className="mt-5"><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody><tr><td>Consultation / service</td><td>1</td><td>GMD 1,250.00</td></tr></tbody></table>
           <div className="kaira-print-total flex items-center justify-between"><strong>Total paid</strong><strong>GMD 1,250.00</strong></div>
