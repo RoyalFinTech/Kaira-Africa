@@ -42,6 +42,7 @@ const CrmPage            = lazy(() => import('@/pages/app/CrmPage'));
 const InventoryPage      = lazy(() => import('@/pages/app/InventoryPage'));
 const AiReportsPage      = lazy(() => import('@/pages/app/AiReportsPage'));
 const DailyLedgerPage    = lazy(() => import('@/pages/app/DailyLedgerPage'));
+const ReceiptBrandingPage = lazy(() => import('@/pages/app/ReceiptBrandingPage'));
 const LegalPage          = lazy(() => import('@/pages/LegalPage'));
 
 const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage'));
@@ -214,6 +215,9 @@ function Router() {
         </Route>
         <Route path="/daily-ledger">
           {() => <ProtectedRoute component={DailyLedgerPage} />}
+        </Route>
+        <Route path="/receipt-branding">
+          {() => <ProtectedRoute component={ReceiptBrandingPage} />}
         </Route>
         <Route path="/legal/terms">
           {() => <LegalPage type="terms" />}

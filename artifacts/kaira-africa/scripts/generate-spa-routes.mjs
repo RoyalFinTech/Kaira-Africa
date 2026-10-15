@@ -31,6 +31,7 @@ const routes = [...new Set([
   'notifications',
   'profile',
   'settings',
+  'receipt-branding',
   'ai-reports',
   'crm',
   'inventory',

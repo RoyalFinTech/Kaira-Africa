@@ -64,6 +64,20 @@
       "when": 1792056000000,
       "tag": "0008_crm_profile_data_and_avatars",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792059600000,
+      "tag": "0009_transaction_details_and_attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792061400000,
+      "tag": "0010_receipt_branding_settings",
+      "breakpoints": true
     }
   ]
 }

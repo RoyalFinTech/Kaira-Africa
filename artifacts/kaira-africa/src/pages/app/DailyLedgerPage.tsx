@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Plus, CheckCircle2, CalendarDays, WalletCards, TrendingUp, TrendingDown, HandCoins } from "lucide-react";
+import { BookOpen, Plus, CheckCircle2, CalendarDays, WalletCards, TrendingUp, TrendingDown, HandCoins, Printer } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { KairaLogo } from "@/components/common/KairaLogo";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { PageTransition } from "@/components/common/PageTransition";
+import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerType } from "@/lib/platform-api";
 import { formatCurrency } from "@/lib/utils";
 
@@ -313,7 +314,7 @@ export default function DailyLedgerPage() {
         </div>
 
         <Card>
-          <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="text-lg">Your business book</CardTitle><p className="mt-1 text-sm text-muted-foreground">A spreadsheet-style register of every recorded transaction. Scroll sideways on smaller screens.</p></div><Button type="button" size="sm" variant="outline" onClick={exportCsv} disabled={!response?.entries.length}><CalendarDays className="mr-1 h-4 w-4" />Export current page</Button></div></CardHeader>
+          <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="text-lg">Your business book</CardTitle><p className="mt-1 text-sm text-muted-foreground">A spreadsheet-style register of every recorded transaction. Scroll sideways on smaller screens.</p></div><div className="flex flex-wrap gap-2 print:hidden"><Button type="button" size="sm" variant="outline" onClick={() => printKairaDocument("daily-ledger-print")} disabled={!response?.entries.length}><Printer className="mr-1 h-4 w-4" />Print / PDF</Button><Button type="button" size="sm" variant="outline" onClick={exportCsv} disabled={!response?.entries.length}><CalendarDays className="mr-1 h-4 w-4" />Export current page</Button></div></div></CardHeader>
           <CardContent>
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
             {ledgerQuery.isLoading ? <div className="h-52 animate-pulse rounded-xl bg-muted" /> : !response?.entries.length ? <div className="py-12 text-center text-sm text-muted-foreground">No daily records in this period. Start by adding your first sale or expense above.</div> : (
@@ -344,7 +345,31 @@ export default function DailyLedgerPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+        <PrintableBusinessDocument id="daily-ledger-print" title="Daily Ledger Report" documentNumber={startDate + " to " + endDate} issuedAt={new Date().toLocaleString()}>
+          <p><strong>Reporting period:</strong> {startDate} through {endDate}</p>
+          <p><strong>Entries included:</strong> {response?.entries.length ?? 0} on this page of {response?.pagination.total ?? 0} records in the period.</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="kaira-print-total"><p>Sales received</p><strong>{formatCurrency(summary?.sales ?? 0, "GMD")}</strong></div>
+            <div className="kaira-print-total"><p>Expenses</p><strong>{formatCurrency(summary?.expenses ?? 0, "GMD")}</strong></div>
+            <div className="kaira-print-total"><p>Outstanding debt</p><strong>{formatCurrency(summary?.outstandingDebt ?? 0, "GMD")}</strong></div>
+            <div className="kaira-print-total"><p>Debt payments received</p><strong>{formatCurrency(summary?.debtPayments ?? 0, "GMD")}</strong></div>
+            <div className="kaira-print-total"><p>Other income</p><strong>{formatCurrency(summary?.otherIncome ?? 0, "GMD")}</strong></div>
+            <div className="kaira-print-total"><p>Sales less expenses</p><strong>{formatCurrency(summary?.salesLessExpenses ?? 0, "GMD")}</strong></div>
+          </div>
+          <table className="mt-5">
+            <thead><tr><th>Date / time</th><th>Type / description</th><th>Customer</th><th>Payment method</th><th>Status / remarks</th><th>Amount</th><th>Balance left</th></tr></thead>
+            <tbody>{(response?.entries ?? []).map((entry) => <tr key={entry.id}>
+              <td>{entry.recordedDate}{entry.recordedTime ? " " + entry.recordedTime : ""}</td>
+              <td><strong>{TYPE_LABELS[entry.entryType]}</strong><br/>{entry.description}{entry.category ? " · " + entry.category : ""}</td>
+              <td>{entry.customerName || "—"}</td>
+              <td>{(entry.paymentMethod || "—").replace(/_/g, " ")}</td>
+              <td>{entry.entryType === "debt" ? (entry.status === "paid" ? "Paid" : "Unpaid") : "Recorded"}{entry.remarks ? " · " + entry.remarks : ""}</td>
+              <td>{formatCurrency(entry.amount, entry.currency)}</td>
+              <td>{entry.entryType === "debt" ? formatCurrency(entry.balance ?? entry.amount, entry.currency) : "—"}</td>
+            </tr>)}</tbody>
+          </table>
+        </PrintableBusinessDocument>
+              </div>
     </PageTransition>
   );
 }

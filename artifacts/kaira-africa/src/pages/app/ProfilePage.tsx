@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProfileAvatar } from '@/components/common/ProfileAvatar';
+import { CameraCaptureDialog } from '@/components/common/CameraCaptureDialog';
 import { Separator } from '@/components/ui/separator';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -47,7 +48,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const avatarCameraInputRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -129,8 +130,12 @@ export default function ProfilePage() {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setAvatarError('Choose a JPEG, PNG or WebP image.'); return; }
     if (file.size > 2 * 1024 * 1024) { setAvatarError('Choose an image that is 2 MB or smaller.'); return; }
     setAvatarBusy(true);
-    try { await uploadProfileAvatar(await readProfileImage(file)); await refetchUser(); setAvatarMessage('Profile photo updated.'); }
-    catch (error) { setAvatarError(error instanceof Error ? error.message : 'Profile photo upload failed.'); }
+    try {
+      await uploadProfileAvatar(await readProfileImage(file));
+      await refetchUser();
+      await queryClient.invalidateQueries();
+      setAvatarMessage('Profile photo updated.');
+    } catch (error) { setAvatarError(error instanceof Error ? error.message : 'Profile photo upload failed.'); }
     finally { setAvatarBusy(false); }
   };
 
@@ -198,50 +203,19 @@ export default function ProfilePage() {
             <CardContent className="p-6 flex flex-col items-center text-center">
               {/* Profile photo: upload is handled by the authenticated API and stored privately. */}
               <div className="relative mb-2">
-                <Avatar className="h-24 w-24 border-2 border-background shadow-lg ring-1 ring-border">
-                  {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.firstName + ' ' + user.lastName} className="object-cover" />}
-                  <AvatarFallback className="overflow-hidden bg-indigo-100">
-                    <svg viewBox="0 0 120 120" role="img" aria-label="Default 3D profile avatar" className="h-full w-full">
-                      <defs>
-                        <linearGradient id="avatar-sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#667eea"/><stop offset="55%" stopColor="#8065ca"/><stop offset="100%" stopColor="#e2a3db"/></linearGradient>
-                        <radialGradient id="avatar-skin" cx="30%" cy="25%" r="80%"><stop offset="0%" stopColor="#ffe2bf"/><stop offset="65%" stopColor="#eeb68b"/><stop offset="100%" stopColor="#c98262"/></radialGradient>
-                        <linearGradient id="avatar-hair" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#483b36"/><stop offset="55%" stopColor="#292b3c"/><stop offset="100%" stopColor="#171a2b"/></linearGradient>
-                        <linearGradient id="avatar-coat" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#fdfdff"/><stop offset="45%" stopColor="#d9e0ff"/><stop offset="100%" stopColor="#8c9be0"/></linearGradient>
-                        <linearGradient id="avatar-shirt" x1="0" y1="0" x2="0.9" y2="1"><stop offset="0%" stopColor="#fff"/><stop offset="100%" stopColor="#c6d2f6"/></linearGradient>
-                        <filter id="avatar-shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#27234c" floodOpacity="0.24"/></filter>
-                      </defs>
-                      <circle cx="60" cy="60" r="60" fill="url(#avatar-sky)"/>
-                      <circle cx="94" cy="23" r="14" fill="#fff" fillOpacity=".16"/>
-                      <path d="M9 120c3-23 15-34 37-40l14 12 14-12c22 6 34 17 37 40Z" fill="url(#avatar-coat)" filter="url(#avatar-shadow)"/>
-                      <path d="M44 78 60 94 76 78 71 70H49Z" fill="url(#avatar-skin)"/>
-                      <path d="M47 82 60 96 73 82 80 120H40Z" fill="url(#avatar-shirt)"/>
-                      <path d="M20 120c2-17 11-30 25-38l15 14 15-14c14 8 23 21 25 38Z" fill="url(#avatar-coat)"/>
-                      <path d="m45 82 15 14-9 11-13-24Zm30 0L60 96l9 11 13-24Z" fill="#fff" fillOpacity=".94"/>
-                      <ellipse cx="60" cy="49" rx="23" ry="29" fill="url(#avatar-skin)" filter="url(#avatar-shadow)"/>
-                      <path d="M36 48c-3-22 7-35 23-36 16-1 28 11 26 31l-5 11-4-19c-10 2-21-1-29-7-1 8-5 13-10 20Z" fill="url(#avatar-hair)"/>
-                      <path d="M42 45c2-5 6-7 10-5" fill="none" stroke="#78513f" strokeWidth="2.1" strokeLinecap="round"/>
-                      <path d="M66 40c4-3 9-2 12 1" fill="none" stroke="#78513f" strokeWidth="2.1" strokeLinecap="round"/>
-                      <ellipse cx="50" cy="48" rx="2.1" ry="2.7" fill="#292333"/>
-                      <ellipse cx="72" cy="48" rx="2.1" ry="2.7" fill="#292333"/>
-                      <circle cx="50.6" cy="47.2" r=".7" fill="#fff"/>
-                      <circle cx="72.6" cy="47.2" r=".7" fill="#fff"/>
-                      <path d="M60 49 57 59q3 3 7 0" fill="none" stroke="#b8755a" strokeWidth="1.7" strokeLinecap="round"/>
-                      <path d="M52 64q8 7 16 0" fill="none" stroke="#9b4e50" strokeWidth="2.1" strokeLinecap="round"/>
-                      <ellipse cx="43" cy="57" rx="5" ry="3" fill="#e99b91" fillOpacity=".34"/>
-                      <ellipse cx="77" cy="57" rx="5" ry="3" fill="#e99b91" fillOpacity=".34"/>
-                      <path d="M38 36c3-9 11-17 22-17 11 0 19 7 22 16-9-4-15-10-19-14-7 8-15 12-25 15Z" fill="#605047" fillOpacity=".42"/>
-                      <path d="M16 21c7-8 15-12 24-14" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeOpacity=".36"/>
-                    </svg>
-                  </AvatarFallback>
-                </Avatar>
+                <ProfileAvatar
+                  photoUrl={user.avatarUrl}
+                  firstName={user.firstName}
+                  lastName={user.lastName}
+                  className="h-24 w-24 border-2 border-background shadow-lg ring-1 ring-border"
+                />
                 <button type="button" aria-label="Upload profile photo" title="Upload from device" disabled={avatarBusy} onClick={() => avatarInputRef.current?.click()} className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50">
                   <Upload className="h-3.5 w-3.5" />
                 </button>
-                <button type="button" aria-label="Take profile photo" title="Take a photo with your camera" disabled={avatarBusy} onClick={() => avatarCameraInputRef.current?.click()} className="absolute bottom-0 left-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-secondary text-secondary-foreground shadow-md transition-colors hover:bg-secondary/80 disabled:opacity-50">
+                <button type="button" aria-label="Take profile photo" title="Take a photo with your camera" disabled={avatarBusy} onClick={() => setCameraOpen(true)} className="absolute bottom-0 left-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-secondary text-secondary-foreground shadow-md transition-colors hover:bg-secondary/80 disabled:opacity-50">
                   <Camera className="h-3.5 w-3.5" />
                 </button>
                 <input ref={avatarInputRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleAvatarFile(file); }} />
-                <input ref={avatarCameraInputRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleAvatarFile(file); }} />
               </div>
               <p className="mb-2 text-xs text-muted-foreground">JPEG, PNG or WebP · recommended 256×256 px or larger · maximum 2 MB</p>
               {avatarBusy && <p role="status" className="mb-2 text-xs text-muted-foreground">Uploading photo securely…</p>}
@@ -530,6 +504,13 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      <CameraCaptureDialog
+        open={cameraOpen}
+        onOpenChange={setCameraOpen}
+        onCapture={handleAvatarFile}
+        title="Take profile photo"
+        description="Your device camera opens here. Capture a clear face photo; the same image will appear in Profile and the top navigation."
+      />
     </PageTransition>
   );
 }

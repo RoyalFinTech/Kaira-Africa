@@ -10,6 +10,7 @@
 // places. If a zero-decimal currency is ever added, extend this map.
 const MINOR_UNIT_EXPONENT: Record<string, number> = {
   GMD: 2,
+  NGN: 2,
   USD: 2,
   EUR: 2,
   GBP: 2,

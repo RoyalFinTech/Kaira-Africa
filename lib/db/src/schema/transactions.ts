@@ -43,11 +43,15 @@ export const transactions = pgTable(
     status: transactionStatusEnum("status").notNull().default("pending"),
 
     description: text("description"),
+  paymentMethod: text("payment_method"),
+  notes: text("notes"),
+  attachmentPath: text("attachment_path"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("transactions_business_idx").on(table.businessId),
