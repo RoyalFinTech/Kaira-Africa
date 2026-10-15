@@ -117,7 +117,7 @@ export function PrintableBusinessDocument({
         <main className="kaira-print-content">{children}</main>
         <footer className="kaira-print-footer">
           <p>{branding?.footerNote?.trim() || "Thank you for your business."}</p>
-          <span>Prepared with Kaira Africa</span>
+          <span>Prepared by Kaira Africa</span>
         </footer>
       </article>
     </section>
