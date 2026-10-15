@@ -153,7 +153,7 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
     try {
       const { base, key } = storageConfig();
       await fetch(`${base}/storage/v1/object/customer-photos`, {
-        method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        method: "DELETE", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({ prefixes: [path] }),
       });
     } catch { /* Keep the profile usable; object cleanup can be retried later. */ }
