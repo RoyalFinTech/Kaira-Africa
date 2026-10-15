@@ -36,10 +36,57 @@ const ReceiptSettingsInput = z.object({
 }).strict();
 
 function receiptStorageConfig() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Private receipt-logo storage is not configured yet.");
+  const missing: string[] = [];
+  if (!env.SUPABASE_URL) missing.push("SUPABASE_URL");
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (missing.length) {
+    throw new HttpError(
+      503,
+      "receipt_storage_not_configured",
+      "Kaira Africa cannot save receipt logos because the API is missing " + missing.join(" and ") +
+        ". Configure these on the Kaira Africa API service in Render; SUPABASE_SERVICE_ROLE_KEY must remain server-side only.",
+    );
   }
-  return { base: env.SUPABASE_URL.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY };
+  return { base: env.SUPABASE_URL!.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY! };
+}
+
+async function describeReceiptLogoUploadFailure(response: Response): Promise<string> {
+  let remoteMessage = "";
+  try {
+    const body: unknown = await response.json();
+    const readMessage = (value: unknown, depth = 0): string => {
+      if (depth > 3 || value == null) return "";
+      if (typeof value === "string") {
+        const text = value.trim();
+        return text && text !== "[object Object]" ? text.slice(0, 240) : "";
+      }
+      if (typeof value !== "object") return "";
+      const record = value as Record<string, unknown>;
+      for (const key of ["message", "error_description", "detail", "error", "code"]) {
+        const text = readMessage(record[key], depth + 1);
+        if (text) return text;
+      }
+      return "";
+    };
+    remoteMessage = readMessage(body);
+  } catch {
+    // Keep the user-facing fallback below if Storage does not return JSON.
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    return "Supabase Storage rejected the API credentials. Check that SUPABASE_SERVICE_ROLE_KEY belongs to the project in SUPABASE_URL and is configured on Render's Kaira Africa API service.";
+  }
+  if (response.status === 404) {
+    return "Supabase could not find the private receipt-logos bucket or upload path. Confirm that the receipt-logos bucket exists in the Supabase project used by the Kaira Africa API.";
+  }
+  if (response.status === 413) {
+    return "Supabase rejected the logo because it exceeds the 2 MB storage limit. Choose a smaller image.";
+  }
+  if (response.status === 400 && /mime|content.?type|image/i.test(remoteMessage)) {
+    return "Supabase rejected this image format. Choose a JPEG, PNG or WebP logo.";
+  }
+  return "Supabase Storage rejected the logo upload (HTTP " + response.status + ")" +
+    (remoteMessage ? ": " + remoteMessage : ". Please check the receipt-logos bucket and API Storage configuration.");
 }
 
 async function signReceiptLogo(path: string | null | undefined): Promise<string | null> {
@@ -189,7 +236,9 @@ router.post("/businesses/me/receipt-logo", requireUser, requireRole("owner"), as
     headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
     body: bytes,
   });
-  if (!upload.ok) throw new HttpError(502, "receipt_logo_upload_failed", "The logo could not be saved. Please try again.");
+  if (!upload.ok) {
+    throw new HttpError(502, "receipt_logo_upload_failed", await describeReceiptLogoUploadFailure(upload));
+  }
   const previousPath = business.receiptSettings?.logoPath ?? null;
   const next: ReceiptBrandingSettings = { ...(business.receiptSettings ?? {}), logoPath: path };
   const [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
