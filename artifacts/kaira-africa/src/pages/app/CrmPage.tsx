@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Phone, Mail, CalendarDays, MessageSquare, CheckCircle2, UserRound, Camera, Trash2, Pencil, Download, Printer, X, Save, Users, Clock3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/PageTransition";
 import { getCrmOverview, createCrmInteraction, completeCrmInteraction, searchCrmCustomers, createManagedCrmCustomer, updateManagedCrmCustomer, uploadCrmCustomerPhoto, removeCrmCustomerPhoto, type ManagedCrmCustomer, type CrmProfileData } from "@/lib/platform-api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 type CustomerDraft = {
   firstName: string; lastName: string; email: string; phone: string; company: string;
@@ -109,7 +109,7 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
       <p className="font-semibold">Relationship notes</p><p className="mb-4 mt-1 text-xs leading-5 text-muted-foreground">Keep notes respectful, factual and relevant. Avoid recording sensitive details without a clear need and appropriate permission.</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {field("tags","Tags","Separate tags with commas, e.g. returning, referral.")}{field("interests","Interests")}
-        {field("preferences","Service or communication preferences")}{field("status","Status")}
+        {field("preferences","Service or communication preferences")}<label className="block space-y-1.5 text-sm font-medium">Status<select className="h-10 w-full rounded-md border bg-background px-3" value={draft.status} onChange={(e) => update("status",e.target.value)}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5 text-sm font-medium">Consent / permissions notes<Textarea rows={3} value={draft.consentNotes} onChange={(e) => update("consentNotes",e.target.value)} placeholder="Record relevant consent, purpose and date. Avoid storing unnecessary sensitive details."/></label>
@@ -157,13 +157,18 @@ export default function CrmPage() {
     setSaving(true); setFormError(null);
     try {
       const payload = toInput(draft);
-      const saved = editing ? await updateManagedCrmCustomer(editing.id, payload) : await createManagedCrmCustomer(payload);
+      let saved = editing ? await updateManagedCrmCustomer(editing.id, payload) : await createManagedCrmCustomer(payload);
+      let photoFailed = false;
       if (photo) {
-        try { await uploadCrmCustomerPhoto(saved.id, await readImage(photo)); }
-        catch (error) { setFormError("Customer details were saved, but the photo upload failed: " + (error instanceof Error ? error.message : "Please retry from Edit customer.")); }
+        try { saved = await uploadCrmCustomerPhoto(saved.id, await readImage(photo)); }
+        catch (error) {
+          photoFailed = true;
+          setEditing(saved);
+          setFormError("Customer details were saved, but the photo upload failed: " + (error instanceof Error ? error.message : "Please retry the photo upload."));
+        }
       }
       await refresh();
-      if (!formError) { setFormOpen(false); setEditing(null); setSelected(saved); }
+      if (!photoFailed) { setFormOpen(false); setEditing(null); setSelected(saved); }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "The customer could not be saved. Please try again.");
     } finally { setSaving(false); }
