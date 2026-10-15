@@ -257,6 +257,7 @@ try {
   const pinPage = await pinContext.newPage();
   const pinErrors = [];
   const pinConsoleErrors = [];
+  const unhandledApiRequests = [];
   pinPage.on('pageerror', (error) => pinErrors.push(error.message));
   pinPage.on('console', (message) => {
     if (message.type() === 'error') pinConsoleErrors.push(message.text());
@@ -510,6 +511,7 @@ try {
       return;
     }
 
+    unhandledApiRequests.push({ method, pathname });
     await route.fulfill({
       status: 503,
       headers: corsHeaders,
@@ -603,7 +605,7 @@ try {
     alerts: Array.from(document.querySelectorAll('[role="alert"]')).map((node) => node.textContent?.trim()).filter(Boolean),
   }));
   await pinPage.screenshot({ path: resolve(outputDir, 'profile-route-diagnostics.png'), fullPage: true });
-  console.log('PROFILE ROUTE DIAGNOSTICS:', JSON.stringify({ ...profileRouteDiagnostics, pinErrors, pinConsoleErrors }));
+  console.log('PROFILE ROUTE DIAGNOSTICS:', JSON.stringify({ ...profileRouteDiagnostics, pinErrors, pinConsoleErrors, unhandledApiRequests }));
   assert.ok(
     profileRouteDiagnostics.headings.some((heading) => /profile/i.test(heading)),
     'Profile route must render a visible profile heading. Diagnostics: ' +
@@ -674,7 +676,7 @@ try {
       assert.equal(crmPhotoRequests[0].isImageDataUrl, true, 'CRM customer photo should be submitted as an image data URL');
 
       await pinPage.getByPlaceholder('Search any saved customer detail…').fill('1990-05-12');
-      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Edit', exact: true }).click();
       await pinPage.getByLabel('Marital status (optional)').selectOption({ label: 'Divorced' });
       await pinPage.getByRole('button', { name: 'Save customer' }).click();
@@ -707,6 +709,7 @@ try {
     }
 
     if (routePath === '/profile') {
+      await pinPage.getByRole('img', { name: 'Default 3D profile avatar' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Upload profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Take profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Upload profile photo' }).click();
