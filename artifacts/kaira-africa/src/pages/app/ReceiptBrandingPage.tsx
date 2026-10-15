@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageTransition } from "@/components/common/PageTransition";
+import { KairaFeedbackCard, type KairaFeedbackTone } from "@/components/common/KairaFeedbackCard";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { useGetMe, useGetMyBusiness } from "@workspace/api-client-react";
 import {
   getReceiptBranding, updateReceiptBranding, uploadReceiptLogo, removeReceiptLogo,
   type ReceiptBrandingInput, type ReceiptBrandingSettings,
 } from "@/lib/platform-api";
-import { CheckCircle2, FileImage, LoaderCircle, Printer, Save, Trash2, UploadCloud } from "lucide-react";
+import { FileImage, LoaderCircle, Printer, Save, Trash2, UploadCloud } from "lucide-react";
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -33,6 +34,8 @@ function initialForm(branding?: ReceiptBrandingSettings, businessName?: string):
     showCustomerDetails: branding?.showCustomerDetails ?? true,
   };
 }
+type FeedbackState = { tone: KairaFeedbackTone; title: string; description: string };
+
 function fileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -56,21 +59,25 @@ export default function ReceiptBrandingPage() {
   const [saving, setSaving] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
   const [removingLogo, setRemovingLogo] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [settingsFeedback, setSettingsFeedback] = useState<FeedbackState | null>(null);
+  const [logoFeedback, setLogoFeedback] = useState<FeedbackState | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const canEdit = me?.role === "owner";
 
   useEffect(() => {
     if (branding || business) setForm(initialForm(branding, business?.name));
-  }, [branding, business?.name]);
+  }, [
+    branding?.companyName, branding?.address, branding?.phone, branding?.email,
+    branding?.website, branding?.footerNote, branding?.showReceiptNumber,
+    branding?.showCustomerDetails, business?.name,
+  ]);
 
   const updateField = <K extends keyof BrandForm>(key: K, value: BrandForm[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSaving(true); setError(null); setSuccess(null);
+    setSaving(true); setSettingsFeedback(null);
     try {
       const payload: ReceiptBrandingInput = {
         companyName: form.companyName.trim(),
@@ -85,9 +92,17 @@ export default function ReceiptBrandingPage() {
       const saved = await updateReceiptBranding(payload);
       queryClient.setQueryData(["receipt-branding"], saved);
       setForm(initialForm(saved, business?.name));
-      setSuccess("Receipt branding saved. Your next print will use these details.");
+      setSettingsFeedback({
+        tone: "success",
+        title: "Receipt settings saved",
+        description: "Your business name, contact details, footer message and print options are saved. Logo upload status is shown separately.",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Receipt branding could not be saved.");
+      setSettingsFeedback({
+        tone: "error",
+        title: "Receipt settings were not saved",
+        description: err instanceof Error ? err.message : "The receipt settings could not be saved. Please try again.",
+      });
     } finally {
       setSaving(false);
     }
@@ -95,33 +110,85 @@ export default function ReceiptBrandingPage() {
 
   const uploadLogo = async (file: File | undefined) => {
     if (!file) return;
-    setError(null); setSuccess(null);
-    if (!LOGO_TYPES.includes(file.type)) { setError("Choose a JPEG, PNG or WebP logo."); return; }
-    if (file.size > MAX_LOGO_BYTES) { setError("Your logo must be 2 MB or smaller."); return; }
+    setLogoFeedback(null);
+    if (!LOGO_TYPES.includes(file.type)) {
+      setLogoFeedback({ tone: "error", title: "Unsupported logo format", description: "Choose a JPEG, PNG or WebP logo." });
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoFeedback({ tone: "error", title: "Logo file is too large", description: "Your logo must be 2 MB or smaller." });
+      return;
+    }
     setLogoBusy(true);
     try {
       const dataUrl = await fileAsDataUrl(file);
       setLogoPreview(dataUrl);
-      const saved = await uploadReceiptLogo(dataUrl);
-      queryClient.setQueryData(["receipt-branding"], saved);
+      const uploadResponse = await uploadReceiptLogo(dataUrl);
+      if (!uploadResponse.hasLogo) {
+        throw new Error("Kaira Africa did not confirm that the logo was saved.");
+      }
+
+      // A fresh read verifies the object path was persisted and a private URL
+      // can be issued for transactions, CRM cards and daily ledger printouts.
+      const confirmed = await getReceiptBranding();
+      queryClient.setQueryData(["receipt-branding"], confirmed);
       setLogoPreview(null);
-      setSuccess("Logo uploaded to private storage and saved for future printouts.");
+
+      if (!confirmed.hasLogo || !confirmed.logoUrl) {
+        setLogoFeedback({
+          tone: "warning",
+          title: "Logo upload needs verification",
+          description: "The upload returned, but Kaira Africa could not confirm a usable private logo URL on a fresh read. The logo is not marked ready for printing. Please retry or ask the administrator to check storage configuration.",
+        });
+        return;
+      }
+
+      setLogoFeedback({
+        tone: "success",
+        title: "Logo saved",
+        description: "Logo uploaded to private storage and saved for future printouts.",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "The logo could not be uploaded.");
+      // Never leave an unsaved local preview looking like a saved logo.
+      setLogoPreview(null);
+      setLogoFeedback({
+        tone: "error",
+        title: "Logo wasn't saved",
+        description: "This logo has not been confirmed in private storage, so it may not appear on printed documents. " +
+          (err instanceof Error ? err.message : "The logo could not be uploaded. Please try again."),
+      });
     } finally {
       setLogoBusy(false);
     }
   };
 
   const deleteLogo = async () => {
-    setRemovingLogo(true); setError(null); setSuccess(null);
+    setRemovingLogo(true);
+    setLogoFeedback(null);
     try {
-      const saved = await removeReceiptLogo();
-      queryClient.setQueryData(["receipt-branding"], saved);
+      await removeReceiptLogo();
+      const confirmed = await getReceiptBranding();
+      queryClient.setQueryData(["receipt-branding"], confirmed);
       setLogoPreview(null);
-      setSuccess("Custom logo removed. Receipts will use the business name instead.");
+      if (confirmed.hasLogo || confirmed.logoUrl) {
+        setLogoFeedback({
+          tone: "warning",
+          title: "Logo removal needs verification",
+          description: "Kaira Africa did not confirm that the custom logo was removed. Refresh the page and try again.",
+        });
+        return;
+      }
+      setLogoFeedback({
+        tone: "success",
+        title: "Logo removed",
+        description: "The custom logo was removed from business settings. Printed documents will use your company name instead.",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "The logo could not be removed.");
+      setLogoFeedback({
+        tone: "error",
+        title: "Logo could not be removed",
+        description: err instanceof Error ? err.message : "Kaira Africa could not remove the custom logo. Please try again.",
+      });
     } finally {
       setRemovingLogo(false);
     }
@@ -166,9 +233,22 @@ export default function ReceiptBrandingPage() {
           <div className="pointer-events-none absolute bottom-0 right-8 hidden h-24 w-24 rotate-12 rounded-2xl border border-white/15 bg-white/5 sm:block"/>
         </section>
 
-        {isError && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"><p className="font-semibold">Saved receipt settings could not be loaded.</p><Button type="button" className="mt-2" variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></div>}
-        {error && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
-        {success && <div role="status" className="flex items-start gap-2 rounded-xl border border-emerald-700/15 bg-emerald-50 p-3 text-sm text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0"/>{success}</div>}
+        {isError && (
+          <KairaFeedbackCard
+            tone="error"
+            title="Receipt settings could not be loaded"
+            description="Your saved branding could not be retrieved. Check your connection and retry before changing or printing these settings."
+            actionLabel="Retry loading settings"
+            onAction={() => void refetch()}
+          />
+        )}
+        {settingsFeedback && (
+          <KairaFeedbackCard
+            tone={settingsFeedback.tone}
+            title={settingsFeedback.title}
+            description={settingsFeedback.description}
+          />
+        )}
 
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
           <Card>
@@ -191,6 +271,16 @@ export default function ReceiptBrandingPage() {
                             {branding?.hasLogo && <Button type="button" variant="ghost" disabled={!canEdit || removingLogo} onClick={() => void deleteLogo()}><Trash2 className="mr-2 h-4 w-4"/>{removingLogo ? "Removing…" : "Remove logo"}</Button>}
                             <input ref={logoInputRef} className="hidden" type="file" accept={LOGO_TYPES.join(",")} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void uploadLogo(file); }}/>
                           </div>
+                          {logoFeedback && (
+                            <KairaFeedbackCard
+                              tone={logoFeedback.tone}
+                              title={logoFeedback.title}
+                              description={logoFeedback.description}
+                              className="mt-4"
+                              actionLabel={logoFeedback.tone === "error" ? "Choose logo again" : undefined}
+                              onAction={logoFeedback.tone === "error" ? () => logoInputRef.current?.click() : undefined}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -210,7 +300,7 @@ export default function ReceiptBrandingPage() {
                   </fieldset>
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                     {!canEdit && <p className="text-xs text-muted-foreground">Only the business owner can edit these settings.</p>}
-                    <Button type="submit" disabled={!canEdit || saving || isLoading} className="ml-auto"><Save className="mr-2 h-4 w-4"/>{saving ? "Saving…" : "Save branding settings"}</Button>
+                    <Button type="submit" disabled={!canEdit || saving || logoBusy || removingLogo || isLoading} className="ml-auto"><Save className="mr-2 h-4 w-4"/>{saving ? "Saving…" : "Save branding settings"}</Button>
                   </div>
                 </form>
               )}
