@@ -773,7 +773,7 @@ try {
   const profileRouteDiagnostics = await pinPage.evaluate(() => ({
     pathname: window.location.pathname,
     headings: Array.from(document.querySelectorAll('h1,h2,h3')).map((node) => node.textContent?.trim()).filter(Boolean),
-    mainText: document.querySelector('main')?.innerText?.slice(0, 1800) || '',
+    mainText: document.querySelector('main.min-w-0.flex-1')?.innerText?.slice(0, 1800) || '',
     alerts: Array.from(document.querySelectorAll('[role="alert"]')).map((node) => node.textContent?.trim()).filter(Boolean),
   }));
   await pinPage.screenshot({ path: resolve(outputDir, 'profile-route-diagnostics.png'), fullPage: true });
@@ -784,7 +784,7 @@ try {
       JSON.stringify({ ...profileRouteDiagnostics, pinErrors, pinConsoleErrors }),
   );
   await pinPage.getByText('PIN sign-in', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
-  assert.ok((await pinPage.locator('main').innerText()).trim().length > 40, 'Profile must show useful content rather than a blank white page');
+  assert.ok((await pinPage.locator('main.min-w-0.flex-1').innerText()).trim().length > 40, 'Profile must show useful content rather than a blank white page');
   await pinPage.getByLabel('New six-digit PIN').fill('482951');
   await pinPage.getByLabel('Confirm six-digit PIN').fill('482951');
   await pinPage.getByRole('button', { name: 'Set my PIN' }).click();
@@ -834,17 +834,17 @@ try {
     await link.waitFor({ state: 'visible', timeout: 10_000 });
     await link.click();
     await pinPage.waitForURL((url) => url.pathname === routePath, { timeout: 10_000 });
-    await pinPage.locator('main').waitFor({ state: 'visible', timeout: 10_000 });
+    await pinPage.locator('main.min-w-0.flex-1').waitFor({ state: 'visible', timeout: 10_000 });
     try {
       await pinPage.waitForFunction(() => {
-        const main = document.querySelector('main');
+        const main = document.querySelector('main.min-w-0.flex-1');
         return Boolean(main && main.innerText.trim().length > 20);
       }, null, { timeout: 10_000 });
     } catch (error) {
       const diagnostic = {
         routePath, url: pinPage.url(),
         headings: await pinPage.locator('h1,h2').allTextContents().catch(() => []),
-        mainText: (await pinPage.locator('main').innerText().catch(() => '')).trim().slice(0, 1800),
+        mainText: (await pinPage.locator('main.min-w-0.flex-1').innerText().catch(() => '')).trim().slice(0, 1800),
         alerts: await pinPage.locator('[role="alert"]').allTextContents().catch(() => []),
         unhandledApiRequests,
       };
@@ -860,7 +860,7 @@ try {
     if (expectedPageMarkers[routePath]) {
       await expectedPageMarkers[routePath]().waitFor({ state: 'visible', timeout: 10_000 });
     }
-    const mainText = (await pinPage.locator('main').innerText().catch(() => '')).trim();
+    const mainText = (await pinPage.locator('main.min-w-0.flex-1').innerText().catch(() => '')).trim();
     assert.ok(mainText.length > 20, 'Navigation to ' + label + ' must render a non-empty page');
 
     if (routePath === '/crm') {
