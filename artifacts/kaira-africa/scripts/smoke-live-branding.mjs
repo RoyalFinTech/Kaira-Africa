@@ -331,6 +331,7 @@ try {
     createdAt: nowIso,
     lastLoginAt: null,
   };
+  let failNextReceiptLogoUpload = false;
   let receiptBrandingFixture = {
     companyName: visualBusiness.name,
     address: visualBusiness.address,
@@ -449,6 +450,17 @@ try {
     }
     if (pathname.endsWith('/api/businesses/me/receipt-logo') && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
+      if (failNextReceiptLogoUpload) {
+        failNextReceiptLogoUpload = false;
+        await route.fulfill({
+          status: 503, headers: corsHeaders,
+          body: JSON.stringify({ error: {
+            code: 'receipt_storage_not_configured',
+            message: "Kaira Africa's private logo storage is not connected on the API server. Missing configuration: SUPABASE_SERVICE_ROLE_KEY. The logo was not saved. Add the missing variable to the Kaira-Africa API service in Render, then retry.",
+          } }),
+        });
+        return;
+      }
       receiptBrandingFixture = { ...receiptBrandingFixture, logoUrl: input.dataUrl || null, hasLogo: Boolean(input.dataUrl) };
       await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
       return;
@@ -1017,10 +1029,10 @@ try {
     if (routePath === '/receipt-branding') {
       await pinPage.getByLabel('Printed company name').fill('Smoke Receipt Studio');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
-      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Your business details and print options are saved. The next receipt, CRM card and ledger print will use these settings.').waitFor({ state: 'visible', timeout: 10_000 });
       const logoFile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
       await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
-      await pinPage.getByText('Logo uploaded to private storage and saved for future printouts.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Your logo is stored privately and linked to this business. It will appear on the next receipt, customer card and ledger printout.').waitFor({ state: 'visible', timeout: 10_000 });
       const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 10_000 });
@@ -1039,7 +1051,7 @@ try {
       await pinPage.getByRole('checkbox', { name: /Show linked customer details on transaction receipts/ }).uncheck();
       assert.ok(!(await visibleReceiptPreview.innerText()).includes('SAMPLE-0001'), 'On-screen sample immediately hides the reference when the option is disabled');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
-      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Your business details and print options are saved. The next receipt, CRM card and ledger print will use these settings.').waitFor({ state: 'visible', timeout: 10_000 });
       const customizedPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customizedPrintBefore, { timeout: 10_000 });
@@ -1051,6 +1063,22 @@ try {
       assert.equal(receiptBrandingFixture.showCustomerDetails, false, 'Customer-detail setting is saved');
       assert.equal(receiptBrandingFixture.companyName, 'Smoke Receipt Studio', 'Receipt branding form should persist the company name via the intercepted save API');
       assert.equal(receiptBrandingFixture.hasLogo, true, 'Receipt logo should be sent to the authenticated upload endpoint');
+
+      const previouslySavedLogo = receiptBrandingFixture.logoUrl;
+      failNextReceiptLogoUpload = true;
+      await pinPage.locator('input[type="file"]').last().setInputFiles({
+        name: 'logo-that-will-fail.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('synthetic-failed-logo-fixture'),
+      });
+      await pinPage.getByRole('heading', { name: 'Logo was not saved' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText(/Missing configuration: SUPABASE_SERVICE_ROLE_KEY/).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Choose logo again' }).waitFor({ state: 'visible', timeout: 10_000 });
+      const previewAfterFailure = await pinPage.getByAltText('Receipt logo preview').getAttribute('src');
+      assert.equal(previewAfterFailure, previouslySavedLogo, 'Failed upload reverts to the last server-confirmed logo instead of showing the local file');
+      assert.equal(receiptBrandingFixture.logoUrl, previouslySavedLogo, 'Failed logo upload must not change persisted branding fixture');
+      assert.equal(await pinPage.getByText('[object Object]', { exact: true }).count(), 0, 'Structured backend errors must never appear as [object Object]');
+      console.log('RECEIPT STORAGE FAILURE FEEDBACK VERIFIED: structured error, Kaira-branded retry card, and saved-logo preview restored');
     }
 
     if (routePath === '/profile') {
