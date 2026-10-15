@@ -163,9 +163,23 @@ function buildErrorMessage(response: Response, data: unknown): string {
     getStringField(data, "error_description") ??
     getStringField(data, "error");
 
+  // The Kaira API wraps failures as { error: { code, message } }.
+  // Read the nested message instead of collapsing it to a generic HTTP
+  // status or accidentally stringifying the object as "[object Object]".
+  const nestedError = data && typeof data === "object"
+    ? (data as Record<string, unknown>).error
+    : undefined;
+  const nestedMessage =
+    getStringField(nestedError, "message") ??
+    getStringField(nestedError, "detail") ??
+    getStringField(nestedError, "title");
+  const nestedCode = getStringField(nestedError, "code");
+
   if (title && detail) return `${prefix}: ${title} — ${detail}`;
   if (detail) return `${prefix}: ${detail}`;
   if (message) return `${prefix}: ${message}`;
+  if (nestedMessage) return `${prefix}: ${nestedMessage}`;
+  if (nestedCode) return `${prefix}: ${nestedCode.replace(/_/g, " ")}`;
   if (title) return `${prefix}: ${title}`;
 
   return prefix;
