@@ -204,10 +204,18 @@ export default function ReceiptBrandingPage() {
           <div className="pointer-events-none absolute bottom-0 right-8 hidden h-24 w-24 rotate-12 rounded-2xl border border-white/15 bg-white/5 sm:block"/>
         </section>
 
-        {isError && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-950">
-          <span>Receipt settings could not be loaded. Use the Kaira Africa notification above for the reason, then retry.</span>
-          <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>Retry settings</Button>
-        </div>}
+        {isError && (
+          <div className="space-y-3">
+            <KairaFeedbackCard
+              variant="error"
+              title="Receipt settings could not be loaded"
+              message="Kaira Africa could not confirm your saved business details. Your existing settings were not changed; retry the connection before uploading a logo."
+            />
+            <div className="flex justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>Retry settings</Button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
           <Card>
@@ -226,7 +234,12 @@ export default function ReceiptBrandingPage() {
                         </div>
                         <div className="min-w-0 flex-1"><p className="font-semibold">Company logo</p><p className="mt-1 text-xs leading-5 text-muted-foreground">JPEG, PNG or WebP. Recommended landscape logo with a transparent or white background. Maximum file size 2 MB.</p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" disabled={!canEdit || logoBusy} onClick={() => logoInputRef.current?.click()}><UploadCloud className="mr-2 h-4 w-4"/>{logoBusy ? "Uploading…" : "Upload logo"}</Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={!canEdit || logoBusy || isLoading || isError || branding?.storageConfigured === false}
+                              onClick={() => logoInputRef.current?.click()}
+                            ><UploadCloud className="mr-2 h-4 w-4"/>{logoBusy ? "Uploading…" : "Upload logo"}</Button>
                             {branding?.hasLogo && <Button type="button" variant="ghost" disabled={!canEdit || removingLogo} onClick={() => void deleteLogo()}><Trash2 className="mr-2 h-4 w-4"/>{removingLogo ? "Removing…" : "Remove logo"}</Button>}
                             <input ref={logoInputRef} className="hidden" type="file" accept={LOGO_TYPES.join(",")} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void uploadLogo(file); }}/>
                           </div>
