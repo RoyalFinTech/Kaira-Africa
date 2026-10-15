@@ -655,6 +655,68 @@ try {
     const mainText = (await pinPage.locator('main').innerText().catch(() => '')).trim();
     assert.ok(mainText.length > 20, 'Navigation to ' + label + ' must render a non-empty page');
 
+    if (routePath === '/crm') {
+      await pinPage.getByRole('button', { name: 'Add customer' }).click();
+      await pinPage.getByLabel('First name *').fill('Aminata');
+      await pinPage.getByLabel('Last name *').fill('SmokeCustomer');
+      await pinPage.getByLabel('Date of birth').fill('1990-05-12');
+      await pinPage.getByLabel('Marital status (optional)').selectOption({ label: 'Married' });
+      const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
+      await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'customer-photo.png', mimeType: 'image/png', buffer: onePixelPng });
+      await pinPage.getByRole('button', { name: 'Save customer' }).click();
+      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(crmCustomerRequests.filter((item) => item.method === 'POST').length, 1, 'CRM add customer should make one intercepted create request');
+      assert.equal(crmCustomerRequests[0].input.profileData.dateOfBirth, '1990-05-12', 'CRM should persist optional date of birth');
+      assert.equal(crmCustomerRequests[0].input.profileData.maritalStatus, 'Married', 'CRM should persist optional marital status');
+      assert.equal(crmPhotoRequests.length, 1, 'CRM should upload an optional customer photo');
+      assert.equal(crmPhotoRequests[0].isImageDataUrl, true, 'CRM customer photo should be submitted as an image data URL');
+
+      await pinPage.getByPlaceholder('Search any saved customer detail…').fill('1990-05-12');
+      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Edit', exact: true }).click();
+      await pinPage.getByLabel('Marital status (optional)').selectOption({ label: 'Divorced' });
+      await pinPage.getByRole('button', { name: 'Save customer' }).click();
+      await pinPage.getByText('Divorced', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(crmCustomerRequests.filter((item) => item.method === 'PUT').length, 1, 'CRM edit should make one intercepted update request');
+      assert.equal(crmCustomerRequests.find((item) => item.method === 'PUT').input.profileData.maritalStatus, 'Divorced', 'CRM should persist edited optional details');
+
+      await pinPage.getByRole('button', { name: 'Remove photo' }).click();
+      await pinPage.waitForFunction(() => !document.querySelector('button[title="Remove photo"]'), { timeout: 10_000 }).catch(() => {});
+      assert.equal(crmPhotoDeleteRequests.length, 1, 'CRM photo removal should call the delete endpoint');
+      await pinPage.getByLabel('Customer').selectOption('crm-customer-smoke');
+      await pinPage.getByPlaceholder('Activity title (e.g. Delivery feedback)').fill('Smoke test feedback');
+      await pinPage.getByPlaceholder('What happened? What did the customer say? What should happen next?').fill('Customer confirmed the service was helpful.');
+      await pinPage.getByRole('button', { name: 'Save activity' }).click();
+      assert.equal(crmInteractionRequests.length, 1, 'CRM activity should be persisted through the activity endpoint');
+      assert.equal(crmInteractionRequests[0].title, 'Smoke test feedback', 'CRM activity should include its title');
+      const [crmDownload] = await Promise.all([
+        pinPage.waitForEvent('download'),
+        pinPage.getByRole('button', { name: 'Export CSV' }).click(),
+      ]);
+      assert.equal(crmDownload.suggestedFilename(), 'kaira-crm-customers.csv', 'CRM should export customer records as CSV');
+      console.log('CRM OPTIONAL PROFILE, SEARCH, EDIT, PHOTO, ACTIVITY AND CSV FLOWS VERIFIED:', JSON.stringify({
+        creates: crmCustomerRequests.filter((item) => item.method === 'POST').length,
+        updates: crmCustomerRequests.filter((item) => item.method === 'PUT').length,
+        photoUploads: crmPhotoRequests.length,
+        photoRemovals: crmPhotoDeleteRequests.length,
+        activities: crmInteractionRequests.length,
+        csv: crmDownload.suggestedFilename(),
+      }));
+    }
+
+    if (routePath === '/profile') {
+      await pinPage.getByRole('button', { name: 'Upload profile photo' }).click();
+      const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
+      await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'profile-avatar.png', mimeType: 'image/png', buffer: onePixelPng });
+      await pinPage.getByText('Profile photo updated.').waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(profileAvatarRequests.length, 1, 'Profile avatar upload should call the authenticated avatar endpoint');
+      assert.ok(profileAvatarRequests[0].bytes > 0, 'Profile avatar should submit non-empty image data');
+      await pinPage.getByRole('button', { name: 'Remove photo' }).click();
+      await pinPage.getByText('Photo removed. Your default avatar is now shown.').waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(profileAvatarDeleteCount, 1, 'Profile avatar removal should call the authenticated delete endpoint');
+      console.log('PROFILE AVATAR UPLOAD AND REMOVAL VERIFIED:', JSON.stringify({ uploads: profileAvatarRequests.length, removals: profileAvatarDeleteCount }));
+    }
+
     if (routePath === '/inventory') {
       await pinPage.getByRole('heading', { name: 'Inventory & stock book' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByText(/SKU means.*Stock Keeping Unit/i).waitFor({ state: 'visible', timeout: 10_000 });
