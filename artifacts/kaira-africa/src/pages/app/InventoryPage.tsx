@@ -102,16 +102,19 @@ export default function InventoryPage() {
     setSaving(true); setFormError(null); setNotice(null);
     try {
       const product = await createInventoryProduct(form);
+      let photoUploadMessage: string | null = null;
       if (photoPreview) {
         try {
           await uploadInventoryProductImage(product.id, photoPreview);
         } catch (cause) {
-          setNotice(cause instanceof Error ? `Product saved, but its photo could not be uploaded: ${cause.message}` : "Product saved, but the photo upload failed.");
+          photoUploadMessage = cause instanceof Error
+            ? `Product saved, but its photo could not be uploaded: ${cause.message}`
+            : "Product saved, but the photo upload failed.";
         }
       }
       resetForm(); setOpen(false);
       await qc.invalidateQueries({ queryKey: ["inventory-products"] });
-      if (!notice) setNotice("Product saved. Opening stock has been recorded in your inventory.");
+      setNotice(photoUploadMessage ?? "Product saved. Opening stock has been recorded in your inventory.");
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "We couldn't save this product. Check your details and try again.");
     } finally {
