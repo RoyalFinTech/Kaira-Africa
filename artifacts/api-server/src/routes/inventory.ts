@@ -27,10 +27,45 @@ function serialize(p: typeof inventoryProducts.$inferSelect) {
     createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() };
 }
 
+async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
+  const product = serialize(p);
+  if (!p.imageUrl || /^https?:\/\//i.test(p.imageUrl)) return product;
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ...product, imageUrl: null };
+
+  // Product photos are private. Store the object path in Postgres and return
+  // a short-lived signed URL to authenticated business users only.
+  const baseUrl = env.SUPABASE_URL.replace(/\/$/, "");
+  const objectPath = p.imageUrl.split("/").map(encodeURIComponent).join("/");
+  try {
+    const response = await fetch(`${baseUrl}/storage/v1/object/sign/inventory-images/${objectPath}`, {
+      method: "POST",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn: 86400 }),
+    });
+    if (!response.ok) return { ...product, imageUrl: null };
+    const result = await response.json() as { signedURL?: string; signedUrl?: string };
+    const signedUrl = result.signedURL ?? result.signedUrl;
+    if (!signedUrl) return { ...product, imageUrl: null };
+    const fullUrl = signedUrl.startsWith("http")
+      ? signedUrl
+      : signedUrl.startsWith("/storage/v1/")
+        ? baseUrl + signedUrl
+        : `${baseUrl}/storage/v1${signedUrl.startsWith("/") ? "" : "/"}${signedUrl}`;
+    return { ...product, imageUrl: fullUrl };
+  } catch {
+    // Keep product and stock information available even if image signing fails.
+    return { ...product, imageUrl: null };
+  }
+}
+
 router.get("/inventory/products", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const products = await db.select().from(inventoryProducts).where(eq(inventoryProducts.businessId, businessId)).orderBy(asc(inventoryProducts.name));
-  res.json(products.map(serialize));
+  res.json(await Promise.all(products.map(serializeWithImage)));
 });
 
 router.post("/inventory/products", requireUser, requireRole("owner", "admin", "manager"), async (req, res) => {
@@ -49,7 +84,7 @@ router.post("/inventory/products", requireUser, requireRole("owner", "admin", "m
       entityType: "inventory_product", entityId: created.id, entityName: created.name,
       description: displayName(req.user!) + " added inventory product " + created.name, status: "success",
     });
-    res.status(201).json(serialize(created));
+    res.status(201).json(await serializeWithImage(created));
   } catch (error) {
     if ((error as { code?: string }).code === "23505") throw new BadRequestError("That SKU already exists for this business");
     throw error;
@@ -87,10 +122,10 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
   if (!upload.ok) {
     throw new HttpError(503, "service_unavailable", "The photo could not be saved to storage. Please try again.");
   }
-  const imageUrl = `${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/inventory-images/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
+  const imageUrl = objectPath;
   const [updated] = await db.update(inventoryProducts).set({ imageUrl, updatedAt: new Date() })
     .where(and(eq(inventoryProducts.id, product.id), eq(inventoryProducts.businessId, businessId))).returning();
-  res.json(serialize(updated));
+  res.json(await serializeWithImage(updated));
 });
 
 router.post("/inventory/products/:id/adjust", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
