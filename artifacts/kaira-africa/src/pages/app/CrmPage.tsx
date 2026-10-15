@@ -1,65 +1,214 @@
-import { useState } from "react";
-import { KairaLogo } from "@/components/common/KairaLogo";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { Users, Plus, Phone, Mail, MessageSquare, CalendarCheck2, CheckCircle2 } from "lucide-react";
+import { Search, Plus, Phone, Mail, CalendarDays, MessageSquare, CheckCircle2, UserRound, Camera, Trash2, Pencil, Download, Printer, X, Save, Users, Clock3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/PageTransition";
-import { getCrmOverview, createCrmInteraction, completeCrmInteraction } from "@/lib/platform-api";
+import { getCrmOverview, createCrmInteraction, completeCrmInteraction, searchCrmCustomers, createManagedCrmCustomer, updateManagedCrmCustomer, uploadCrmCustomerPhoto, removeCrmCustomerPhoto, type ManagedCrmCustomer, type CrmProfileData } from "@/lib/platform-api";
 import { formatCurrency, formatDate } from "@/lib/utils";
+
+type CustomerDraft = {
+  firstName: string; lastName: string; email: string; phone: string; company: string;
+  country: string; city: string; status: "active" | "inactive";
+  dateOfBirth: string; preferredName: string; gender: string; maritalStatus: string;
+  occupation: string; customerType: string; preferredContactMethod: string;
+  preferredLanguage: string; addressLine1: string; addressLine2: string;
+  postalCode: string; region: string; source: string; tags: string;
+  interests: string; preferences: string; consentNotes: string; internalNotes: string;
+  emergencyContactName: string; emergencyContactPhone: string;
+};
+const blankDraft = (): CustomerDraft => ({
+  firstName: "", lastName: "", email: "", phone: "", company: "", country: "", city: "", status: "active",
+  dateOfBirth: "", preferredName: "", gender: "", maritalStatus: "", occupation: "", customerType: "",
+  preferredContactMethod: "", preferredLanguage: "", addressLine1: "", addressLine2: "", postalCode: "",
+  region: "", source: "", tags: "", interests: "", preferences: "", consentNotes: "", internalNotes: "",
+  emergencyContactName: "", emergencyContactPhone: "",
+});
+const fromCustomer = (c: ManagedCrmCustomer): CustomerDraft => {
+  const p = c.profileData ?? {};
+  return {
+    ...blankDraft(), firstName: c.firstName, lastName: c.lastName, email: c.email ?? "", phone: c.phone ?? "",
+    company: c.company ?? "", country: c.country ?? "", city: c.city ?? "", status: c.status === "inactive" ? "inactive" : "active",
+    dateOfBirth: p.dateOfBirth ?? "", preferredName: p.preferredName ?? "", gender: p.gender ?? "",
+    maritalStatus: p.maritalStatus ?? "", occupation: p.occupation ?? "", customerType: p.customerType ?? "",
+    preferredContactMethod: p.preferredContactMethod ?? "", preferredLanguage: p.preferredLanguage ?? "",
+    addressLine1: p.addressLine1 ?? "", addressLine2: p.addressLine2 ?? "", postalCode: p.postalCode ?? "",
+    region: p.region ?? "", source: p.source ?? "", tags: (p.tags ?? []).join(", "),
+    interests: p.interests ?? "", preferences: p.preferences ?? "", consentNotes: p.consentNotes ?? "",
+    internalNotes: p.internalNotes ?? "", emergencyContactName: p.emergencyContactName ?? "",
+    emergencyContactPhone: p.emergencyContactPhone ?? "",
+  };
+};
+const toInput = (d: CustomerDraft) => {
+  const profileData: CrmProfileData = {};
+  (["dateOfBirth","preferredName","gender","maritalStatus","occupation","customerType","preferredContactMethod","preferredLanguage","addressLine1","addressLine2","postalCode","region","source","interests","preferences","consentNotes","internalNotes","emergencyContactName","emergencyContactPhone"] as const).forEach((key) => {
+    const value = d[key].trim();
+    if (value) profileData[key] = value;
+  });
+  const tags = d.tags.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 30);
+  if (tags.length) profileData.tags = tags;
+  return {
+    firstName: d.firstName.trim(), lastName: d.lastName.trim(), email: d.email.trim() || undefined,
+    phone: d.phone.trim() || undefined, company: d.company.trim() || undefined,
+    country: d.country.trim() || undefined, city: d.city.trim() || undefined, status: d.status, profileData,
+  };
+};
+function readImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Could not read this image."));
+    reader.onerror = () => reject(new Error("Could not read this image."));
+    reader.readAsDataURL(file);
+  });
+}
+function CustomerForm({ initial, saving, error, onCancel, onSave }: {
+  initial: CustomerDraft; saving: boolean; error: string | null;
+  onCancel: () => void; onSave: (draft: CustomerDraft, photo: File | null) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState(initial);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState("");
+  const update = (key: keyof CustomerDraft, value: string) => setDraft((old) => ({ ...old, [key]: value }));
+  const field = (key: keyof CustomerDraft, label: string, hint?: string, type = "text") => (
+    <label className="block space-y-1.5 text-sm font-medium" key={key}>
+      <span>{label}</span>
+      <Input type={type} value={draft[key]} onChange={(e) => update(key, e.target.value)} />
+      {hint && <span className="block text-xs font-normal leading-5 text-muted-foreground">{hint}</span>}
+    </label>
+  );
+  return <form className="space-y-5" onSubmit={async (e) => { e.preventDefault(); await onSave(draft, photo); }}>
+    <div className="rounded-xl border bg-muted/30 p-4">
+      <p className="font-semibold">Customer identity</p><p className="mb-4 mt-1 text-xs leading-5 text-muted-foreground">Only the customer's first and last names are required. Add other information when it is relevant and appropriate.</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {field("firstName","First name *")}{field("lastName","Last name *")}
+        {field("preferredName","Preferred name","What the customer likes to be called.")}{field("dateOfBirth","Date of birth","Optional. Collect only when needed.","date")}
+        {field("phone","Phone number")}{field("email","Email address","","email")}
+        {field("customerType","Customer type","For example, walk-in, returning, referral or VIP.")}{field("company","Company / organisation")}
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block space-y-1.5 text-sm font-medium">Gender (optional)<select className="h-10 w-full rounded-md border bg-background px-3" value={draft.gender} onChange={(e) => update("gender",e.target.value)}><option value="">Not specified</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option><option>Self-described</option></select></label>
+        <label className="block space-y-1.5 text-sm font-medium">Marital status (optional)<select className="h-10 w-full rounded-md border bg-background px-3" value={draft.maritalStatus} onChange={(e) => update("maritalStatus",e.target.value)}><option value="">Not provided</option><option>Single</option><option>Married</option><option>Separated</option><option>Divorced</option><option>Widowed</option><option>Prefer not to say</option></select></label>
+        {field("occupation","Occupation")}{field("preferredLanguage","Preferred language")}
+      </div>
+    </div>
+    <div className="rounded-xl border p-4">
+      <p className="font-semibold">Contact and location</p><p className="mb-4 mt-1 text-xs leading-5 text-muted-foreground">Use these details to contact the customer or deliver a service. Leave any unknown field blank.</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {field("addressLine1","Address line 1")}{field("addressLine2","Address line 2")}
+        {field("city","Town / city")}{field("region","Region / state")}
+        {field("postalCode","Postal code")}{field("country","Country")}
+        {field("preferredContactMethod","Preferred contact method","Phone, SMS, email or WhatsApp.")}
+        {field("source","How they found you","Referral, social media, walk-in, campaign…")}
+        {field("emergencyContactName","Emergency contact name","Only where relevant to your service.")}{field("emergencyContactPhone","Emergency contact phone")}
+      </div>
+    </div>
+    <div className="rounded-xl border p-4">
+      <p className="font-semibold">Relationship notes</p><p className="mb-4 mt-1 text-xs leading-5 text-muted-foreground">Keep notes respectful, factual and relevant. Avoid recording sensitive details without a clear need and appropriate permission.</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {field("tags","Tags","Separate tags with commas, e.g. returning, referral.")}{field("interests","Interests")}
+        {field("preferences","Service or communication preferences")}{field("status","Status")}
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block space-y-1.5 text-sm font-medium">Consent / permissions notes<Textarea rows={3} value={draft.consentNotes} onChange={(e) => update("consentNotes",e.target.value)} placeholder="Record relevant consent, purpose and date. Avoid storing unnecessary sensitive details."/></label>
+        <label className="block space-y-1.5 text-sm font-medium">Internal customer notes<Textarea rows={3} value={draft.internalNotes} onChange={(e) => update("internalNotes",e.target.value)} placeholder="Useful context for the next staff member…"/></label>
+      </div>
+    </div>
+    <div className="rounded-xl border p-4">
+      <p className="font-semibold">Customer photo</p><p className="mb-3 mt-1 text-xs leading-5 text-muted-foreground">Choose a face photo from your device or take one using your camera. JPEG, PNG or WebP, up to 2 MB.</p>
+      <Input type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(e) => {
+        const next = e.target.files?.[0] ?? null; setPhotoError("");
+        if (next && !["image/jpeg","image/png","image/webp"].includes(next.type)) { setPhotoError("Choose a JPEG, PNG or WebP image."); e.target.value = ""; return; }
+        if (next && next.size > 2 * 1024 * 1024) { setPhotoError("The photo must be 2 MB or smaller."); e.target.value = ""; return; }
+        setPhoto(next);
+      }} />
+      {photo && <p className="mt-2 text-xs text-muted-foreground">Selected: {photo.name} · {(photo.size / 1024).toFixed(0)} KB</p>}
+      {photoError && <p role="alert" className="mt-2 text-sm text-destructive">{photoError}</p>}
+    </div>
+    {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+    <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel} disabled={saving}>Cancel</Button><Button type="submit" disabled={saving || !draft.firstName.trim() || !draft.lastName.trim()}><Save className="mr-2 h-4 w-4"/>{saving ? "Saving customer…" : "Save customer"}</Button></div>
+  </form>;
+}
 
 export default function CrmPage() {
   const qc = useQueryClient();
-  const { data, isLoading, isError } = useQuery({ queryKey: ["crm-overview"], queryFn: getCrmOverview });
+  const [search, setSearch] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<ManagedCrmCustomer | null>(null);
+  const [selected, setSelected] = useState<ManagedCrmCustomer | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [customerId, setCustomerId] = useState("");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [nextActionAt, setNextActionAt] = useState("");
-  const [search, setSearch] = useState("");
-  const [saving, setSaving] = useState(false);
-  const customers = (data?.customers ?? []).filter((c) =>
-    (c.firstName + " " + c.lastName).toLowerCase().includes(search.toLowerCase()) ||
-    (c.company || "").toLowerCase().includes(search.toLowerCase())
-  );
-  const addNote = async () => {
-    if (!customerId || !title || !note) return;
-    setSaving(true);
+  const [activityError, setActivityError] = useState("");
+  const [activitySaving, setActivitySaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { data: overview, isLoading: overviewLoading, isError: overviewError } = useQuery({ queryKey: ["crm-overview"], queryFn: getCrmOverview });
+  const { data: crmData, isLoading, isError } = useQuery({ queryKey: ["crm-customers", search], queryFn: () => searchCrmCustomers(search) });
+  const customers = crmData?.customers ?? [];
+  const metrics = overview?.metrics;
+  const openForm = (customer?: ManagedCrmCustomer) => { setEditing(customer ?? null); setSelected(null); setFormError(null); setFormOpen(true); };
+  const refresh = async () => { await qc.invalidateQueries({ queryKey: ["crm-customers"] }); await qc.invalidateQueries({ queryKey: ["crm-overview"] }); };
+  const saveCustomer = async (draft: CustomerDraft, photo: File | null) => {
+    setSaving(true); setFormError(null);
     try {
-      await createCrmInteraction({ customerId, type: "note", title, note, nextActionAt: nextActionAt ? new Date(nextActionAt).toISOString() : undefined });
-      setTitle(""); setNote(""); setNextActionAt(""); setCustomerId("");
-      await qc.invalidateQueries({ queryKey: ["crm-overview"] });
+      const payload = toInput(draft);
+      const saved = editing ? await updateManagedCrmCustomer(editing.id, payload) : await createManagedCrmCustomer(payload);
+      if (photo) {
+        try { await uploadCrmCustomerPhoto(saved.id, await readImage(photo)); }
+        catch (error) { setFormError("Customer details were saved, but the photo upload failed: " + (error instanceof Error ? error.message : "Please retry from Edit customer.")); }
+      }
+      await refresh();
+      if (!formError) { setFormOpen(false); setEditing(null); setSelected(saved); }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "The customer could not be saved. Please try again.");
     } finally { setSaving(false); }
   };
+  const addNote = async () => {
+    if (!customerId || !title.trim() || !note.trim()) return;
+    setActivitySaving(true); setActivityError("");
+    try {
+      await createCrmInteraction({ customerId, type: "note", title: title.trim(), note: note.trim(), nextActionAt: nextActionAt ? new Date(nextActionAt).toISOString() : undefined });
+      setTitle(""); setNote(""); setNextActionAt(""); await qc.invalidateQueries({ queryKey: ["crm-overview"] });
+    } catch (error) { setActivityError(error instanceof Error ? error.message : "Could not save this activity."); }
+    finally { setActivitySaving(false); }
+  };
+  const exportCsv = () => {
+    const headers = ["First name","Last name","Phone","Email","Company","Date of birth","Marital status","Occupation","City","Country","Status","Notes"];
+    const rows = customers.map((c) => [c.firstName,c.lastName,c.phone ?? "",c.email ?? "",c.company ?? "",c.profileData?.dateOfBirth ?? "",c.profileData?.maritalStatus ?? "",c.profileData?.occupation ?? "",c.city ?? "",c.country ?? "",c.status,c.profileData?.internalNotes ?? ""]);
+    const escape = (value: unknown) => '"' + String(value ?? "").replace(/"/g,'""') + '"';
+    const csv = [headers,...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = "kaira-crm-customers.csv"; a.click(); URL.revokeObjectURL(url);
+  };
+  const filteredCount = crmData?.total ?? 0;
 
-  return <PageTransition><div className="space-y-6">
-    <div className="flex items-center justify-between"><div><h1 className="font-display text-3xl font-bold">CRM</h1><p className="text-muted-foreground text-sm">Manage customer relationships, notes, follow-ups and sales context.</p></div><Link href="/customers"><Button variant="outline" className="gap-2"><Users className="h-4 w-4" />Customer directory</Button></Link></div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card><CardContent className="p-5"><div className="text-xs text-muted-foreground">Customers</div><div className="text-2xl font-bold mt-1">{data?.metrics.totalCustomers ?? 0}</div></CardContent></Card>
-      <Card><CardContent className="p-5"><div className="text-xs text-muted-foreground">Active</div><div className="text-2xl font-bold mt-1">{data?.metrics.activeCustomers ?? 0}</div></CardContent></Card>
-      <Card><CardContent className="p-5"><div className="text-xs text-muted-foreground">Open follow-ups</div><div className="text-2xl font-bold mt-1">{data?.metrics.openFollowUps ?? 0}</div></CardContent></Card>
+  return <PageTransition><div className="mx-auto max-w-7xl space-y-6 print:max-w-none">
+    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-primary"><Users className="h-3.5 w-3.5"/> Customer relationship workspace</div><h1 className="font-display text-3xl font-bold tracking-tight">Customer CRM</h1><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Keep customer details, preferences, conversations and next steps together. Start with the basics and add optional information only when it helps serve the customer.</p></div>
+      <div className="flex flex-wrap gap-2 print:hidden"><Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4"/>Export CSV</Button><Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4"/>Print / PDF</Button><Button onClick={() => openForm()}><Plus className="mr-2 h-4 w-4"/>Add customer</Button></div>
     </div>
-    {isError && <Card><CardContent className="p-5"><div className="flex items-center gap-3 text-sm text-destructive" role="alert"><KairaLogo width={36} className="shrink-0 rounded bg-white p-0.5" /><span>CRM data could not be loaded. Complete business onboarding and sign in again if this persists.</span></div></CardContent></Card>}
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <Card className="xl:col-span-2"><CardHeader><CardTitle>Customer CRM</CardTitle><Input placeholder="Search customers or companies…" value={search} onChange={(e) => setSearch(e.target.value)} /></CardHeader><CardContent>
-        {isLoading ? <div className="h-48 animate-pulse bg-muted rounded-xl" /> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="py-3">Customer</th><th className="py-3">Contact</th><th className="py-3">Sales</th><th className="py-3">Status</th></tr></thead><tbody>
-          {customers.map((c) => <tr key={c.id} className="border-b last:border-0"><td className="py-3"><Link href={"/customers/" + c.id} className="font-semibold hover:underline">{c.firstName} {c.lastName}</Link><div className="text-xs text-muted-foreground">{c.company || "—"}</div></td><td className="py-3 text-muted-foreground"><div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" />{c.phone || "—"}</div><div className="flex items-center gap-2 mt-1"><Mail className="h-3.5 w-3.5" />{c.email || "—"}</div></td><td className="py-3"><div className="font-semibold">{formatCurrency(c.totalSpend)}</div><div className="text-xs text-muted-foreground">{c.transactionCount} transactions</div></td><td className="py-3"><Badge variant="outline">{c.status}</Badge></td></tr>)}
-        </tbody></table></div>}
-      </CardContent></Card>
-      <Card><CardHeader><CardTitle>Log a CRM activity</CardTitle></CardHeader><CardContent className="space-y-3">
-        <select className="w-full h-10 rounded-md border bg-background px-3 text-sm" value={customerId} onChange={(e) => setCustomerId(e.target.value)}><option value="">Select customer</option>{data?.customers.map((c) => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}</select>
-        <Input placeholder="Activity title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Textarea placeholder="What happened? Next steps?…" value={note} onChange={(e) => setNote(e.target.value)} rows={5} />
-        <Input type="datetime-local" value={nextActionAt} onChange={(e) => setNextActionAt(e.target.value)} />
-        <Button onClick={addNote} disabled={saving || !customerId || !title || !note} className="w-full gap-2"><Plus className="h-4 w-4" />{saving ? "Saving…" : "Save CRM activity"}</Button>
-      </CardContent></Card>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <Card><CardContent className="flex items-center gap-4 p-5"><div className="rounded-xl bg-primary/10 p-3 text-primary"><Users className="h-5 w-5"/></div><div><p className="text-xs text-muted-foreground">Customers in CRM</p><p className="text-2xl font-bold">{metrics?.totalCustomers ?? filteredCount}</p><p className="text-xs text-muted-foreground">Searchable customer records</p></div></CardContent></Card>
+      <Card><CardContent className="flex items-center gap-4 p-5"><div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-600"><UserRound className="h-5 w-5"/></div><div><p className="text-xs text-muted-foreground">Active customers</p><p className="text-2xl font-bold">{metrics?.activeCustomers ?? "—"}</p><p className="text-xs text-muted-foreground">Currently active relationships</p></div></CardContent></Card>
+      <Card><CardContent className="flex items-center gap-4 p-5"><div className="rounded-xl bg-amber-500/10 p-3 text-amber-600"><Clock3 className="h-5 w-5"/></div><div><p className="text-xs text-muted-foreground">Open follow-ups</p><p className="text-2xl font-bold">{metrics?.openFollowUps ?? "—"}</p><p className="text-xs text-muted-foreground">Reminders still to complete</p></div></CardContent></Card>
     </div>
-    <Card><CardHeader><CardTitle>Recent interactions</CardTitle></CardHeader><CardContent className="space-y-3">
-      {(data?.interactions ?? []).map((i) => <div key={i.id} className="p-3 rounded-lg border flex items-start justify-between gap-3"><div><div className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /><span className="font-semibold text-sm">{i.title}</span>{i.completedAt ? <Badge variant="secondary">Done</Badge> : i.nextActionAt ? <Badge variant="outline"><CalendarCheck2 className="h-3 w-3 mr-1" />Follow-up</Badge> : null}</div><p className="text-xs text-muted-foreground mt-1">{i.customerName} · {i.userName}</p><p className="text-sm mt-2">{i.note}</p><p className="text-xs text-muted-foreground mt-2">{formatDate(new Date(i.createdAt), "MMM d, yyyy HH:mm")}</p></div>{!i.completedAt && <Button size="icon" variant="ghost" onClick={async () => { await completeCrmInteraction(i.id); await qc.invalidateQueries({ queryKey: ["crm-overview"] }); }}><CheckCircle2 className="h-4 w-4" /></Button>}</div>)}
-      {!data?.interactions?.length && <div className="text-sm text-muted-foreground text-center py-10">No CRM interactions yet.</div>}
-    </CardContent></Card>
+    <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="grid gap-3 p-4 sm:grid-cols-3"><div><p className="text-sm font-semibold">Customer profile</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Core identity and contact details. First and last name are required; other fields are optional.</p></div><div><p className="text-sm font-semibold">Relationship notes</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Record service preferences, feedback and useful follow-up context, keeping notes factual and respectful.</p></div><div><p className="text-sm font-semibold">Industry-specific fields</p><p className="mt-1 text-xs leading-5 text-muted-foreground">DOB, marital status and emergency contact are optional. Collect sensitive details only when relevant and appropriately authorised.</p></div></CardContent></Card>
+    {formOpen && <Card><CardHeader className="flex flex-row items-center justify-between"><div><CardTitle>{editing ? "Edit customer profile" : "Create customer profile"}</CardTitle><p className="mt-1 text-sm text-muted-foreground">Fields marked optional can be left blank and completed later.</p></div><Button variant="ghost" size="icon" onClick={() => {setFormOpen(false);setFormError(null);}}><X className="h-4 w-4"/></Button></CardHeader><CardContent><CustomerForm key={editing?.id ?? "new-customer"} initial={editing ? fromCustomer(editing) : blankDraft()} saving={saving} error={formError} onCancel={() => setFormOpen(false)} onSave={saveCustomer}/></CardContent></Card>}
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <Card className="xl:col-span-2"><CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Customer directory</CardTitle><p className="mt-1 text-sm text-muted-foreground">Search names, phone, email, company, date of birth and saved profile details.</p></div><Badge variant="secondary">{filteredCount} records</Badge></div><div className="relative mt-3"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input className="pl-9" placeholder="Search any saved customer detail…" value={search} onChange={(e) => setSearch(e.target.value)}/></div></CardHeader><CardContent>
+        {isLoading ? <div className="space-y-3">{[1,2,3].map((n) => <div key={n} className="h-20 animate-pulse rounded-xl bg-muted"/>)}</div> : isError ? <div className="rounded-xl border border-destructive/30 p-5 text-sm text-destructive" role="alert">Customer records could not be loaded. Check your connection and sign-in, then try again.</div> : customers.length === 0 ? <div className="py-12 text-center"><div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted"><Users className="h-5 w-5 text-muted-foreground"/></div><p className="font-semibold">{search ? "No matching customers" : "Your customer list starts here"}</p><p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{search ? "Try a different name, phone number, date of birth or other detail." : "Add a customer to create a profile, record notes and schedule follow-ups."}</p>{!search && <Button className="mt-4" onClick={() => openForm()}><Plus className="mr-2 h-4 w-4"/>Add first customer</Button>}</div> : <div className="space-y-3">{customers.map((c) => <div key={c.id} className={"rounded-xl border p-4 transition-colors hover:border-primary/35 " + (selected?.id === c.id ? "border-primary/50 bg-primary/[0.025]" : "")}><div className="flex flex-col gap-3 sm:flex-row sm:items-start"><button className="flex min-w-0 flex-1 items-start gap-3 text-left" onClick={() => setSelected(c)}><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted">{c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-full w-full object-cover"/> : <span className="font-semibold text-muted-foreground">{(c.firstName[0] + c.lastName[0]).toUpperCase()}</span>}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-semibold">{c.firstName} {c.lastName}</span><Badge variant={c.status === "active" ? "default" : "secondary"}>{c.status}</Badge></div>{c.company && <p className="text-sm text-muted-foreground">{c.company}</p>}<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{c.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3"/>{c.phone}</span>}{c.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3"/>{c.email}</span>}{c.profileData?.dateOfBirth && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3"/>DOB: {c.profileData.dateOfBirth}</span>}</div></div></button><div className="flex shrink-0 gap-2 print:hidden"><Button variant="outline" size="sm" onClick={() => openForm(c)}><Pencil className="mr-1.5 h-3.5 w-3.5"/>Edit</Button><Button variant="ghost" size="icon" title="Choose customer photo" onClick={() => {setSelected(c); fileRef.current?.click();}}><Camera className="h-4 w-4"/></Button></div></div></div>)}</div>}
+      </CardContent></Card>
+      <div className="space-y-6">
+        {selected ? <Card><CardHeader><div className="flex items-start justify-between gap-2"><div><CardTitle>Customer card</CardTitle><p className="mt-1 text-xs text-muted-foreground">A quick reference for this relationship.</p></div><Button variant="ghost" size="icon" onClick={() => setSelected(null)}><X className="h-4 w-4"/></Button></div></CardHeader><CardContent className="space-y-3"><div className="flex items-center gap-3">{selected.avatarUrl ? <img src={selected.avatarUrl} alt="" className="h-14 w-14 rounded-full border object-cover"/> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-lg font-semibold">{(selected.firstName[0]+selected.lastName[0]).toUpperCase()}</div>}<div><p className="font-semibold">{selected.firstName} {selected.lastName}</p><p className="text-xs text-muted-foreground">{selected.profileData?.preferredName || selected.company || "Individual customer"}</p></div></div><div className="space-y-2 text-sm">{selected.phone && <p><span className="text-muted-foreground">Phone:</span> {selected.phone}</p>}{selected.email && <p className="break-all"><span className="text-muted-foreground">Email:</span> {selected.email}</p>}{selected.profileData?.dateOfBirth && <p><span className="text-muted-foreground">Date of birth:</span> {selected.profileData.dateOfBirth}</p>}{selected.profileData?.maritalStatus && <p><span className="text-muted-foreground">Marital status:</span> {selected.profileData.maritalStatus}</p>}{selected.profileData?.occupation && <p><span className="text-muted-foreground">Occupation:</span> {selected.profileData.occupation}</p>}{selected.city && <p><span className="text-muted-foreground">Town / city:</span> {selected.city}</p>}{selected.country && <p><span className="text-muted-foreground">Country:</span> {selected.country}</p>}{selected.profileData?.preferredContactMethod && <p><span className="text-muted-foreground">Preferred contact:</span> {selected.profileData.preferredContactMethod}</p>}{selected.profileData?.tags?.length ? <div className="flex flex-wrap gap-1">{selected.profileData.tags.map((tag) => <Badge variant="outline" key={tag}>{tag}</Badge>)}</div> : null}{selected.profileData?.preferences && <div><p className="text-xs font-semibold text-muted-foreground">Preferences</p><p className="whitespace-pre-wrap">{selected.profileData.preferences}</p></div>}{selected.profileData?.internalNotes && <div><p className="text-xs font-semibold text-muted-foreground">Internal notes</p><p className="whitespace-pre-wrap">{selected.profileData.internalNotes}</p></div>}</div><div className="flex gap-2 border-t pt-3 print:hidden"><Button className="flex-1" variant="outline" onClick={() => openForm(selected)}><Pencil className="mr-2 h-4 w-4"/>Edit profile</Button>{selected.avatarUrl && <Button variant="outline" size="icon" title="Remove photo" onClick={async () => {try {const updated = await removeCrmCustomerPhoto(selected.id);setSelected(updated);await refresh();}catch(e){setFormError(e instanceof Error ? e.message : "Photo removal failed.");}}}><Trash2 className="h-4 w-4"/></Button>}</div></CardContent></Card> : <Card><CardHeader><CardTitle>How to use this CRM</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p className="font-medium">1. Add the essentials</p><p className="text-muted-foreground">Name is required. Phone, email and location make it easier to contact the customer.</p><p className="font-medium">2. Add optional context</p><p className="text-muted-foreground">DOB, marital status, occupation and emergency contact are not required for ordinary retail customers. Only collect what your service genuinely needs.</p><p className="font-medium">3. Keep a useful history</p><p className="text-muted-foreground">Log conversations, customer feedback and a clear next action so the team knows what to do next.</p><p className="font-medium">4. Export when needed</p><p className="text-muted-foreground">Use Export CSV for spreadsheet work or Print / PDF to save a printable view.</p></CardContent></Card>}
+        <Card><CardHeader><CardTitle>Log a customer activity</CardTitle><p className="text-sm text-muted-foreground">Record a call, visit, message, feedback or next step.</p></CardHeader><CardContent className="space-y-3"><label className="block space-y-1.5 text-sm font-medium">Customer<select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={customerId} onChange={(e) => setCustomerId(e.target.value)}><option value="">Choose customer</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}</select></label><Input placeholder="Activity title (e.g. Delivery feedback)" value={title} onChange={(e) => setTitle(e.target.value)}/><Textarea placeholder="What happened? What did the customer say? What should happen next?" value={note} onChange={(e) => setNote(e.target.value)} rows={4}/><label className="block space-y-1.5 text-sm font-medium">Follow-up date (optional)<Input type="datetime-local" value={nextActionAt} onChange={(e) => setNextActionAt(e.target.value)}/></label>{activityError && <p className="text-sm text-destructive" role="alert">{activityError}</p>}<Button className="w-full" onClick={addNote} disabled={activitySaving || !customerId || !title.trim() || !note.trim()}><Plus className="mr-2 h-4 w-4"/>{activitySaving ? "Saving activity…" : "Save activity"}</Button></CardContent></Card>
+      </div>
+    </div>
+    <Card><CardHeader><CardTitle>Recent interactions</CardTitle><p className="text-sm text-muted-foreground">A timeline of notes and follow-ups saved by your team.</p></CardHeader><CardContent className="space-y-3">{(overview?.interactions ?? []).map((i) => <div key={i.id} className="flex items-start justify-between gap-3 rounded-xl border p-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><MessageSquare className="h-4 w-4 text-primary"/><span className="font-semibold text-sm">{i.title}</span>{i.completedAt ? <Badge variant="secondary">Done</Badge> : i.nextActionAt ? <Badge variant="outline">Follow-up</Badge> : null}</div><p className="mt-1 text-xs text-muted-foreground">{i.customerName} · {i.userName}</p><p className="mt-2 whitespace-pre-wrap text-sm">{i.note}</p><p className="mt-2 text-xs text-muted-foreground">{formatDate(new Date(i.createdAt),"MMM d, yyyy HH:mm")}</p></div>{!i.completedAt && <Button size="icon" variant="ghost" title="Mark follow-up complete" onClick={async () => {try {await completeCrmInteraction(i.id);await qc.invalidateQueries({queryKey:["crm-overview"]});}catch(e){setActivityError(e instanceof Error ? e.message : "Could not complete this follow-up.");}}}><CheckCircle2 className="h-4 w-4"/></Button>}</div>)}{!overviewLoading && !overview?.interactions?.length && <p className="py-6 text-center text-sm text-muted-foreground">No activities recorded yet. Add a note or follow-up above.</p>}{overviewError && <p className="text-sm text-destructive" role="alert">The activity timeline could not be loaded.</p>}</CardContent></Card>
+    <input ref={fileRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp" capture="user" onChange={async (e) => {const file=e.target.files?.[0];e.target.value="";if(!file||!selected)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>2*1024*1024){setFormError("Choose a JPEG, PNG or WebP photo up to 2 MB.");return;}try{const updated=await uploadCrmCustomerPhoto(selected.id,await readImage(file));setSelected(updated);await refresh();setFormError(null);}catch(err){setFormError(err instanceof Error?err.message:"Photo upload failed.");}}}/>
   </div></PageTransition>;
 }
