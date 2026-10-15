@@ -564,8 +564,12 @@ export const ListTransactionsResponse = zod.object({
   "customerId": zod.string().nullish(),
   "customerName": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "attachmentUrl": zod.string().nullish(),
   "createdAt": zod.string(),
-  "completedAt": zod.string().nullish()
+  "completedAt": zod.string().nullish(),
+  "updatedAt": zod.string()
 })),
   "total": zod.number(),
   "page": zod.number(),
@@ -581,7 +585,9 @@ export const CreateTransactionBody = zod.object({
   "currency": zod.string(),
   "type": zod.enum(['payment', 'refund', 'transfer', 'withdrawal', 'deposit']),
   "customerId": zod.string().optional(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "paymentMethod": zod.enum(['manual_entry', 'cash', 'bank_transfer', 'mobile_money', 'card', 'paypal', 'cheque', 'other']).optional(),
+  "notes": zod.string().max(4000).optional()
 })
 
 export const CreateTransactionResponse = zod.object({
@@ -594,8 +600,12 @@ export const CreateTransactionResponse = zod.object({
   "customerId": zod.string().nullish(),
   "customerName": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "attachmentUrl": zod.string().nullish(),
   "createdAt": zod.string(),
-  "completedAt": zod.string().nullish()
+  "completedAt": zod.string().nullish(),
+  "updatedAt": zod.string()
 })
 
 
@@ -616,8 +626,12 @@ export const GetTransactionResponse = zod.object({
   "customerId": zod.string().nullish(),
   "customerName": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "attachmentUrl": zod.string().nullish(),
   "createdAt": zod.string(),
-  "completedAt": zod.string().nullish()
+  "completedAt": zod.string().nullish(),
+  "updatedAt": zod.string()
 })
 
 
