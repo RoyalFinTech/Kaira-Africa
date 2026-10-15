@@ -331,6 +331,8 @@ try {
     createdAt: nowIso,
     lastLoginAt: null,
   };
+  let failFirstReceiptLogoUpload = true;
+  const receiptLogoUploadAttempts = [];
   let receiptBrandingFixture = {
     companyName: visualBusiness.name,
     address: visualBusiness.address,
@@ -449,6 +451,21 @@ try {
     }
     if (pathname.endsWith('/api/businesses/me/receipt-logo') && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
+      receiptLogoUploadAttempts.push({ hasDataUrl: typeof input.dataUrl === 'string' && input.dataUrl.startsWith('data:image/') });
+      if (failFirstReceiptLogoUpload) {
+        failFirstReceiptLogoUpload = false;
+        await route.fulfill({
+          status: 503,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            error: {
+              code: 'receipt_logo_storage_url_missing',
+              message: 'Logo upload is not ready because SUPABASE_URL is missing from the Kaira Africa API service configuration in Render. The logo was not saved.',
+            },
+          }),
+        });
+        return;
+      }
       receiptBrandingFixture = { ...receiptBrandingFixture, logoUrl: input.dataUrl || null, hasLogo: Boolean(input.dataUrl) };
       await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
       return;
@@ -1019,8 +1036,25 @@ try {
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
       await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
       const logoFile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
-      await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
-      await pinPage.getByText('Logo uploaded to private storage and saved for future printouts.').waitFor({ state: 'visible', timeout: 10_000 });
+      const logoInput = pinPage.locator('input[type="file"]').last();
+      await logoInput.setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
+      const storageErrorCard = pinPage.getByRole('alert').filter({ hasText: 'SUPABASE_URL is missing' });
+      await storageErrorCard.waitFor({ state: 'visible', timeout: 10_000 });
+      const errorBodyText = await pinPage.locator('body').innerText();
+      assert.ok(!errorBodyText.includes('[object Object]'), 'Nested API error payload must never appear as [object Object]');
+      assert.ok(errorBodyText.includes('Logo upload is not ready because SUPABASE_URL is missing'), 'Storage configuration errors must be shown as readable detail');
+      assert.ok(errorBodyText.includes('ACTION NEEDED'), 'Upload failure uses the branded Kaira Africa error card');
+      assert.ok(!errorBodyText.includes('Logo saved successfully'), 'A failed logo upload must not show a success card');
+      assert.equal(receiptLogoUploadAttempts.length, 1, 'The first attempted logo upload is recorded in the intercepted fixture');
+
+      await logoInput.setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
+      await pinPage.getByText('Logo uploaded to private storage and verified for future printouts.').waitFor({ state: 'visible', timeout: 10_000 });
+      const successBodyText = await pinPage.locator('body').innerText();
+      assert.ok(successBodyText.includes('Logo saved successfully'), 'Successful logo upload uses the branded Kaira Africa success card');
+      assert.ok(successBodyText.includes('SUCCESSFUL'), 'Success feedback includes a clear success status marker');
+      assert.ok(!successBodyText.includes('[object Object]'), 'Success state must not contain raw object text');
+      assert.equal(receiptLogoUploadAttempts.length, 2, 'Retrying with the selected file makes a second intercepted upload request');
+      assert.ok(receiptLogoUploadAttempts.every((attempt) => attempt.hasDataUrl), 'Logo upload sends image data on each attempt');
       const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 10_000 });
