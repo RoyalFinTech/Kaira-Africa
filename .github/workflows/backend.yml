@@ -82,6 +82,9 @@ jobs:
       - name: Install dependencies (whole workspace — required for lib/db & lib/api-zod project references)
         run: pnpm install --frozen-lockfile
 
+      - name: Syntax-check live browser smoke script
+        run: node --check artifacts/kaira-africa/scripts/smoke-live-branding.mjs
+
       - name: Typecheck shared libraries (lib/db, lib/api-zod, etc)
         run: pnpm run typecheck:libs
 
