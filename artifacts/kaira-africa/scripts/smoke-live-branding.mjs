@@ -466,11 +466,21 @@ try {
       const endDate = url.searchParams.get('endDate') || startDate;
       const page = Number(url.searchParams.get('page') || 1);
       const pageSize = Number(url.searchParams.get('pageSize') || 50);
-      const entry = { ...dailyEntryFixture, recordedDate: startDate };
+      const isPrintRequest = pageSize === 100;
+      const total = isPrintRequest ? 101 : 1;
+      const allEntries = isPrintRequest
+        ? Array.from({ length: total }, (_, index) => ({
+            ...dailyEntryFixture,
+            id: 'ledger-print-' + (index + 1),
+            description: 'Ledger print fixture ' + (index + 1),
+            recordedDate: startDate,
+          }))
+        : [{ ...dailyEntryFixture, recordedDate: startDate }];
+      const entries = allEntries.slice((page - 1) * pageSize, page * pageSize);
       await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
-        startDate, endDate, entries: [entry],
-        pagination: { page, pageSize, total: 1, totalPages: 1 },
-        summary: { sales: 1250, expenses: 0, outstandingDebt: 0, debtPayments: 0, otherIncome: 0, salesLessExpenses: 1250, totalRecords: 1 },
+        startDate, endDate, entries,
+        pagination: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+        summary: { sales: 1250, expenses: 0, outstandingDebt: 0, debtPayments: 0, otherIncome: 0, salesLessExpenses: 1250, totalRecords: total },
         dailyTrend: [{ date: startDate, sales: 1250, expenses: 0 }], expensesByCategory: [],
       }) });
       return;
@@ -940,7 +950,9 @@ try {
     if (routePath === '/daily-ledger') {
       const ledgerPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print / PDF' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, ledgerPrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, ledgerPrintBefore, { timeout: 10_000 });
+      const printedLedgerRows = await pinPage.locator('#daily-ledger-print tbody tr').count();
+      assert.equal(printedLedgerRows, 101, 'Daily ledger print should include all records across pages in the selected date range');
     }
 
     if (routePath === '/receipt-branding') {
