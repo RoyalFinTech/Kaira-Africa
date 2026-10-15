@@ -2,6 +2,12 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
+function emitKairaFeedback(detail: { variant: "success" | "error" | "info"; title: string; message: string }) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("kaira:feedback", { detail }));
+  }
+}
+
 function readableApiMessage(value: unknown, depth = 0): string | null {
   if (depth > 3 || value == null) return null;
   if (typeof value === "string") {
@@ -26,14 +32,21 @@ function readableApiMessage(value: unknown, depth = 0): string | null {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const response = await fetch(API_BASE_URL + path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(API_BASE_URL + path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: "Bearer " + token } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    const message = "Kaira Africa could not reach the server. Check your connection and try again.";
+    emitKairaFeedback({ variant: "error", title: "Connection problem", message });
+    throw new Error(message);
+  }
   const text = await response.text();
   let data: unknown = null;
   if (text) {
@@ -45,7 +58,38 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
   }
   if (!response.ok) {
-    throw new Error(readableApiMessage(data) || "Request failed with status " + response.status + ". Please try again.");
+    const message = readableApiMessage(data) || "Request failed with status " + response.status + ". Please try again.";
+    emitKairaFeedback({ variant: "error", title: "Kaira Africa couldn't complete that request", message });
+    throw new Error(message);
+  }
+
+  const method = (options.method || "GET").toUpperCase();
+  if (path.endsWith("/receipt-settings") && method === "PATCH") {
+    emitKairaFeedback({
+      variant: "success",
+      title: "Receipt branding saved",
+      message: "Your business details and print preferences were saved successfully.",
+    });
+  } else if (path.endsWith("/receipt-logo") && method === "POST") {
+    const branding = data as Partial<ReceiptBrandingSettings> | null;
+    if (!branding?.hasLogo || !branding.logoUrl) {
+      const message = branding?.hasLogo
+        ? "The logo may be stored, but its secure preview link could not be verified. Refresh the page and retry."
+        : "The server did not confirm that your logo was saved. Please try uploading it again.";
+      emitKairaFeedback({ variant: "error", title: "Logo upload could not be verified", message });
+      throw new Error(message);
+    }
+    emitKairaFeedback({
+      variant: "success",
+      title: "Logo uploaded successfully",
+      message: "Kaira Africa verified the saved logo and secure preview link. It is ready for printouts.",
+    });
+  } else if (path.endsWith("/receipt-logo") && method === "DELETE") {
+    emitKairaFeedback({
+      variant: "success",
+      title: "Logo removed",
+      message: "The custom logo was removed from your receipt branding.",
+    });
   }
   return data as T;
 }
