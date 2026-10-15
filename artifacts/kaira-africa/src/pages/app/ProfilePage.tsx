@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, Building2, Calendar, CheckCircle2, Edit2, Shield, LogOut, CircleHelp, Trash2 } from 'lucide-react';
+import { User, Mail, Phone, Building2, Calendar, CheckCircle2, Edit2, Shield, LogOut, CircleHelp, Trash2, Camera, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const avatarCameraInputRef = useRef<HTMLInputElement>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -122,6 +123,17 @@ export default function ProfilePage() {
     },
   });
 
+  const handleAvatarFile = async (file: File | undefined) => {
+    if (!file) return;
+    setAvatarError(null); setAvatarMessage(null);
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setAvatarError('Choose a JPEG, PNG or WebP image.'); return; }
+    if (file.size > 2 * 1024 * 1024) { setAvatarError('Choose an image that is 2 MB or smaller.'); return; }
+    setAvatarBusy(true);
+    try { await uploadProfileAvatar(await readProfileImage(file)); await refetchUser(); setAvatarMessage('Profile photo updated.'); }
+    catch (error) { setAvatarError(error instanceof Error ? error.message : 'Profile photo upload failed.'); }
+    finally { setAvatarBusy(false); }
+  };
+
   const onSave = (data: ProfileForm) => {
     setFormError(null);
     updateProfile.mutate({ data });
@@ -196,20 +208,14 @@ export default function ProfilePage() {
                     </span>
                   </AvatarFallback>
                 </Avatar>
-                <button type="button" aria-label="Upload profile photo" title="Upload or take a profile photo" disabled={avatarBusy} onClick={() => avatarInputRef.current?.click()} className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50">
-                  <Edit2 className="h-3.5 w-3.5" />
+                <button type="button" aria-label="Upload profile photo" title="Upload from device" disabled={avatarBusy} onClick={() => avatarInputRef.current?.click()} className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50">
+                  <Upload className="h-3.5 w-3.5" />
                 </button>
-                <input ref={avatarInputRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp" capture="user" onChange={async (event) => {
-                  const file = event.target.files?.[0]; event.target.value = '';
-                  if (!file) return;
-                  setAvatarError(null); setAvatarMessage(null);
-                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setAvatarError('Choose a JPEG, PNG or WebP image.'); return; }
-                  if (file.size > 2 * 1024 * 1024) { setAvatarError('Choose an image that is 2 MB or smaller.'); return; }
-                  setAvatarBusy(true);
-                  try { await uploadProfileAvatar(await readProfileImage(file)); await refetchUser(); setAvatarMessage('Profile photo updated.'); }
-                  catch (error) { setAvatarError(error instanceof Error ? error.message : 'Profile photo upload failed.'); }
-                  finally { setAvatarBusy(false); }
-                }} />
+                <button type="button" aria-label="Take profile photo" title="Take a photo with your camera" disabled={avatarBusy} onClick={() => avatarCameraInputRef.current?.click()} className="absolute bottom-0 left-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-secondary text-secondary-foreground shadow-md transition-colors hover:bg-secondary/80 disabled:opacity-50">
+                  <Camera className="h-3.5 w-3.5" />
+                </button>
+                <input ref={avatarInputRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleAvatarFile(file); }} />
+                <input ref={avatarCameraInputRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void handleAvatarFile(file); }} />
               </div>
               <p className="mb-2 text-xs text-muted-foreground">JPEG, PNG or WebP · recommended 256×256 px or larger · maximum 2 MB</p>
               {avatarBusy && <p role="status" className="mb-2 text-xs text-muted-foreground">Uploading photo securely…</p>}
