@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   index,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -11,21 +12,42 @@ import { customerStatusEnum } from "./enums";
 import { businesses } from "./businesses";
 
 /**
- * Note: `totalSpend`, `transactionCount`, and `lastTransactionAt` from
- * the OpenAPI `Customer` schema are intentionally NOT stored here —
- * they're derived by aggregating `transactions` at query time in
- * Phase 3, so they can never drift out of sync with the actual
- * transaction ledger. See the route layer for the aggregation query.
+ * Extended CRM details intentionally live in profileData rather than a long
+ * list of mandatory columns. Different industries collect different fields;
+ * personal and sensitive details remain optional and should only be collected
+ * when there is a clear business/legal need and the customer understands why.
  */
+export type CustomerProfileData = {
+  dateOfBirth?: string;
+  preferredName?: string;
+  gender?: string;
+  maritalStatus?: string;
+  occupation?: string;
+  customerType?: string;
+  preferredContactMethod?: string;
+  preferredLanguage?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
+  region?: string;
+  source?: string;
+  tags?: string[];
+  interests?: string;
+  preferences?: string;
+  consentNotes?: string;
+  internalNotes?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  organizationSpecific?: Record<string, string>;
+};
+
 export const customers = pgTable(
   "customers",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-
     businessId: uuid("business_id")
       .notNull()
       .references(() => businesses.id, { onDelete: "cascade" }),
-
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     email: text("email"),
@@ -34,15 +56,10 @@ export const customers = pgTable(
     country: text("country"),
     city: text("city"),
     avatarUrl: text("avatar_url"),
-
+    profileData: jsonb("profile_data").$type<CustomerProfileData>().notNull().default({}),
     status: customerStatusEnum("status").notNull().default("active"),
-
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("customers_business_idx").on(table.businessId),
