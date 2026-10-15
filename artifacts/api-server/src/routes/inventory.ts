@@ -148,7 +148,7 @@ router.post("/inventory/products/:id/adjust", requireUser, requireRole("owner", 
     description: displayName(req.user!) + " adjusted " + product.name + " stock by " + (input.quantityDelta > 0 ? "+" : "") + input.quantityDelta,
     status: "success",
   });
-  res.json(serialize(updated));
+  res.json(await serializeWithImage(updated));
 });
 
 export default router;
