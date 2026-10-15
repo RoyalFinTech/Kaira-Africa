@@ -377,7 +377,7 @@ try {
     }
   });
   await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await pinPage.getByRole('heading', { name: 'Welcome back' }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
   await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
   const pinHero = pinPage.locator('img[src="/kaira-pin-login-hero.webp"]');
   await pinHero.waitFor({ state: 'visible', timeout: 10_000 });
@@ -512,7 +512,7 @@ try {
   // Check the dedicated PIN screen and authenticated dashboard on a 390px phone.
   await pinPage.setViewportSize({ width: 390, height: 844 });
   await pinPage.goto(baseUrl + '/login/pin?mobile-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await pinPage.getByRole('heading', { name: 'Welcome back' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
   const pinMobileLayout = await pinPage.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
     documentWidth: document.documentElement.scrollWidth,
