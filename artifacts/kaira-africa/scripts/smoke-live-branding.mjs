@@ -1029,12 +1029,15 @@ try {
       assert.ok(samplePrinted.logoSrc.startsWith('data:image/png;base64,'), 'Printed sample reflects the uploaded logo');
       assert.ok(samplePrinted.logoNaturalWidth > 0, 'Printed sample waits for the uploaded logo to decode');
       await assertPrintDocumentReady(pinPage, 'receipt-preview-print');
+      const visibleReceiptPreview = pinPage.locator('div.max-w-md').filter({ hasText: 'BUSINESS RECEIPT' }).first();
+      assert.ok((await visibleReceiptPreview.innerText()).includes('SAMPLE-0001'), 'On-screen sample shows the reference while the reference option is enabled');
       assert.ok(samplePrinted.reference.includes('SAMPLE-0001'), 'Printed sample includes its reference number');
       assert.ok(samplePrinted.footer.includes('Thank you for your business.'), 'Printed sample includes its configured footer');
       assert.ok(samplePrinted.footer.includes('Prepared by Kaira Africa'), 'Printed sample carries Kaira Africa attribution');
 
       await pinPage.getByRole('checkbox', { name: /Show receipt or document reference/ }).uncheck();
       await pinPage.getByRole('checkbox', { name: /Show linked customer details on transaction receipts/ }).uncheck();
+      assert.ok(!(await visibleReceiptPreview.innerText()).includes('SAMPLE-0001'), 'On-screen sample immediately hides the reference when the option is disabled');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
       await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
       const customizedPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
