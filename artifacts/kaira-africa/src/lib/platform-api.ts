@@ -1,34 +1,8 @@
 import { getToken } from "./api-client";
+import { normalizeKairaMessage, reportKairaFeedback } from "./kaira-feedback";
+export { reportKairaFeedback };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
-
-export function reportKairaFeedback(detail: { variant: "success" | "error" | "info"; title: string; message: string }) {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("kaira:feedback", { detail }));
-  }
-}
-
-function readableApiMessage(value: unknown, depth = 0): string | null {
-  if (depth > 3 || value == null) return null;
-  if (typeof value === "string") {
-    const message = value.trim();
-    if (!message || message === "[object Object]" || message.startsWith("<!DOCTYPE") || message.startsWith("<html")) return null;
-    return message.slice(0, 500);
-  }
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) {
-    const messages = value.map((item) => readableApiMessage(item, depth + 1)).filter(Boolean);
-    return messages.length ? messages.join(" · ") : null;
-  }
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    for (const key of ["message", "error_description", "detail", "details", "error", "title"]) {
-      const message = readableApiMessage(record[key], depth + 1);
-      if (message) return message;
-    }
-  }
-  return null;
-}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
@@ -53,12 +27,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     try {
       data = JSON.parse(text);
     } catch {
-      if (response.ok) throw new Error("The server returned an unreadable response. Please try again.");
+      if (response.ok) {
+        const message = "The server returned an unreadable response. Please try again.";
+        reportKairaFeedback({ variant: "error", title: "Unreadable server response", message });
+        throw new Error(message);
+      }
       data = { message: text };
     }
   }
   if (!response.ok) {
-    const message = readableApiMessage(data) || "Request failed with status " + response.status + ". Please try again.";
+    const message = normalizeKairaMessage(data, "Request failed with status " + response.status + ". Please try again.");
     reportKairaFeedback({ variant: "error", title: "Kaira Africa couldn't complete that request", message });
     throw new Error(message);
   }
