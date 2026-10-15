@@ -994,7 +994,7 @@ try {
       assert.ok(transactionPrinted.logoSrc.startsWith('data:image/png;base64,'), 'Transaction print must include the saved logo');
       assert.ok(transactionPrinted.logoNaturalWidth > 0, 'Transaction print waits for the logo to decode before opening the print dialog');
       assert.ok(transactionPrinted.reference.includes('TXN-SMOKE-001'), 'Transaction receipt includes its transaction reference');
-      assert.ok(transactionPrinted.footer.includes('Prepared with Kaira Africa'), 'Transaction print carries the Kaira Africa footer');
+      assert.ok(transactionPrinted.footer.includes('Prepared by Kaira Africa'), 'Transaction print carries the Kaira Africa footer');
       const transactionPrintCss = await assertPrintDocumentReady(pinPage, 'transaction-receipt-print');
       assert.equal(transactionPrintCss.companyName, receiptBrandingFixture.companyName, 'Transaction receipt displays the configured brand name in print CSS');
       assert.ok(premiumTransactionFixture.reference === 'TXN-SMOKE-001', 'Transaction receipt uses the intercepted transaction fixture');
@@ -1031,6 +1031,7 @@ try {
       await assertPrintDocumentReady(pinPage, 'receipt-preview-print');
       assert.ok(samplePrinted.reference.includes('SAMPLE-0001'), 'Printed sample includes its reference number');
       assert.ok(samplePrinted.footer.includes('Thank you for your business.'), 'Printed sample includes its configured footer');
+      assert.ok(samplePrinted.footer.includes('Prepared by Kaira Africa'), 'Printed sample carries Kaira Africa attribution');
 
       await pinPage.getByRole('checkbox', { name: /Show receipt or document reference/ }).uncheck();
       await pinPage.getByRole('checkbox', { name: /Show linked customer details on transaction receipts/ }).uncheck();
