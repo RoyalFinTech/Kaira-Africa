@@ -152,7 +152,7 @@ export default function ReceiptBrandingPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">Free during early access</Badge>
-            <Button type="button" variant="outline" disabled={saving || logoBusy || removingLogo} onClick={() => printKairaDocument("receipt-preview-print")}><Printer className="mr-2 h-4 w-4"/>Print sample / Save PDF</Button>
+            <Button type="button" variant="outline" disabled={isLoading || isError || saving || logoBusy || removingLogo} onClick={() => printKairaDocument("receipt-preview-print")}><Printer className="mr-2 h-4 w-4"/>Print sample / Save PDF</Button>
           </div>
         </div>
 
