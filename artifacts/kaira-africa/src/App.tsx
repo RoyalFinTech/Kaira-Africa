@@ -7,6 +7,7 @@ import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wo
 import { AppShell } from '@/components/layout/AppShell';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ApiError } from '@workspace/api-client-react';
+import { getApiErrorMessage } from '@/lib/platform-api';
 import { initApiClient, getToken, clearToken, isUserToken, isAdminToken } from '@/lib/api-client';
 
 initApiClient();
@@ -126,8 +127,11 @@ function handleQueryError(error: unknown) {
   // (see mutationCache below): most already show a contextual inline
   // error near the form that triggered them, so they only get the
   // 401 handling here to avoid redundant/duplicate toasts.
-  const message = error instanceof ApiError ? error.message : 'Please check your connection and try again.';
-  toast({ title: 'Something went wrong', description: message, variant: 'destructive' });
+  const message = getApiErrorMessage(
+    error,
+    error instanceof ApiError ? error.message : 'Please check your connection and try again.',
+  );
+  toast({ title: "Kaira Africa couldn't complete that request", description: message, variant: 'destructive' });
 }
 
 const queryClient = new QueryClient({
