@@ -193,7 +193,7 @@ export default function ReceiptBrandingPage() {
                     <div className="space-y-3 rounded-xl bg-muted/40 p-4">
                       <p className="text-sm font-semibold">Document options</p>
                       <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={form.showReceiptNumber} onChange={(e) => updateField("showReceiptNumber", e.target.checked)}/><span><span className="font-medium">Show receipt or document reference</span><span className="block text-xs leading-5 text-muted-foreground">Keeps transaction references visible for matching and filing.</span></span></label>
-                      <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={form.showCustomerDetails} onChange={(e) => updateField("showCustomerDetails", e.target.checked)}/><span><span className="font-medium">Show customer details</span><span className="block text-xs leading-5 text-muted-foreground">Used on customer receipts and profile printouts where applicable.</span></span></label>
+                      <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={form.showCustomerDetails} onChange={(e) => updateField("showCustomerDetails", e.target.checked)}/><span><span className="font-medium">Show linked customer details on transaction receipts</span><span className="block text-xs leading-5 text-muted-foreground">Controls whether customer name and payment method appear on transaction receipt printouts.</span></span></label>
                     </div>
                   </fieldset>
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
@@ -225,7 +225,7 @@ export default function ReceiptBrandingPage() {
           </div>
         </div>
         <PrintableBusinessDocument id="receipt-preview-print" title="Sample transaction receipt" documentNumber="SAMPLE-0001" issuedAt={new Date().toLocaleString()} status="COMPLETED">
-          <div className="grid grid-cols-2 gap-4"><div><p><strong>Customer</strong></p><p>Sample customer</p></div><div><p><strong>Payment method</strong></p><p>Bank transfer</p></div></div>
+          {form.showCustomerDetails && <div className="grid grid-cols-2 gap-4"><div><p><strong>Customer</strong></p><p>Sample customer</p></div><div><p><strong>Payment method</strong></p><p>Bank transfer</p></div></div>}
           <table className="mt-5"><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody><tr><td>Consultation / service</td><td>1</td><td>GMD 1,250.00</td></tr></tbody></table>
           <div className="kaira-print-total flex items-center justify-between"><strong>Total paid</strong><strong>GMD 1,250.00</strong></div>
         </PrintableBusinessDocument>
