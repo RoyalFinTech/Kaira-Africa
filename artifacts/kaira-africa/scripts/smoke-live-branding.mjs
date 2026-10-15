@@ -934,7 +934,7 @@ try {
       await pinPage.getByRole('button', { name: 'Print receipt / record' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, transactionPrintBefore, { timeout: 5_000 });
       assert.ok(premiumTransactionFixture.reference === 'TXN-SMOKE-001', 'Transaction receipt uses the intercepted transaction fixture');
-      await pinPage.getByRole('button', { name: 'Close' }).click();
+      await pinPage.getByRole('button', { name: 'Close' }).first().click();
     }
 
     if (routePath === '/daily-ledger') {
