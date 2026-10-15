@@ -268,6 +268,13 @@ try {
   const inventoryImageRequests = [];
   const inventoryAdjustmentRequests = [];
   const inventoryFixtureProducts = [];
+  const crmCustomerRequests = [];
+  const crmPhotoRequests = [];
+  const crmPhotoDeleteRequests = [];
+  const crmInteractionRequests = [];
+  const crmFixtureCustomers = [];
+  const profileAvatarRequests = [];
+  let profileAvatarDeleteCount = 0;
   let pinEnabled = false;
   const nowIso = new Date().toISOString();
   const visualBusiness = {
@@ -364,6 +371,83 @@ try {
 
     if (pathname.endsWith('/api/auth/logout') && method === 'POST') {
       await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/profile/avatar') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
+      profileAvatarRequests.push({ dataUrlPrefix: dataUrl.slice(0, 30), bytes: dataUrl.includes(',') ? Buffer.from(dataUrl.split(',')[1], 'base64').byteLength : 0 });
+      visualUser.avatarUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(visualUser) });
+      return;
+    }
+    if (pathname.endsWith('/api/auth/profile/avatar') && method === 'DELETE') {
+      profileAvatarDeleteCount++;
+      visualUser.avatarUrl = null;
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(visualUser) });
+      return;
+    }
+
+    if (pathname.endsWith('/api/crm/overview') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({
+        customers: crmFixtureCustomers.map((customer) => ({ ...customer, totalSpend: 0, transactionCount: 0 })),
+        interactions: crmInteractionRequests.map((item, index) => ({ id: 'crm-interaction-' + index, customerId: item.customerId, customerName: (crmFixtureCustomers.find((customer) => customer.id === item.customerId)?.firstName || 'Test') + ' ' + (crmFixtureCustomers.find((customer) => customer.id === item.customerId)?.lastName || 'Customer'), userName: 'Smoke Test', type: item.type, title: item.title, note: item.note, nextActionAt: item.nextActionAt || null, completedAt: null, createdAt: nowIso })),
+        metrics: { totalCustomers: crmFixtureCustomers.length, activeCustomers: crmFixtureCustomers.filter((customer) => customer.status === 'active').length, openFollowUps: crmInteractionRequests.filter((item) => item.nextActionAt).length },
+      }) });
+      return;
+    }
+    if (pathname.endsWith('/api/crm/customers') && method === 'GET') {
+      const searchTerm = (url.searchParams.get('search') || '').toLowerCase();
+      const matches = crmFixtureCustomers.filter((customer) => JSON.stringify(customer).toLowerCase().includes(searchTerm));
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ customers: matches, total: matches.length }) });
+      return;
+    }
+    if (pathname.endsWith('/api/crm/customers') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      crmCustomerRequests.push({ method: 'POST', input });
+      const created = { id: 'crm-customer-smoke', ...input, email: input.email || null, phone: input.phone || null, company: input.company || null, country: input.country || null, city: input.city || null, avatarUrl: null, profileData: input.profileData || {}, status: input.status || 'active', totalSpend: 0, transactionCount: 0, createdAt: nowIso, updatedAt: nowIso };
+      crmFixtureCustomers.push(created);
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(created) });
+      return;
+    }
+    const crmCustomerRoute = pathname.match(/\/api\/crm\/customers\/([^/]+)$/);
+    if (crmCustomerRoute && method === 'PUT') {
+      const input = JSON.parse(request.postData() || '{}');
+      crmCustomerRequests.push({ method: 'PUT', id: crmCustomerRoute[1], input });
+      const customer = crmFixtureCustomers.find((item) => item.id === crmCustomerRoute[1]);
+      if (!customer) { await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'CRM fixture customer not found' }) }); return; }
+      Object.assign(customer, input, { profileData: { ...(customer.profileData || {}), ...(input.profileData || {}) }, updatedAt: new Date().toISOString() });
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(customer) });
+      return;
+    }
+    const crmPhotoRoute = pathname.match(/\/api\/crm\/customers\/([^/]+)\/photo$/);
+    if (crmPhotoRoute && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
+      crmPhotoRequests.push({ id: crmPhotoRoute[1], isImageDataUrl: /^data:image\/(jpeg|png|webp);base64,/.test(dataUrl), bytes: dataUrl.includes(',') ? Buffer.from(dataUrl.split(',')[1], 'base64').byteLength : 0 });
+      const customer = crmFixtureCustomers.find((item) => item.id === crmPhotoRoute[1]);
+      if (!customer) { await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'CRM fixture customer not found' }) }); return; }
+      customer.avatarUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(customer) });
+      return;
+    }
+    if (crmPhotoRoute && method === 'DELETE') {
+      crmPhotoDeleteRequests.push(crmPhotoRoute[1]);
+      const customer = crmFixtureCustomers.find((item) => item.id === crmPhotoRoute[1]);
+      if (customer) customer.avatarUrl = null;
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(customer || {}) });
+      return;
+    }
+    if (pathname.endsWith('/api/crm/interactions') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      crmInteractionRequests.push(input);
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify({ id: 'crm-interaction-' + crmInteractionRequests.length, ...input, customerName: 'Test Customer', userName: 'Smoke Test', nextActionAt: input.nextActionAt || null, completedAt: null, createdAt: nowIso }) });
+      return;
+    }
+    const crmCompleteRoute = pathname.match(/\/api\/crm\/interactions\/([^/]+)\/complete$/);
+    if (crmCompleteRoute && method === 'PATCH') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ id: crmCompleteRoute[1], completedAt: nowIso }) });
       return;
     }
 
@@ -570,6 +654,72 @@ try {
     await pinPage.waitForURL((url) => url.pathname === routePath, { timeout: 10_000 });
     const mainText = (await pinPage.locator('main').innerText().catch(() => '')).trim();
     assert.ok(mainText.length > 20, 'Navigation to ' + label + ' must render a non-empty page');
+
+    if (routePath === '/crm') {
+      await pinPage.getByRole('button', { name: 'Add customer' }).click();
+      await pinPage.getByRole('button', { name: 'Upload from device' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Take photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByLabel('First name *').fill('Aminata');
+      await pinPage.getByLabel('Last name *').fill('SmokeCustomer');
+      await pinPage.getByLabel('Date of birth').fill('1990-05-12');
+      await pinPage.getByLabel('Marital status (optional)').selectOption({ label: 'Married' });
+      const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
+      await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'customer-photo.png', mimeType: 'image/png', buffer: onePixelPng });
+      await pinPage.getByRole('button', { name: 'Save customer' }).click();
+      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(crmCustomerRequests.filter((item) => item.method === 'POST').length, 1, 'CRM add customer should make one intercepted create request');
+      assert.equal(crmCustomerRequests[0].input.profileData.dateOfBirth, '1990-05-12', 'CRM should persist optional date of birth');
+      assert.equal(crmCustomerRequests[0].input.profileData.maritalStatus, 'Married', 'CRM should persist optional marital status');
+      assert.equal(crmPhotoRequests.length, 1, 'CRM should upload an optional customer photo');
+      assert.equal(crmPhotoRequests[0].isImageDataUrl, true, 'CRM customer photo should be submitted as an image data URL');
+
+      await pinPage.getByPlaceholder('Search any saved customer detail…').fill('1990-05-12');
+      await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Edit', exact: true }).click();
+      await pinPage.getByLabel('Marital status (optional)').selectOption({ label: 'Divorced' });
+      await pinPage.getByRole('button', { name: 'Save customer' }).click();
+      await pinPage.getByText('Divorced', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(crmCustomerRequests.filter((item) => item.method === 'PUT').length, 1, 'CRM edit should make one intercepted update request');
+      assert.equal(crmCustomerRequests.find((item) => item.method === 'PUT').input.profileData.maritalStatus, 'Divorced', 'CRM should persist edited optional details');
+
+      await pinPage.getByRole('button', { name: 'Remove photo' }).click();
+      await pinPage.getByRole('button', { name: 'Remove photo' }).waitFor({ state: 'detached', timeout: 10_000 });
+      assert.equal(crmPhotoDeleteRequests.length, 1, 'CRM photo removal should call the delete endpoint');
+      await pinPage.getByLabel('Customer').selectOption('crm-customer-smoke');
+      await pinPage.getByPlaceholder('Activity title (e.g. Delivery feedback)').fill('Smoke test feedback');
+      await pinPage.getByPlaceholder('What happened? What did the customer say? What should happen next?').fill('Customer confirmed the service was helpful.');
+      await pinPage.getByRole('button', { name: 'Save activity' }).click();
+      assert.equal(crmInteractionRequests.length, 1, 'CRM activity should be persisted through the activity endpoint');
+      assert.equal(crmInteractionRequests[0].title, 'Smoke test feedback', 'CRM activity should include its title');
+      const [crmDownload] = await Promise.all([
+        pinPage.waitForEvent('download'),
+        pinPage.getByRole('button', { name: 'Export CSV' }).click(),
+      ]);
+      assert.equal(crmDownload.suggestedFilename(), 'kaira-crm-customers.csv', 'CRM should export customer records as CSV');
+      console.log('CRM OPTIONAL PROFILE, SEARCH, EDIT, PHOTO, ACTIVITY AND CSV FLOWS VERIFIED:', JSON.stringify({
+        creates: crmCustomerRequests.filter((item) => item.method === 'POST').length,
+        updates: crmCustomerRequests.filter((item) => item.method === 'PUT').length,
+        photoUploads: crmPhotoRequests.length,
+        photoRemovals: crmPhotoDeleteRequests.length,
+        activities: crmInteractionRequests.length,
+        csv: crmDownload.suggestedFilename(),
+      }));
+    }
+
+    if (routePath === '/profile') {
+      await pinPage.getByRole('button', { name: 'Upload profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Take profile photo' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Upload profile photo' }).click();
+      const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
+      await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'profile-avatar.png', mimeType: 'image/png', buffer: onePixelPng });
+      await pinPage.getByText('Profile photo updated.').waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(profileAvatarRequests.length, 1, 'Profile avatar upload should call the authenticated avatar endpoint');
+      assert.ok(profileAvatarRequests[0].bytes > 0, 'Profile avatar should submit non-empty image data');
+      await pinPage.getByRole('button', { name: 'Remove photo' }).click();
+      await pinPage.getByText('Photo removed. Your default avatar is now shown.').waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(profileAvatarDeleteCount, 1, 'Profile avatar removal should call the authenticated delete endpoint');
+      console.log('PROFILE AVATAR UPLOAD AND REMOVAL VERIFIED:', JSON.stringify({ uploads: profileAvatarRequests.length, removals: profileAvatarDeleteCount }));
+    }
 
     if (routePath === '/inventory') {
       await pinPage.getByRole('heading', { name: 'Inventory & stock book' }).waitFor({ state: 'visible', timeout: 10_000 });
