@@ -65,6 +65,46 @@ type KairaFeedbackDetail = {
   message: string;
 };
 
+/** Extract a readable message from API/client errors without exposing [object Object] or raw JSON. */
+function readableFeedbackMessage(value: unknown, depth = 0): string | null {
+  if (depth > 5 || value == null) return null;
+
+  if (typeof value === 'string') {
+    const candidate = value.trim();
+    if (!candidate || /^\[object object\]$/i.test(candidate) ||
+        candidate.startsWith('<!DOCTYPE') || candidate.startsWith('<html')) return null;
+
+    if (candidate.startsWith('{') || candidate.startsWith('[')) {
+      try {
+        const parsed: unknown = JSON.parse(candidate);
+        const parsedMessage = readableFeedbackMessage(parsed, depth + 1);
+        if (parsedMessage) return parsedMessage;
+      } catch {
+        // Preserve a normal, non-JSON sentence; discard object-like serialization below.
+      }
+      if (/^[{[]/.test(candidate)) return null;
+    }
+    return candidate.slice(0, 500);
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    const messages = value
+      .map((item) => readableFeedbackMessage(item, depth + 1))
+      .filter((item): item is string => Boolean(item));
+    return messages.length ? messages.slice(0, 5).join(' · ').slice(0, 500) : null;
+  }
+
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    for (const key of ['message', 'error_description', 'detail', 'details', 'error', 'title', 'issues', 'errors', 'body', 'data', 'cause', 'response']) {
+      const message = readableFeedbackMessage(record[key], depth + 1);
+      if (message && !/^error$/i.test(message)) return message;
+    }
+  }
+  return null;
+}
+
 function KairaFeedbackHost() {
   const [feedback, setFeedback] = useState<KairaFeedbackDetail | null>(null);
 
@@ -74,7 +114,11 @@ function KairaFeedbackHost() {
       const detail = (event as CustomEvent<KairaFeedbackDetail>).detail;
       if (!detail || !['success', 'error', 'info'].includes(detail.variant) ||
           typeof detail.title !== 'string' || typeof detail.message !== 'string') return;
-      setFeedback(detail);
+      const message = readableFeedbackMessage(detail.message) ||
+        (detail.variant === 'error'
+          ? 'Kaira Africa received an unreadable error response. Please try again.'
+          : 'Kaira Africa completed the action, but there was no readable response detail.');
+      setFeedback({ ...detail, message });
       if (dismissTimer) clearTimeout(dismissTimer);
       // Feedback cards should never remain over controls and block the app.
       // Users can dismiss earlier; longer errors remain visible briefly.
@@ -160,9 +204,8 @@ function handleUnauthorized(error: unknown): boolean {
 }
 
 function showKairaApiError(error: unknown, title = "Kaira Africa couldn't complete that request") {
-  const message = error instanceof Error && error.message.trim()
-    ? error.message
-    : 'Please check your connection and try again.';
+  const message = readableFeedbackMessage(error) ||
+    'Kaira Africa could not complete this request. Please check your connection and try again.';
   window.dispatchEvent(new CustomEvent('kaira:feedback', {
     detail: { variant: 'error', title, message },
   }));
