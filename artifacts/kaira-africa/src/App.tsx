@@ -1,11 +1,11 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
-import { toast } from '@/hooks/use-toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
 import { AppShell } from '@/components/layout/AppShell';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { KairaFeedbackCard } from '@/components/common/KairaFeedbackCard';
 import { ApiError } from '@workspace/api-client-react';
 import { initApiClient, getToken, clearToken, isUserToken, isAdminToken } from '@/lib/api-client';
 
@@ -57,6 +57,40 @@ const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage')
 
 // 404
 const NotFoundPage       = lazy(() => import('@/pages/not-found'));
+
+
+type KairaFeedbackDetail = {
+  variant: 'success' | 'error' | 'info';
+  title: string;
+  message: string;
+};
+
+function KairaFeedbackHost() {
+  const [feedback, setFeedback] = useState<KairaFeedbackDetail | null>(null);
+
+  useEffect(() => {
+    const onFeedback = (event: Event) => {
+      const detail = (event as CustomEvent<KairaFeedbackDetail>).detail;
+      if (!detail || !['success', 'error', 'info'].includes(detail.variant) ||
+          typeof detail.title !== 'string' || typeof detail.message !== 'string') return;
+      setFeedback(detail);
+    };
+    window.addEventListener('kaira:feedback', onFeedback);
+    return () => window.removeEventListener('kaira:feedback', onFeedback);
+  }, []);
+
+  if (!feedback) return null;
+  return (
+    <div className="fixed right-4 top-4 z-[200] w-[min(92vw,30rem)]" data-testid="kaira-global-feedback">
+      <KairaFeedbackCard
+        variant={feedback.variant}
+        title={feedback.title}
+        message={feedback.message}
+        onDismiss={() => setFeedback(null)}
+      />
+    </div>
+  );
+}
 
 // ─── Auth helpers ────────────────────────────────────────────────────────────
 export function isAuthenticated(): boolean {
@@ -117,17 +151,18 @@ function handleUnauthorized(error: unknown): boolean {
   return false;
 }
 
+function showKairaApiError(error: unknown, title = "Kaira Africa couldn't complete that request") {
+  const message = error instanceof Error && error.message.trim()
+    ? error.message
+    : 'Please check your connection and try again.';
+  window.dispatchEvent(new CustomEvent('kaira:feedback', {
+    detail: { variant: 'error', title, message },
+  }));
+}
+
 function handleQueryError(error: unknown) {
   if (handleUnauthorized(error)) return;
-
-  // Queries (background data fetching) rarely have dedicated inline
-  // error UI in this app's page designs — a toast is the "no silent
-  // failures" mechanism for them. Mutations are handled separately
-  // (see mutationCache below): most already show a contextual inline
-  // error near the form that triggered them, so they only get the
-  // 401 handling here to avoid redundant/duplicate toasts.
-  const message = error instanceof ApiError ? error.message : 'Please check your connection and try again.';
-  toast({ title: 'Something went wrong', description: message, variant: 'destructive' });
+  showKairaApiError(error);
 }
 
 const queryClient = new QueryClient({
@@ -138,7 +173,11 @@ const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({ onError: handleQueryError }),
-  mutationCache: new MutationCache({ onError: handleUnauthorized }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (!handleUnauthorized(error)) showKairaApiError(error);
+    },
+  }),
 });
 
 const PageLoader = () => (
@@ -261,6 +300,7 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Router />
         </WouterRouter>
+        <KairaFeedbackHost />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
