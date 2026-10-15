@@ -926,7 +926,7 @@ try {
     if (routePath === '/transactions') {
       await pinPage.getByRole('button', { name: 'New transaction' }).click();
       await pinPage.getByLabel('Transaction currency').waitFor({ state: 'visible', timeout: 10_000 });
-      await pinPage.getByLabel('Transaction type').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Cancel' }).last().click();
       await pinPage.getByRole('button', { name: 'Details' }).first().click();
