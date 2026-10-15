@@ -185,9 +185,16 @@ export interface Transaction {
   customerName?: string | null;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  paymentMethod?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable Private attachments are exposed through short-lived signed URLs. */
+  attachmentUrl?: string | null;
   createdAt: string;
   /** @nullable */
   completedAt?: string | null;
+  updatedAt?: string;
 }
 
 export type ActivityLogStatus = typeof ActivityLogStatus[keyof typeof ActivityLogStatus];
@@ -340,6 +347,8 @@ export interface TransactionInput {
   type: TransactionInputType;
   customerId?: string;
   description?: string;
+  paymentMethod?: "manual_entry" | "cash" | "bank_transfer" | "mobile_money" | "card" | "paypal" | "cheque" | "other";
+  notes?: string;
 }
 
 export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
