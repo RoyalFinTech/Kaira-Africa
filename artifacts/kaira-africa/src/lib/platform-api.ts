@@ -223,3 +223,28 @@ export const uploadProfileAvatar = (dataUrl: string) =>
   request<{ avatarUrl: string | null }>("/api/auth/profile/avatar", { method: "POST", body: JSON.stringify({ dataUrl }) });
 export const removeProfileAvatar = () =>
   request<{ avatarUrl: string | null }>("/api/auth/profile/avatar", { method: "DELETE" });
+export type TransactionCurrency = "GMD" | "NGN" | "USD" | "EUR" | "GBP";
+export type TransactionPaymentMethod = "manual_entry" | "cash" | "bank_transfer" | "mobile_money" | "card" | "paypal" | "cheque" | "other";
+export type ManagedTransactionStatus = "completed" | "pending" | "failed" | "cancelled";
+export interface ManagedTransaction {
+  id: string; reference: string; amount: number; currency: TransactionCurrency;
+  type: "payment" | "refund" | "transfer" | "withdrawal" | "deposit";
+  status: ManagedTransactionStatus; customerId?: string | null; customerName?: string | null;
+  description?: string | null; paymentMethod?: TransactionPaymentMethod | null;
+  notes?: string | null; attachmentUrl?: string | null; createdAt: string;
+  completedAt?: string | null; updatedAt?: string;
+}
+export interface CreateManagedTransactionInput {
+  amount: number; currency: TransactionCurrency;
+  type: ManagedTransaction["type"]; customerId?: string; description?: string;
+  paymentMethod?: TransactionPaymentMethod; notes?: string;
+}
+export const createManagedTransaction = (input: CreateManagedTransactionInput) =>
+  request<ManagedTransaction>("/api/transactions", { method: "POST", body: JSON.stringify(input) });
+export const updateManagedTransaction = (id: string, input: {
+  status?: ManagedTransactionStatus; description?: string | null; paymentMethod?: TransactionPaymentMethod | null; notes?: string | null;
+}) => request<ManagedTransaction>("/api/transactions/" + encodeURIComponent(id), { method: "PATCH", body: JSON.stringify(input) });
+export const uploadManagedTransactionAttachment = (id: string, dataUrl: string) =>
+  request<ManagedTransaction>("/api/transactions/" + encodeURIComponent(id) + "/attachment", { method: "POST", body: JSON.stringify({ dataUrl }) });
+export const removeManagedTransactionAttachment = (id: string) =>
+  request<ManagedTransaction>("/api/transactions/" + encodeURIComponent(id) + "/attachment", { method: "DELETE" });
