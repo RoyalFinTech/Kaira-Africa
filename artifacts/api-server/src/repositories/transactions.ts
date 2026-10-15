@@ -5,8 +5,6 @@ import {
   transactions,
   customers,
   type Transaction,
-
-
 } from "@workspace/db";
 
 export interface ListTransactionsFilters {
