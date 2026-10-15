@@ -342,6 +342,7 @@ try {
     showCustomerDetails: true,
     logoUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
     hasLogo: true,
+    logoStorageConfigured: true,
   };
   let failFirstReceiptLogoUpload = true;
   const premiumTransactionFixture = {
