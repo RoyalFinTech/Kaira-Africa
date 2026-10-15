@@ -316,7 +316,7 @@ try {
     footerNote: "Thank you for your business.",
     showReceiptNumber: true,
     showCustomerDetails: true,
-    logoUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVQIHWP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+    logoUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
     hasLogo: true,
   };
   const premiumTransactionFixture = {
@@ -901,10 +901,18 @@ try {
       await pinPage.getByText('Aminata SmokeCustomer', { exact: true }).first().waitFor({ state: 'visible', timeout: 10_000 });
       const crmPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print / PDF' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, crmPrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, crmPrintBefore, { timeout: 10_000 });
+      const crmDirectoryPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.equal(crmDirectoryPrinted.id, 'crm-directory-print', 'CRM directory uses the shared branded print layout');
+      assert.ok(crmDirectoryPrinted.logoSrc.startsWith('data:image/png;base64,'), 'CRM directory print includes the saved logo');
+      assert.ok(crmDirectoryPrinted.logoNaturalWidth > 0, 'CRM directory print waits for the logo to decode');
       const customerPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print customer card' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customerPrintBefore, { timeout: 5_000 });
+      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customerPrintBefore, { timeout: 10_000 });
+      const crmCustomerPrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
+      assert.equal(crmCustomerPrinted.id, 'crm-customer-print', 'CRM customer card uses the shared branded print layout');
+      assert.ok(crmCustomerPrinted.logoSrc.startsWith('data:image/png;base64,'), 'CRM customer card print includes the saved logo');
+      assert.ok(crmCustomerPrinted.logoNaturalWidth > 0, 'CRM customer card print waits for the logo to decode');
       assert.equal(crmCustomerRequests.filter((item) => item.method === 'POST').length, 1, 'CRM add customer should make one intercepted create request');
       assert.equal(crmCustomerRequests[0].input.profileData.dateOfBirth, '1990-05-12', 'CRM should persist optional date of birth');
       assert.equal(crmCustomerRequests[0].input.profileData.maritalStatus, 'Married', 'CRM should persist optional marital status');
