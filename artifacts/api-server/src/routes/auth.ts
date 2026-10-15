@@ -1,4 +1,6 @@
 import { Router, type IRouter, type Request } from "express";
+import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import {
   GetMeResponse,
@@ -58,7 +60,7 @@ import {
   consumePasswordReset,
 } from "../repositories/admin-password-resets";
 import { recordAuthEvent } from "../repositories/auth-audit";
-import { NotFoundError, BadRequestError, UnauthorizedError, ForbiddenError } from "../lib/http-errors";
+import { NotFoundError, BadRequestError, UnauthorizedError, ForbiddenError, HttpError } from "../lib/http-errors";
 import { normalizeGambianPhone } from "../lib/phone";
 import { generateOtp, hashOtp, OTP_TTL_MINUTES, OTP_RESEND_COOLDOWN_SECONDS } from "../lib/otp";
 import { generateSessionToken, hashToken, hashResetToken, tokenKind } from "../lib/tokens";
@@ -170,7 +172,7 @@ router.post("/auth/profile/avatar", requireUser, async (req, res) => {
   if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new BadRequestError("Profile photos must be 2 MB or smaller.");
   const base = env.SUPABASE_URL.replace(/\/$/, "");
   const ext = match[1] === "jpeg" ? "jpg" : match[1];
-  const path = `${req.user!.id}/${crypto.randomUUID()}.${ext}`;
+  const path = `${req.user!.id}/${randomUUID()}.${ext}`;
   const upload = await fetch(`${base}/storage/v1/object/profile-avatars/${path.split("/").map(encodeURIComponent).join("/")}`, {
     method: "POST",
     headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": `image/${match[1]}`, "x-upsert": "false" },
@@ -197,10 +199,10 @@ router.delete("/auth/profile/avatar", requireUser, async (req, res) => {
       });
     } catch { /* Removing the profile reference is more important than best-effort object cleanup. */ }
   }
-  const updated = await updateUserProfile(req.user!.id, { avatarUrl: undefined });
   // Explicitly clear the column rather than leaving a stale storage path.
   const [cleared] = await db.update(users).set({ avatarUrl: null, updatedAt: new Date() }).where(eq(users.id, req.user!.id)).returning();
-  res.json(UpdateProfileResponse.parse(await serializeUser(cleared ?? updated!)));
+  if (!cleared) throw new NotFoundError("User not found");
+  res.json(UpdateProfileResponse.parse(await serializeUser(cleared)));
 });
 
 // ─── PIN sign-in (business users) ────────────────────────────────────────────
@@ -377,7 +379,7 @@ router.post(
       VerifyOtpResponse.parse({
         token: rawToken,
         isNewUser: false,
-        user: serializeUser(refreshedUser),
+        user: await serializeUser(refreshedUser),
       }),
     );
   },
