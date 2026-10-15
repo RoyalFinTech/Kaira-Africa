@@ -206,6 +206,7 @@ export default function ReceiptBrandingPage() {
     showCustomerDetails: form.showCustomerDetails,
     logoUrl,
     hasLogo: Boolean(logoUrl),
+    logoStorageConfigured: branding?.logoStorageConfigured ?? false,
   };
 
   return (
