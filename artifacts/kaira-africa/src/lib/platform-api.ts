@@ -38,13 +38,15 @@ export const completeCrmInteraction = (id: string) =>
 
 export interface InventoryProduct {
   id: string; name: string; sku: string; category: string | null; unit: string; quantity: number;
-  reorderLevel: number; unitCost: number; salePrice: number; active: boolean;
+  reorderLevel: number; unitCost: number; salePrice: number; active: boolean; imageUrl?: string | null; currency: "GMD" | "NGN" | "USD";
 }
 export const getInventoryProducts = () => request<InventoryProduct[]>("/api/inventory/products");
 export const createInventoryProduct = (input: {
   name: string; sku: string; category?: string; unit?: string; quantity?: number;
-  reorderLevel?: number; unitCost?: number; salePrice?: number;
+  reorderLevel?: number; unitCost?: number; salePrice?: number; currency?: "GMD" | "NGN" | "USD";
 }) => request<InventoryProduct>("/api/inventory/products", { method: "POST", body: JSON.stringify(input) });
+export const uploadInventoryProductImage = (id: string, dataUrl: string) =>
+  request<InventoryProduct>("/api/inventory/products/" + encodeURIComponent(id) + "/image", { method: "POST", body: JSON.stringify({ dataUrl }) });
 export const adjustInventory = (id: string, input: { quantityDelta: number; type: string; reason?: string }) =>
   request<InventoryProduct>("/api/inventory/products/" + id + "/adjust", { method: "POST", body: JSON.stringify(input) });
 

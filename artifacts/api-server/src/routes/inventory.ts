@@ -5,7 +5,8 @@ import { db, inventoryProducts, inventoryMovements } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
-import { BadRequestError, NotFoundError } from "../lib/http-errors";
+import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
+import { env } from "../config/env";
 
 const router: IRouter = Router();
 
@@ -14,6 +15,7 @@ const productInput = z.object({
   category: z.string().trim().max(80).optional(), unit: z.string().trim().max(30).default("unit"),
   quantity: z.number().int().min(0).default(0), reorderLevel: z.number().int().min(0).default(5),
   unitCost: z.number().min(0).default(0), salePrice: z.number().min(0).default(0),
+  currency: z.enum(["GMD", "NGN", "USD"]).default("GMD"),
 });
 const adjustmentInput = z.object({
   quantityDelta: z.number().int().refine((v) => v !== 0, "Quantity change cannot be zero"),
@@ -25,10 +27,45 @@ function serialize(p: typeof inventoryProducts.$inferSelect) {
     createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() };
 }
 
+async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
+  const product = serialize(p);
+  if (!p.imageUrl || /^https?:\/\//i.test(p.imageUrl)) return product;
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ...product, imageUrl: null };
+
+  // Product photos are private. Store the object path in Postgres and return
+  // a short-lived signed URL to authenticated business users only.
+  const baseUrl = env.SUPABASE_URL.replace(/\/$/, "");
+  const objectPath = p.imageUrl.split("/").map(encodeURIComponent).join("/");
+  try {
+    const response = await fetch(`${baseUrl}/storage/v1/object/sign/inventory-images/${objectPath}`, {
+      method: "POST",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn: 86400 }),
+    });
+    if (!response.ok) return { ...product, imageUrl: null };
+    const result = await response.json() as { signedURL?: string; signedUrl?: string };
+    const signedUrl = result.signedURL ?? result.signedUrl;
+    if (!signedUrl) return { ...product, imageUrl: null };
+    const fullUrl = signedUrl.startsWith("http")
+      ? signedUrl
+      : signedUrl.startsWith("/storage/v1/")
+        ? baseUrl + signedUrl
+        : `${baseUrl}/storage/v1${signedUrl.startsWith("/") ? "" : "/"}${signedUrl}`;
+    return { ...product, imageUrl: fullUrl };
+  } catch {
+    // Keep product and stock information available even if image signing fails.
+    return { ...product, imageUrl: null };
+  }
+}
+
 router.get("/inventory/products", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const products = await db.select().from(inventoryProducts).where(eq(inventoryProducts.businessId, businessId)).orderBy(asc(inventoryProducts.name));
-  res.json(products.map(serialize));
+  res.json(await Promise.all(products.map(serializeWithImage)));
 });
 
 router.post("/inventory/products", requireUser, requireRole("owner", "admin", "manager"), async (req, res) => {
@@ -37,7 +74,7 @@ router.post("/inventory/products", requireUser, requireRole("owner", "admin", "m
     const [created] = await db.insert(inventoryProducts).values({
       businessId, name: input.name, sku: input.sku, category: input.category || null, unit: input.unit,
       quantity: input.quantity, reorderLevel: input.reorderLevel, unitCostMinor: Math.round(input.unitCost * 100),
-      salePriceMinor: Math.round(input.salePrice * 100),
+      salePriceMinor: Math.round(input.salePrice * 100), currency: input.currency,
     }).returning();
     if (input.quantity) await db.insert(inventoryMovements).values({
       businessId, productId: created.id, userId: req.user!.id, quantityDelta: input.quantity, type: "initial", reason: "Opening stock",
@@ -47,11 +84,48 @@ router.post("/inventory/products", requireUser, requireRole("owner", "admin", "m
       entityType: "inventory_product", entityId: created.id, entityName: created.name,
       description: displayName(req.user!) + " added inventory product " + created.name, status: "success",
     });
-    res.status(201).json(serialize(created));
+    res.status(201).json(await serializeWithImage(created));
   } catch (error) {
     if ((error as { code?: string }).code === "23505") throw new BadRequestError("That SKU already exists for this business");
     throw error;
   }
+});
+
+router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "admin", "manager"), async (req, res) => {
+  const businessId = requireBusiness(req);
+  const [product] = await db.select().from(inventoryProducts).where(and(
+    eq(inventoryProducts.id, req.params.id as string), eq(inventoryProducts.businessId, businessId)
+  )).limit(1);
+  if (!product) throw new NotFoundError("Inventory product not found");
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new HttpError(503, "service_unavailable", "Product image storage is not configured yet. You can still save the product without a photo.");
+  }
+  const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
+  const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
+  if (!match) throw new BadRequestError("Upload a JPEG product photo. Images are resized before upload.");
+  const bytes = Buffer.from(match[1], "base64");
+  if (!bytes.length || bytes.length > 204800) {
+    throw new BadRequestError("Product photos must be 200 KB or smaller.");
+  }
+  const objectPath = `${businessId}/${product.id}/${Date.now()}.jpg`;
+  const storageUrl = `${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/inventory-images/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
+  const upload = await fetch(storageUrl, {
+    method: "POST",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "image/jpeg",
+      "x-upsert": "true",
+    },
+    body: bytes,
+  });
+  if (!upload.ok) {
+    throw new HttpError(503, "service_unavailable", "The photo could not be saved to storage. Please try again.");
+  }
+  const imageUrl = objectPath;
+  const [updated] = await db.update(inventoryProducts).set({ imageUrl, updatedAt: new Date() })
+    .where(and(eq(inventoryProducts.id, product.id), eq(inventoryProducts.businessId, businessId))).returning();
+  res.json(await serializeWithImage(updated));
 });
 
 router.post("/inventory/products/:id/adjust", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
@@ -74,7 +148,7 @@ router.post("/inventory/products/:id/adjust", requireUser, requireRole("owner", 
     description: displayName(req.user!) + " adjusted " + product.name + " stock by " + (input.quantityDelta > 0 ? "+" : "") + input.quantityDelta,
     status: "success",
   });
-  res.json(serialize(updated));
+  res.json(await serializeWithImage(updated));
 });
 
 export default router;

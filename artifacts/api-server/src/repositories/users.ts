@@ -48,11 +48,13 @@ export async function findOrCreateUserByPhone(
   return { user: created, isNewUser: true };
 }
 
-export async function updateUserPinHash(id: string, pinHash: string): Promise<void> {
-  await db
+export async function updateUserPinHash(id: string, pinHash: string): Promise<boolean> {
+  const updated = await db
     .update(users)
     .set({ pinHash, updatedAt: new Date() })
-    .where(eq(users.id, id));
+    .where(eq(users.id, id))
+    .returning({ id: users.id });
+  return updated.length === 1;
 }
 
 export async function touchLastLogin(id: string): Promise<void> {

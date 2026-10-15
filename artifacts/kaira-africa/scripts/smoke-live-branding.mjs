@@ -264,6 +264,10 @@ try {
 
   const pinLoginRequests = [];
   const pinSetRequests = [];
+  const inventoryCreateRequests = [];
+  const inventoryImageRequests = [];
+  const inventoryAdjustmentRequests = [];
+  const inventoryFixtureProducts = [];
   let pinEnabled = false;
   const nowIso = new Date().toISOString();
   const visualBusiness = {
@@ -360,6 +364,65 @@ try {
 
     if (pathname.endsWith('/api/auth/logout') && method === 'POST') {
       await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (pathname.endsWith('/api/inventory/products') && method === 'GET') {
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(inventoryFixtureProducts) });
+      return;
+    }
+
+    if (pathname.endsWith('/api/inventory/products') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      inventoryCreateRequests.push(input);
+      const created = {
+        id: 'product_visual_smoke',
+        name: input.name,
+        sku: input.sku,
+        category: input.category || null,
+        unit: input.unit || 'piece',
+        quantity: input.quantity ?? 0,
+        reorderLevel: input.reorderLevel ?? 5,
+        unitCost: input.unitCost ?? 0,
+        salePrice: input.salePrice ?? 0,
+        currency: input.currency || 'GMD',
+        active: true,
+        imageUrl: null,
+      };
+      inventoryFixtureProducts.push(created);
+      await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(created) });
+      return;
+    }
+
+    const imageRoute = pathname.match(/\/api\/inventory\/products\/([^/]+)\/image$/);
+    if (imageRoute && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
+      const encoded = dataUrl.startsWith('data:image/jpeg;base64,') ? dataUrl.slice('data:image/jpeg;base64,'.length) : '';
+      inventoryImageRequests.push({ productId: imageRoute[1], jpegDataUrl: dataUrl.startsWith('data:image/jpeg;base64,'), base64Length: encoded.length, imageBytes: Buffer.from(encoded, 'base64').byteLength });
+      const product = inventoryFixtureProducts.find((item) => item.id === imageRoute[1]);
+      if (!product) {
+        await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'Fixture product not found' }) });
+        return;
+      }
+      const updated = { ...product, imageUrl: null };
+      inventoryFixtureProducts.splice(inventoryFixtureProducts.indexOf(product), 1, updated);
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(updated) });
+      return;
+    }
+
+    const adjustRoute = pathname.match(/\/api\/inventory\/products\/([^/]+)\/adjust$/);
+    if (adjustRoute && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      inventoryAdjustmentRequests.push({ productId: adjustRoute[1], ...input });
+      const product = inventoryFixtureProducts.find((item) => item.id === adjustRoute[1]);
+      if (!product) {
+        await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'Fixture product not found' }) });
+        return;
+      }
+      const updated = { ...product, quantity: product.quantity + Number(input.quantityDelta || 0) };
+      inventoryFixtureProducts.splice(inventoryFixtureProducts.indexOf(product), 1, updated);
+      await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(updated) });
       return;
     }
 
@@ -507,6 +570,55 @@ try {
     await pinPage.waitForURL((url) => url.pathname === routePath, { timeout: 10_000 });
     const mainText = (await pinPage.locator('main').innerText().catch(() => '')).trim();
     assert.ok(mainText.length > 20, 'Navigation to ' + label + ' must render a non-empty page');
+
+    if (routePath === '/inventory') {
+      await pinPage.getByRole('heading', { name: 'Inventory & stock book' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText(/SKU means.*Stock Keeping Unit/i).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText(/maximum of 200 KB/i).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Go back' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Add product' }).click();
+
+      await pinPage.getByPlaceholder('e.g. 25 kg bag of rice').fill('Rice 25 kg bag');
+      await pinPage.getByPlaceholder('e.g. RICE-25KG').fill('RICE-SMOKE-25KG');
+      await pinPage.getByPlaceholder('e.g. Food, clothing, supplies').fill('Food');
+      await pinPage.getByPlaceholder('piece, bag, bottle, box').fill('bag');
+      const inventoryNumbers = pinPage.locator('input[type="number"]');
+      await inventoryNumbers.nth(0).fill('12');
+      await inventoryNumbers.nth(1).fill('3');
+      await pinPage.locator('select').selectOption('NGN');
+      await inventoryNumbers.nth(2).fill('7.5');
+      await inventoryNumbers.nth(3).fill('10');
+
+      // Small synthetic image: browser compression and API handling are tested,
+      // while the intercepted route ensures no real product/photo is created.
+      const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
+      await pinPage.locator('input[type="file"]').setInputFiles({
+        name: 'rice-product.png',
+        mimeType: 'image/png',
+        buffer: onePixelPng,
+      });
+      await pinPage.getByText(/Photo prepared for upload: rice-product.png/i).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Save product' }).click();
+      await pinPage.getByRole('status').filter({ hasText: 'Product saved.' }).waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(inventoryCreateRequests.length, 1, 'Inventory form should make one intercepted product-create request');
+      assert.equal(inventoryCreateRequests[0].name, 'Rice 25 kg bag', 'Inventory form should submit the product name');
+      assert.equal(inventoryCreateRequests[0].sku, 'RICE-SMOKE-25KG', 'Inventory form should submit the item code');
+      assert.equal(inventoryCreateRequests[0].currency, 'NGN', 'Inventory form should submit the selected currency');
+      assert.equal(inventoryImageRequests.length, 1, 'Optional product photo should upload once after product creation');
+      assert.equal(inventoryImageRequests[0].jpegDataUrl, true, 'Product photo should be converted to JPEG before upload');
+      assert.ok(inventoryImageRequests[0].imageBytes > 0 && inventoryImageRequests[0].imageBytes <= 200 * 1024, 'Compressed JPEG upload must be 200 KB or smaller after base64 decoding');
+      await pinPage.getByRole('button', { name: 'Receive one bag of Rice 25 kg bag' }).click();
+      await pinPage.getByText('13 bag', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(inventoryAdjustmentRequests.length, 1, 'Stock receive button should send one intercepted stock-movement request');
+      assert.equal(inventoryAdjustmentRequests[0].quantityDelta, 1, 'Stock receive button should add one unit');
+      console.log('INVENTORY STOCK BOOK, CURRENCY, COMPRESSED PHOTO AND MOVEMENT VERIFIED:', JSON.stringify({
+        createCount: inventoryCreateRequests.length,
+        photoCount: inventoryImageRequests.length,
+        jpegDataUrl: inventoryImageRequests[0].jpegDataUrl,
+        currency: inventoryCreateRequests[0].currency,
+        adjustmentCount: inventoryAdjustmentRequests.length,
+      }));
+    }
   }
 
   // Header shortcuts that used to be dead ends now open their respective routes.

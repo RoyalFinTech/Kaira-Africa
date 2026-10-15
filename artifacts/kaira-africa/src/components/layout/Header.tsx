@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, Menu } from 'lucide-react';
+import { ArrowLeft, Bell, Search, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,12 +21,24 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { data: user } = useGetMe();
   const { data: notifications } = useListNotifications({ unreadOnly: true });
   const [shouldShake, setShouldShake] = useState(false);
 
   const unreadCount = notifications?.length || 0;
+
+  const handleBack = () => {
+    // Use browser history when the previous page belongs to this app.
+    // If the user opened a deep link directly, return to the dashboard instead
+    // of sending them back to an unrelated external site.
+    const referrerIsInternal = document.referrer.startsWith(window.location.origin);
+    if (window.history.length > 1 && referrerIsInternal) {
+      window.history.back();
+      return;
+    }
+    if (location !== '/dashboard' && location !== '/') setLocation('/dashboard');
+  };
 
   // Trigger bell shake animation 3s after mount (simulating new notification)
   useEffect(() => {
@@ -58,16 +70,30 @@ export function Header({ onMenuClick }: HeaderProps) {
   return (
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 sm:px-6">
       {/* Left: Mobile menu + Breadcrumb */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {location !== '/dashboard' && location !== '/' && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Go back"
+            title="Go back"
+            onClick={handleBack}
+            className="shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
+          aria-label="Open navigation menu"
+          title="Open navigation menu"
           className="lg:hidden"
           onClick={onMenuClick}
         >
           <Menu className="h-5 w-5" />
         </Button>
-        {/* Breadcrumb could be added here based on current route */}
+        {/* Back navigation plus mobile menu; route title belongs to each page. */}
       </div>
 
       {/* Right: Search, Notifications, Avatar */}
