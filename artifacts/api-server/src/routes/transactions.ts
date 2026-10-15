@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   db, transactions,
 } from "@workspace/db";
