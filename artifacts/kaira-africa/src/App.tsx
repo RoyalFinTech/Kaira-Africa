@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
-import { toast } from '@/hooks/use-toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
 import { AppShell } from '@/components/layout/AppShell';
@@ -152,17 +151,18 @@ function handleUnauthorized(error: unknown): boolean {
   return false;
 }
 
+function showKairaApiError(error: unknown, title = "Kaira Africa couldn't complete that request") {
+  const message = error instanceof Error && error.message.trim()
+    ? error.message
+    : 'Please check your connection and try again.';
+  window.dispatchEvent(new CustomEvent('kaira:feedback', {
+    detail: { variant: 'error', title, message },
+  }));
+}
+
 function handleQueryError(error: unknown) {
   if (handleUnauthorized(error)) return;
-
-  // Queries (background data fetching) rarely have dedicated inline
-  // error UI in this app's page designs — a toast is the "no silent
-  // failures" mechanism for them. Mutations are handled separately
-  // (see mutationCache below): most already show a contextual inline
-  // error near the form that triggered them, so they only get the
-  // 401 handling here to avoid redundant/duplicate toasts.
-  const message = error instanceof ApiError ? error.message : 'Please check your connection and try again.';
-  toast({ title: 'Something went wrong', description: message, variant: 'destructive' });
+  showKairaApiError(error);
 }
 
 const queryClient = new QueryClient({
@@ -173,7 +173,11 @@ const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({ onError: handleQueryError }),
-  mutationCache: new MutationCache({ onError: handleUnauthorized }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (!handleUnauthorized(error)) showKairaApiError(error);
+    },
+  }),
 });
 
 const PageLoader = () => (
