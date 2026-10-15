@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/PageTransition";
+import { CameraCaptureDialog } from "@/components/common/CameraCaptureDialog";
 import { getCrmOverview, createCrmInteraction, completeCrmInteraction, searchCrmCustomers, createManagedCrmCustomer, updateManagedCrmCustomer, uploadCrmCustomerPhoto, removeCrmCustomerPhoto, type ManagedCrmCustomer, type CrmProfileData } from "@/lib/platform-api";
 import { formatDate } from "@/lib/utils";
 
@@ -72,7 +73,7 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
   const uploadPhotoRef = useRef<HTMLInputElement>(null);
-  const cameraPhotoRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const choosePhoto = (next: File | null) => {
     setPhotoError("");
     if (next && !["image/jpeg", "image/png", "image/webp"].includes(next.type)) { setPhotoError("Choose a JPEG, PNG or WebP image."); return; }
@@ -128,11 +129,18 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
       <p className="font-semibold">Customer photo</p><p className="mb-3 mt-1 text-xs leading-5 text-muted-foreground">Choose a face photo from your device or take one using your camera. JPEG, PNG or WebP, up to 2 MB.</p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={() => uploadPhotoRef.current?.click()}><Upload className="mr-2 h-4 w-4"/>Upload from device</Button>
-        <Button type="button" variant="outline" onClick={() => cameraPhotoRef.current?.click()}><Camera className="mr-2 h-4 w-4"/>Take photo</Button>
+        <Button type="button" variant="outline" onClick={() => setCameraOpen(true)}><Camera className="mr-2 h-4 w-4"/>Take photo</Button>
         <input ref={uploadPhotoRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { choosePhoto(e.target.files?.[0] ?? null); e.target.value = ""; }} />
-        <input ref={cameraPhotoRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={(e) => { choosePhoto(e.target.files?.[0] ?? null); e.target.value = ""; }} />
       </div>
       {photo && <p className="mt-2 text-xs text-muted-foreground">Selected: {photo.name} · {(photo.size / 1024).toFixed(0)} KB</p>}
+      {photo && <img src={URL.createObjectURL(photo)} alt="Selected customer photo preview" className="mt-3 h-20 w-20 rounded-xl border object-cover" />}
+      <CameraCaptureDialog
+        open={cameraOpen}
+        onOpenChange={setCameraOpen}
+        onCapture={choosePhoto}
+        title="Take customer photo"
+        description="Capture a clear face photo with your device camera. Upload from device remains a separate option."
+      />
       {photoError && <p role="alert" className="mt-2 text-sm text-destructive">{photoError}</p>}
     </div>
     {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
