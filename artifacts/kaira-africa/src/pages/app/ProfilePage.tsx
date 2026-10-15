@@ -1,6 +1,6 @@
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { GambiaFlag } from '@/components/common/GambiaFlag';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -24,6 +24,7 @@ import { PinSettingsCard } from '@/components/common/PinSettingsCard';
 import { useGetMe, useGetMyBusiness, useUpdateProfile, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { formatDate, getInitials } from '@/lib/utils';
+import { uploadProfileAvatar, removeProfileAvatar } from '@/lib/platform-api';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'Required'),
@@ -31,11 +32,24 @@ const profileSchema = z.object({
 });
 type ProfileForm = z.infer<typeof profileSchema>;
 
+function readProfileImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read this image.'));
+    reader.onerror = () => reject(new Error('Could not read this image.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ProfilePage() {
   const { data: user, isLoading: userLoading, isError: userIsError, refetch: refetchUser } = useGetMe();
   const { data: business } = useGetMyBusiness();
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarMessage, setAvatarMessage] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [businessSaved, setBusinessSaved] = useState(false);
   const [businessError, setBusinessError] = useState<string | null>(null);
   const [businessDraft, setBusinessDraft] = useState({
@@ -170,17 +184,43 @@ export default function ProfilePage() {
           {/* ── Profile card ── */}
           <Card className="lg:col-span-1">
             <CardContent className="p-6 flex flex-col items-center text-center">
-              {/* Avatar */}
-              <div className="relative mb-4">
-                <Avatar className="h-20 w-20 bg-secondary">
-                  <AvatarFallback className="bg-secondary text-sidebar-primary-foreground text-2xl font-bold">
-                    {getInitials(user.firstName, user.lastName)}
+              {/* Profile photo: upload is handled by the authenticated API and stored privately. */}
+              <div className="relative mb-2">
+                <Avatar className="h-24 w-24 border-2 border-background shadow-lg ring-1 ring-border">
+                  {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.firstName + ' ' + user.lastName} className="object-cover" />}
+                  <AvatarFallback className="overflow-hidden bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-400 text-white">
+                    <span aria-hidden="true" className="relative flex h-full w-full flex-col items-center justify-end overflow-hidden rounded-full">
+                      <span className="absolute top-[17%] h-[30%] w-[30%] rounded-full bg-gradient-to-br from-amber-100 to-amber-300 shadow-md" />
+                      <span className="absolute bottom-[-8%] h-[47%] w-[64%] rounded-t-[48%] bg-gradient-to-br from-white/95 to-indigo-100 shadow-inner" />
+                      <span className="relative z-10 mb-1 text-[9px] font-bold tracking-widest text-indigo-700">{getInitials(user.firstName, user.lastName)}</span>
+                    </span>
                   </AvatarFallback>
                 </Avatar>
-                <button className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center shadow-md hover:bg-primary/90 transition-colors">
+                <button type="button" aria-label="Upload profile photo" title="Upload or take a profile photo" disabled={avatarBusy} onClick={() => avatarInputRef.current?.click()} className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50">
                   <Edit2 className="h-3.5 w-3.5" />
                 </button>
+                <input ref={avatarInputRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp" capture="user" onChange={async (event) => {
+                  const file = event.target.files?.[0]; event.target.value = '';
+                  if (!file) return;
+                  setAvatarError(null); setAvatarMessage(null);
+                  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setAvatarError('Choose a JPEG, PNG or WebP image.'); return; }
+                  if (file.size > 2 * 1024 * 1024) { setAvatarError('Choose an image that is 2 MB or smaller.'); return; }
+                  setAvatarBusy(true);
+                  try { await uploadProfileAvatar(await readProfileImage(file)); await refetchUser(); setAvatarMessage('Profile photo updated.'); }
+                  catch (error) { setAvatarError(error instanceof Error ? error.message : 'Profile photo upload failed.'); }
+                  finally { setAvatarBusy(false); }
+                }} />
               </div>
+              <p className="mb-2 text-xs text-muted-foreground">JPEG, PNG or WebP · maximum 2 MB</p>
+              {avatarBusy && <p role="status" className="mb-2 text-xs text-muted-foreground">Uploading photo securely…</p>}
+              {avatarMessage && <p role="status" className="mb-2 text-xs text-primary">{avatarMessage}</p>}
+              {avatarError && <p role="alert" className="mb-2 max-w-[220px] text-xs text-destructive">{avatarError}</p>}
+              {user.avatarUrl && <Button type="button" variant="ghost" size="sm" disabled={avatarBusy} onClick={async () => {
+                setAvatarError(null); setAvatarMessage(null); setAvatarBusy(true);
+                try { await removeProfileAvatar(); await refetchUser(); setAvatarMessage('Photo removed. Your default avatar is now shown.'); }
+                catch (error) { setAvatarError(error instanceof Error ? error.message : 'Could not remove the photo.'); }
+                finally { setAvatarBusy(false); }
+              }} className="mb-2 h-7 text-xs text-muted-foreground"><icon name="trash-2" /> Remove photo</Button>
 
               <h2 className="font-display text-xl font-bold text-foreground">
                 {user.firstName} {user.lastName}
