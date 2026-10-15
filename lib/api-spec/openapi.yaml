@@ -629,6 +629,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Transaction"
+    patch:
+      operationId: updateTransaction
+      tags: [transactions]
+      summary: Update transaction status, notes or payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionUpdateInput"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/{id}/attachment:
+    post:
+      operationId: uploadTransactionAttachment
+      tags: [transactions]
+      summary: Upload a private transaction receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dataUrl:
+                  type: string
+              required: [dataUrl]
+      responses:
+        "200":
+          description: Transaction with signed attachment URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    delete:
+      operationId: removeTransactionAttachment
+      tags: [transactions]
+      summary: Remove a transaction receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction with receipt removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
 
   /activity:
     get:
@@ -1303,10 +1372,20 @@ components:
           type: ["string", "null"]
         description:
           type: ["string", "null"]
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+        attachmentUrl:
+          type: ["string", "null"]
+          description: Short-lived signed URL for a private transaction receipt.
         createdAt:
           type: string
         completedAt:
           type: ["string", "null"]
+        updatedAt:
+          type: string
       required:
         - id
         - reference
@@ -1349,10 +1428,33 @@ components:
           type: string
         description:
           type: string
+        paymentMethod:
+          type: string
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other]
+          default: manual_entry
+        notes:
+          type: string
+          maxLength: 4000
       required:
         - amount
         - currency
         - type
+
+    TransactionUpdateInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [completed, pending, failed, cancelled]
+        description:
+          type: ["string", "null"]
+          maxLength: 500
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+          maxLength: 4000
 
     ActivityLog:
       type: object
