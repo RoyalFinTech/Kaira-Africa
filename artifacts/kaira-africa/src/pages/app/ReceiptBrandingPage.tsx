@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageTransition } from "@/components/common/PageTransition";
+import { KairaFeedbackCard } from "@/components/common/KairaFeedbackCard";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { useGetMe, useGetMyBusiness } from "@workspace/api-client-react";
 import {
@@ -184,6 +185,14 @@ export default function ReceiptBrandingPage() {
             <Button type="button" variant="outline" disabled={isLoading || isError || saving || logoBusy || removingLogo} onClick={() => printKairaDocument("receipt-preview-print")}><Printer className="mr-2 h-4 w-4"/>Print sample / Save PDF</Button>
           </div>
         </div>
+
+        {branding?.storageConfigured === false && (
+          <KairaFeedbackCard
+            variant="error"
+            title="Receipt-logo storage needs configuration"
+            message="Kaira Africa can save your printed business details, but the logo cannot be persisted yet. Configure SUPABASE_URL and the server-only SUPABASE_SERVICE_ROLE_KEY on the Kaira Africa API service in Render, then reload this page. The secret key must never be added to the frontend."
+          />
+        )}
 
         <section className="relative isolate overflow-hidden rounded-2xl border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 p-5 text-white shadow-sm sm:p-7">
           <div className="relative z-10 max-w-2xl">
