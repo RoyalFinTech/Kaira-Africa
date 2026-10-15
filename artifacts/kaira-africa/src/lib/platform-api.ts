@@ -248,3 +248,27 @@ export const uploadManagedTransactionAttachment = (id: string, dataUrl: string) 
   request<ManagedTransaction>("/api/transactions/" + encodeURIComponent(id) + "/attachment", { method: "POST", body: JSON.stringify({ dataUrl }) });
 export const removeManagedTransactionAttachment = (id: string) =>
   request<ManagedTransaction>("/api/transactions/" + encodeURIComponent(id) + "/attachment", { method: "DELETE" });
+
+export interface ReceiptBrandingSettings {
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  footerNote: string;
+  showReceiptNumber: boolean;
+  showCustomerDetails: boolean;
+  logoUrl: string | null;
+  hasLogo: boolean;
+}
+export type ReceiptBrandingInput = Partial<Pick<ReceiptBrandingSettings,
+  "companyName" | "address" | "phone" | "email" | "website" | "footerNote" | "showReceiptNumber" | "showCustomerDetails"
+>>;
+export const getReceiptBranding = () =>
+  request<ReceiptBrandingSettings>("/api/businesses/me/receipt-settings");
+export const updateReceiptBranding = (input: ReceiptBrandingInput) =>
+  request<ReceiptBrandingSettings>("/api/businesses/me/receipt-settings", { method: "PATCH", body: JSON.stringify(input) });
+export const uploadReceiptLogo = (dataUrl: string) =>
+  request<ReceiptBrandingSettings>("/api/businesses/me/receipt-logo", { method: "POST", body: JSON.stringify({ dataUrl }) });
+export const removeReceiptLogo = () =>
+  request<ReceiptBrandingSettings>("/api/businesses/me/receipt-logo", { method: "DELETE" });
