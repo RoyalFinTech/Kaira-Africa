@@ -55,12 +55,13 @@ const baseSchema = z.object({
   SMS_API_KEY: z.string().optional(),
   SMS_SENDER_ID: z.string().optional(),
 
-  // Supabase is used as the PostgreSQL infrastructure via DATABASE_URL
-  // (see Phase 2 architecture decision) — these are only needed if a
-  // future feature calls the Supabase client SDK directly (e.g.
-  // Storage). Never required for the API server to boot.
+  // Direct Supabase REST Storage calls. These are optional so the API can
+  // boot without file-storage features configured. Prefer the modern
+  // server-only SUPABASE_SECRET_KEY; retain the legacy service-role key
+  // for existing deployments during migration.
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
+  SUPABASE_SECRET_KEY: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 
   LOG_LEVEL: z
