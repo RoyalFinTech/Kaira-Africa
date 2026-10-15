@@ -336,6 +336,8 @@ export interface ReceiptBrandingSettings {
   showCustomerDetails: boolean;
   logoUrl: string | null;
   hasLogo: boolean;
+  /** True only when the API has both the project URL and its server-only Storage key. */
+  storageConfigured?: boolean;
 }
 export type ReceiptBrandingInput = Partial<Pick<ReceiptBrandingSettings,
   "companyName" | "address" | "phone" | "email" | "website" | "footerNote" | "showReceiptNumber" | "showCustomerDetails"
