@@ -84,7 +84,7 @@ router.get("/crm/customers", requireUser, async (req, res) => {
   const where = and(eq(customers.businessId, businessId), rawSearch ? or(
     ilike(customers.firstName, `%${term}%`), ilike(customers.lastName, `%${term}%`),
     ilike(customers.email, `%${term}%`), ilike(customers.phone, `%${term}%`),
-    ilike(customers.company, `%${term}%`), ilike(customers.profileData, `%${term}%`),
+    ilike(customers.company, `%${term}%`), sql`${customers.profileData}::text ILIKE ${`%${term}%`}`,
   ) : undefined);
   const rows = await db.select().from(customers).where(where).orderBy(desc(customers.updatedAt)).limit(200);
   res.json({ customers: await Promise.all(rows.map(serializeCustomer)), total: rows.length });
