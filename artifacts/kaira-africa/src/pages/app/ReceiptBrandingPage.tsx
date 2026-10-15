@@ -250,6 +250,13 @@ export default function ReceiptBrandingPage() {
             description={settingsFeedback.description}
           />
         )}
+        {branding && !branding.logoStorageConfigured && (
+          <KairaFeedbackCard
+            tone="warning"
+            title="Custom logo uploads are not configured yet"
+            description="Kaira Africa has saved your receipt text and print options, but its API cannot currently access private logo storage. Please ask the Kaira Africa administrator to configure private storage access in Render. Your other receipt and printing features remain available."
+          />
+        )}
 
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
           <Card>
