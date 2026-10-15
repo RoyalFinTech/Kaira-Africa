@@ -1,8 +1,20 @@
-import { pgTable, uuid, text, timestamp, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { businessStatusEnum } from "./enums";
 import { users } from "./users";
+
+export interface ReceiptBrandingSettings {
+  companyName?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  footerNote?: string;
+  showReceiptNumber?: boolean;
+  showCustomerDetails?: boolean;
+  logoPath?: string | null;
+}
 
 export const businesses = pgTable("businesses", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -26,6 +38,7 @@ export const businesses = pgTable("businesses", {
   website: text("website"),
   description: text("description"),
   logoUrl: text("logo_url"),
+  receiptSettings: jsonb("receipt_settings").$type<ReceiptBrandingSettings>().notNull().default({}),
   address: text("address"),
 
   // Free text on purpose — matches the existing OpenAPI contract, which
