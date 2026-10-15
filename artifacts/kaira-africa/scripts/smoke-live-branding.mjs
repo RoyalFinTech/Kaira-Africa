@@ -394,12 +394,12 @@ try {
       return;
     }
 
-    const imageRoute = pathname.match(/\\/api\\/inventory\\/products\\/([^/]+)\\/image$/);
+    const imageRoute = pathname.match(/\/api\/inventory\/products\/([^/]+)\/image$/);
     if (imageRoute && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
       const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
       const encoded = dataUrl.startsWith('data:image/jpeg;base64,') ? dataUrl.slice('data:image/jpeg;base64,'.length) : '';
-      inventoryImageRequests.push({ productId: imageRoute[1], jpegDataUrl: dataUrl.startsWith('data:image/jpeg;base64,'), base64Length: encoded.length });
+      inventoryImageRequests.push({ productId: imageRoute[1], jpegDataUrl: dataUrl.startsWith('data:image/jpeg;base64,'), base64Length: encoded.length, imageBytes: Buffer.from(encoded, 'base64').byteLength });
       const product = inventoryFixtureProducts.find((item) => item.id === imageRoute[1]);
       if (!product) {
         await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'Fixture product not found' }) });
@@ -411,7 +411,7 @@ try {
       return;
     }
 
-    const adjustRoute = pathname.match(/\\/api\\/inventory\\/products\\/([^/]+)\\/adjust$/);
+    const adjustRoute = pathname.match(/\/api\/inventory\/products\/([^/]+)\/adjust$/);
     if (adjustRoute && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
       inventoryAdjustmentRequests.push({ productId: adjustRoute[1], ...input });
@@ -606,7 +606,7 @@ try {
       assert.equal(inventoryCreateRequests[0].currency, 'NGN', 'Inventory form should submit the selected currency');
       assert.equal(inventoryImageRequests.length, 1, 'Optional product photo should upload once after product creation');
       assert.equal(inventoryImageRequests[0].jpegDataUrl, true, 'Product photo should be converted to JPEG before upload');
-      assert.ok(inventoryImageRequests[0].base64Length > 0 && inventoryImageRequests[0].base64Length < 280_000, 'Compressed JPEG upload should stay within the 200 KB decoded cap');
+      assert.ok(inventoryImageRequests[0].imageBytes > 0 && inventoryImageRequests[0].imageBytes <= 200 * 1024, 'Compressed JPEG upload must be 200 KB or smaller after base64 decoding');
       await pinPage.getByRole('button', { name: 'Receive one bag of Rice 25 kg bag' }).click();
       await pinPage.getByText('13 bag', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(inventoryAdjustmentRequests.length, 1, 'Stock receive button should send one intercepted stock-movement request');
