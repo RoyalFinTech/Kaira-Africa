@@ -46,14 +46,14 @@ const toInput = (d: CustomerDraft) => {
   const profileData: CrmProfileData = {};
   (["dateOfBirth","preferredName","gender","maritalStatus","occupation","customerType","preferredContactMethod","preferredLanguage","addressLine1","addressLine2","postalCode","region","source","interests","preferences","consentNotes","internalNotes","emergencyContactName","emergencyContactPhone"] as const).forEach((key) => {
     const value = d[key].trim();
-    if (value) Object.assign(profileData, { [key]: value });
+    Object.assign(profileData, { [key]: value });
   });
   const tags = d.tags.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 30);
   profileData.tags = tags;
   return {
-    firstName: d.firstName.trim(), lastName: d.lastName.trim(), email: d.email.trim() || undefined,
-    phone: d.phone.trim() || undefined, company: d.company.trim() || undefined,
-    country: d.country.trim() || undefined, city: d.city.trim() || undefined, status: d.status, profileData,
+    firstName: d.firstName.trim(), lastName: d.lastName.trim(), email: d.email.trim(),
+    phone: d.phone.trim(), company: d.company.trim(),
+    country: d.country.trim(), city: d.city.trim(), status: d.status, profileData,
   };
 };
 function readImage(file: File): Promise<string> {
