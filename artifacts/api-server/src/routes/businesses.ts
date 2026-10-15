@@ -54,14 +54,18 @@ async function signReceiptLogo(path: string | null | undefined): Promise<string 
       headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({ expiresIn: 3600 }),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      logger.error({ status: response.status }, "Could not create a private signed URL for a receipt logo");
+      return null;
+    }
     const result = await response.json() as { signedURL?: string; signedUrl?: string };
     const signed = result.signedURL ?? result.signedUrl;
     if (!signed) return null;
     return signed.startsWith("http") ? signed
       : signed.startsWith("/storage/v1/") ? base + signed
       : `${base}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}`;
-  } catch {
+  } catch (error) {
+    logger.error({ err: error }, "Could not sign a private receipt-logo URL");
     return null;
   }
 }
