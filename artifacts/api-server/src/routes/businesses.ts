@@ -20,6 +20,7 @@ import { count, eq } from "drizzle-orm";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { supabaseStorageHeaders } from "../lib/supabase-storage-headers";
+import { logger } from "../lib/logger";
 import { fromMinorUnits } from "../lib/money";
 import type { Business } from "@workspace/db";
 
@@ -98,7 +99,7 @@ async function signReceiptLogo(path: string | null | undefined): Promise<string 
   }
 }
 
-async function serializeReceiptSettings(business: Business) {
+async function serializeReceiptSettings(business: Business, verifiedLogoUrl?: string | null) {
   const settings: ReceiptBrandingSettings = business.receiptSettings ?? {};
   return {
     companyName: settings.companyName || business.name,
@@ -109,7 +110,7 @@ async function serializeReceiptSettings(business: Business) {
     footerNote: settings.footerNote ?? "Thank you for your business.",
     showReceiptNumber: settings.showReceiptNumber ?? true,
     showCustomerDetails: settings.showCustomerDetails ?? true,
-    logoUrl: await signReceiptLogo(settings.logoPath),
+    logoUrl: verifiedLogoUrl === undefined ? await signReceiptLogo(settings.logoPath) : verifiedLogoUrl,
     hasLogo: Boolean(settings.logoPath),
     storageConfigured: hasSupabaseStorageConfig(),
   };
@@ -225,21 +226,91 @@ router.post("/businesses/me/receipt-logo", requireUser, requireRole("owner"), as
       headers: supabaseStorageHeaders(key, { "Content-Type": mimeType, "x-upsert": "false" }),
       body: bytes,
     });
-  } catch {
+  } catch (error) {
+    logger.error({
+      businessId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    }, "Could not reach Supabase Storage for receipt logo upload");
     throw new HttpError(502, "receipt_storage_unreachable", "Kaira Africa could not reach Supabase Storage. Verify SUPABASE_URL and that the Kaira Africa API can connect to the configured Supabase project.");
   }
   if (!upload.ok) {
-    throw new HttpError(502, "receipt_logo_upload_failed", await describeReceiptLogoUploadFailure(upload));
+    const failureMessage = await describeReceiptLogoUploadFailure(upload);
+    logger.error({ businessId, statusCode: upload.status }, "Supabase Storage rejected a receipt-logo upload");
+    throw new HttpError(502, "receipt_logo_upload_failed", failureMessage);
   }
+
+  // A successful POST alone is not enough: the print template needs a usable
+  // signed URL from this same private object. Verify it before recording the
+  // path in the business settings, so failed uploads can never look saved.
+  const verifiedLogoUrl = await signReceiptLogo(path);
+  if (!verifiedLogoUrl) {
+    try {
+      await removeReceiptLogoObject(path);
+    } catch (error) {
+      logger.warn({
+        businessId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      }, "Could not remove an unverified receipt-logo object");
+    }
+    throw new HttpError(
+      502,
+      "receipt_logo_verification_failed",
+      "Supabase accepted the image, but Kaira Africa could not verify a secure print link. The logo was not saved to your business settings. Check the API Storage key and try again.",
+    );
+  }
+
   const previousPath = business.receiptSettings?.logoPath ?? null;
   const next: ReceiptBrandingSettings = { ...(business.receiptSettings ?? {}), logoPath: path };
-  const [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
-    .where(eq(businesses.id, businessId)).returning();
-  if (!updated) throw new NotFoundError("Business not found");
-  if (previousPath && previousPath !== path) {
-    try { await removeReceiptLogoObject(previousPath); } catch { /* New logo and database reference are already saved. */ }
+  let updated: Business | undefined;
+  try {
+    [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
+      .where(eq(businesses.id, businessId)).returning();
+  } catch (error) {
+    // A connection error can happen after the database committed. Only remove
+    // the new object when a fresh read proves the business does not reference it.
+    let confirmedUnreferenced = false;
+    try {
+      const [fresh] = await db.select({ receiptSettings: businesses.receiptSettings })
+        .from(businesses).where(eq(businesses.id, businessId)).limit(1);
+      confirmedUnreferenced = fresh?.receiptSettings?.logoPath !== path;
+    } catch {
+      // Keep the object rather than risk deleting one that may have committed.
+    }
+    if (confirmedUnreferenced) {
+      try {
+        await removeReceiptLogoObject(path);
+      } catch (cleanupError) {
+        logger.warn({
+          businessId,
+          errorName: cleanupError instanceof Error ? cleanupError.name : "UnknownError",
+        }, "Could not remove a receipt logo after database update failure");
+      }
+    }
+    logger.error({ businessId }, "Could not confirm the receipt-logo path was saved to business settings");
+    throw error;
   }
-  res.status(201).json(await serializeReceiptSettings(updated));
+  if (!updated) {
+    try {
+      await removeReceiptLogoObject(path);
+    } catch (error) {
+      logger.warn({
+        businessId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      }, "Could not remove a receipt logo when the business settings row was missing");
+    }
+    throw new NotFoundError("Business not found");
+  }
+  if (previousPath && previousPath !== path) {
+    try {
+      await removeReceiptLogoObject(previousPath);
+    } catch (error) {
+      logger.warn({
+        businessId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      }, "New receipt logo was saved but the previous object could not be removed");
+    }
+  }
+  res.status(201).json(await serializeReceiptSettings(updated, verifiedLogoUrl));
 });
 
 router.delete("/businesses/me/receipt-logo", requireUser, requireRole("owner"), async (req, res) => {
