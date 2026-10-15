@@ -681,7 +681,7 @@ try {
       assert.equal(crmCustomerRequests.find((item) => item.method === 'PUT').input.profileData.maritalStatus, 'Divorced', 'CRM should persist edited optional details');
 
       await pinPage.getByRole('button', { name: 'Remove photo' }).click();
-      await pinPage.waitForFunction(() => !document.querySelector('button[title="Remove photo"]'), { timeout: 10_000 }).catch(() => {});
+      await pinPage.getByRole('button', { name: 'Remove photo' }).waitFor({ state: 'detached', timeout: 10_000 });
       assert.equal(crmPhotoDeleteRequests.length, 1, 'CRM photo removal should call the delete endpoint');
       await pinPage.getByLabel('Customer').selectOption('crm-customer-smoke');
       await pinPage.getByPlaceholder('Activity title (e.g. Delivery feedback)').fill('Smoke test feedback');
