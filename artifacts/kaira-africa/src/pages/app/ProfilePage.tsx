@@ -23,7 +23,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PinSettingsCard } from '@/components/common/PinSettingsCard';
 import { useGetMe, useGetMyBusiness, useUpdateProfile, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
-import { formatDate, getInitials } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { uploadProfileAvatar, removeProfileAvatar } from '@/lib/platform-api';
 
 const profileSchema = z.object({
