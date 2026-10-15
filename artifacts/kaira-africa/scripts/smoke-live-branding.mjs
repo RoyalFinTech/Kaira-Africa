@@ -1030,7 +1030,7 @@ try {
     if (routePath === '/receipt-branding') {
       await pinPage.getByLabel('Printed company name').fill('Smoke Receipt Studio');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
-      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('status').filter({ hasText: 'Receipt branding saved' }).waitFor({ state: 'visible', timeout: 10_000 });
       const logoFile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
 
       // Exercise the same nested error payload returned by the API error
@@ -1069,7 +1069,7 @@ try {
       await pinPage.getByRole('checkbox', { name: /Show linked customer details on transaction receipts/ }).uncheck();
       assert.ok(!(await visibleReceiptPreview.innerText()).includes('SAMPLE-0001'), 'On-screen sample immediately hides the reference when the option is disabled');
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
-      await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('status').filter({ hasText: 'Receipt branding saved' }).waitFor({ state: 'visible', timeout: 10_000 });
       const customizedPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, customizedPrintBefore, { timeout: 10_000 });
