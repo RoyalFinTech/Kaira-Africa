@@ -17,10 +17,10 @@ import {
   User,
 } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ProfileAvatar } from '@/components/common/ProfileAvatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { cn, getInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useGetMe, useGetMyBusiness, useLogout } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { useLocation as useLocationHook } from 'wouter';
@@ -88,11 +88,12 @@ export function Sidebar() {
       {/* User Info */}
       <div className="px-4 pb-4">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent">
-          <Avatar className="h-10 w-10 bg-sidebar-primary">
-            <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground font-semibold">
-              {user && getInitials(user.firstName, user.lastName)}
-            </AvatarFallback>
-          </Avatar>
+          <ProfileAvatar
+            photoUrl={user?.avatarUrl}
+            firstName={user?.firstName}
+            lastName={user?.lastName}
+            className="h-10 w-10 ring-1 ring-sidebar-border"
+          />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
               {user?.firstName} {user?.lastName}
