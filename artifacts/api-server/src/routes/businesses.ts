@@ -35,10 +35,15 @@ const ReceiptSettingsInput = z.object({
   showCustomerDetails: z.boolean().optional(),
 }).strict();
 
-function receiptStorageConfig() {
+function receiptStorageMissingVariables(): string[] {
   const missing: string[] = [];
   if (!env.SUPABASE_URL) missing.push("SUPABASE_URL");
   if (!env.SUPABASE_SERVICE_ROLE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  return missing;
+}
+
+function receiptStorageConfig() {
+  const missing = receiptStorageMissingVariables();
   if (missing.length) {
     throw new HttpError(
       503,
@@ -112,8 +117,9 @@ async function signReceiptLogo(path: string | null | undefined): Promise<string 
   }
 }
 
-async function serializeReceiptSettings(business: Business) {
+async function serializeReceiptSettings(business: Business, logoUrlOverride?: string | null) {
   const settings: ReceiptBrandingSettings = business.receiptSettings ?? {};
+  const storageMissingVariables = receiptStorageMissingVariables();
   return {
     companyName: settings.companyName || business.name,
     address: settings.address ?? business.address ?? "",
@@ -123,9 +129,10 @@ async function serializeReceiptSettings(business: Business) {
     footerNote: settings.footerNote ?? "Thank you for your business.",
     showReceiptNumber: settings.showReceiptNumber ?? true,
     showCustomerDetails: settings.showCustomerDetails ?? true,
-    logoUrl: await signReceiptLogo(settings.logoPath),
+    logoUrl: logoUrlOverride === undefined ? await signReceiptLogo(settings.logoPath) : logoUrlOverride,
     hasLogo: Boolean(settings.logoPath),
-    storageConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY),
+    storageConfigured: storageMissingVariables.length === 0,
+    storageMissingVariables,
   };
 }
 
@@ -245,15 +252,39 @@ router.post("/businesses/me/receipt-logo", requireUser, requireRole("owner"), as
   if (!upload.ok) {
     throw new HttpError(502, "receipt_logo_upload_failed", await describeReceiptLogoUploadFailure(upload));
   }
+
+  // Prove the uploaded object can be signed before changing the saved business
+  // settings. This prevents a success-shaped response or a broken saved path
+  // when Storage accepted bytes but the private-object URL cannot be verified.
+  const verifiedLogoUrl = await signReceiptLogo(path);
+  if (!verifiedLogoUrl) {
+    try { await removeReceiptLogoObject(path); } catch { /* Leave no DB reference to the unverified object. */ }
+    throw new HttpError(
+      502,
+      "receipt_logo_verification_failed",
+      "Supabase accepted the logo upload, but Kaira Africa could not verify a secure preview link. Check that SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY belong to the same Supabase project, then try again.",
+    );
+  }
+
   const previousPath = business.receiptSettings?.logoPath ?? null;
   const next: ReceiptBrandingSettings = { ...(business.receiptSettings ?? {}), logoPath: path };
-  const [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
-    .where(eq(businesses.id, businessId)).returning();
-  if (!updated) throw new NotFoundError("Business not found");
+  let updated: Business | undefined;
+  try {
+    const [savedBusiness] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
+      .where(eq(businesses.id, businessId)).returning();
+    updated = savedBusiness;
+  } catch (error) {
+    try { await removeReceiptLogoObject(path); } catch { /* Avoid a visible unsaved object if cleanup is temporarily unavailable. */ }
+    throw error;
+  }
+  if (!updated) {
+    try { await removeReceiptLogoObject(path); } catch { /* No business reference was saved. */ }
+    throw new NotFoundError("Business not found");
+  }
   if (previousPath && previousPath !== path) {
     try { await removeReceiptLogoObject(previousPath); } catch { /* New logo and database reference are already saved. */ }
   }
-  res.status(201).json(await serializeReceiptSettings(updated));
+  res.status(201).json(await serializeReceiptSettings(updated, verifiedLogoUrl));
 });
 
 router.delete("/businesses/me/receipt-logo", requireUser, requireRole("owner"), async (req, res) => {
