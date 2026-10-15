@@ -8,9 +8,9 @@ DO $$
 BEGIN
   IF to_regclass('storage.buckets') IS NOT NULL THEN
     INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-    VALUES ('inventory-images', 'inventory-images', true, 204800, ARRAY['image/jpeg']::text[])
+    VALUES ('inventory-images', 'inventory-images', false, 204800, ARRAY['image/jpeg']::text[])
     ON CONFLICT (id) DO UPDATE
-    SET public = EXCLUDED.public,
+    SET public = false,
         file_size_limit = EXCLUDED.file_size_limit,
         allowed_mime_types = EXCLUDED.allowed_mime_types;
   END IF;
