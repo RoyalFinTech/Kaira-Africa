@@ -2,6 +2,34 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
+/** Extract a useful human-readable message from API errors, including the
+ * nested { error: { code, message } } envelope returned by the Kaira API. */
+export function apiErrorMessage(value: unknown, fallback = "The request could not be completed. Please try again."): string {
+  const read = (candidate: unknown, depth = 0): string | undefined => {
+    if (depth > 4 || candidate == null) return undefined;
+    if (typeof candidate === "string") return candidate.trim() || undefined;
+    if (Array.isArray(candidate)) {
+      const messages = candidate.map((item) => read(item, depth + 1)).filter((item): item is string => Boolean(item));
+      return messages.length ? messages.join(" ") : undefined;
+    }
+    if (typeof candidate !== "object") return undefined;
+
+    const record = candidate as Record<string, unknown>;
+    for (const key of ["message", "detail", "description", "error_description", "title"]) {
+      if (typeof record[key] === "string" && (record[key] as string).trim()) {
+        return (record[key] as string).trim();
+      }
+    }
+    for (const key of ["error", "errors", "issues", "details"]) {
+      const nested = read(record[key], depth + 1);
+      if (nested) return nested;
+    }
+    return undefined;
+  };
+
+  return read(value) ?? fallback;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(API_BASE_URL + path, {
@@ -13,8 +41,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message || data?.error || "Request failed with status " + response.status);
+  let data: unknown = null;
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text) as unknown;
+    } catch {
+      // Some proxies return plain text/HTML during an outage. Preserve the
+      // useful text rather than replacing the real server problem with a
+      // JSON parsing exception.
+      data = text;
+    }
+  }
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(data, "Request failed with status " + response.status));
+  }
   return data as T;
 }
 
