@@ -19,6 +19,7 @@ import { db, businesses, customers, teamMembers, type ReceiptBrandingSettings } 
 import { count, eq } from "drizzle-orm";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { env } from "../config/env";
+import { logger } from "../lib/logger";
 import { fromMinorUnits } from "../lib/money";
 import type { Business } from "@workspace/db";
 
@@ -36,10 +37,20 @@ const ReceiptSettingsInput = z.object({
 }).strict();
 
 function receiptStorageConfig() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Private receipt-logo storage is not configured yet.");
+  const missing = [
+    !env.SUPABASE_URL ? "SUPABASE_URL" : null,
+    !env.SUPABASE_SERVICE_ROLE_KEY ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+  ].filter(Boolean);
+  if (missing.length) {
+    throw new HttpError(
+      503,
+      "receipt_storage_not_configured",
+      "Private logo storage is not configured on the Kaira Africa API. Add " +
+        missing.join(" and ") +
+        " to the Kaira Africa API environment in Render, then redeploy.",
+    );
   }
-  return { base: env.SUPABASE_URL.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY };
+  return { base: env.SUPABASE_URL!.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY! };
 }
 
 async function signReceiptLogo(path: string | null | undefined): Promise<string | null> {
@@ -184,21 +195,56 @@ router.post("/businesses/me/receipt-logo", requireUser, requireRole("owner"), as
   const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/png" ? "png" : "webp";
   const path = `${businessId}/${Date.now()}-${randomUUID()}.${extension}`;
   const url = `${base}/storage/v1/object/receipt-logos/${path.split("/").map(encodeURIComponent).join("/")}`;
-  const upload = await fetch(url, {
-    method: "POST",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
-    body: bytes,
-  });
-  if (!upload.ok) throw new HttpError(502, "receipt_logo_upload_failed", "The logo could not be saved. Please try again.");
+  let upload: Response;
+  try {
+    upload = await fetch(url, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
+      body: bytes,
+    });
+  } catch (error) {
+    logger.error({ businessId, message: error instanceof Error ? error.message : String(error) }, "Could not reach private receipt-logo storage");
+    throw new HttpError(502, "receipt_logo_storage_unreachable", "Kaira Africa could not reach private logo storage. Please try again.");
+  }
+  if (!upload.ok) {
+    const storageResponse = (await upload.text().catch(() => "")).slice(0, 500);
+    logger.error({ businessId, statusCode: upload.status, storageResponse }, "Supabase Storage rejected a receipt-logo upload");
+    throw new HttpError(502, "receipt_logo_upload_failed", "Private storage rejected the logo upload. Check the logo file and storage configuration, then try again.");
+  }
+
+  // Confirm that the uploaded object can be read back through a signed URL
+  // before writing the business setting. A 201 must mean the logo is usable.
+  const verifiedLogoUrl = await signReceiptLogo(path);
+  if (!verifiedLogoUrl) {
+    try { await removeReceiptLogoObject(path); } catch (cleanupError) {
+      logger.warn({ businessId, message: cleanupError instanceof Error ? cleanupError.message : String(cleanupError) }, "Could not clean up unverified receipt logo");
+    }
+    throw new HttpError(502, "receipt_logo_verification_failed", "Storage accepted the image but Kaira Africa could not verify it for printing. Check the private storage credentials and retry; the logo was not saved to your business settings.");
+  }
+
   const previousPath = business.receiptSettings?.logoPath ?? null;
   const next: ReceiptBrandingSettings = { ...(business.receiptSettings ?? {}), logoPath: path };
-  const [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
-    .where(eq(businesses.id, businessId)).returning();
-  if (!updated) throw new NotFoundError("Business not found");
-  if (previousPath && previousPath !== path) {
-    try { await removeReceiptLogoObject(previousPath); } catch { /* New logo and database reference are already saved. */ }
+  let updated: Business | undefined;
+  try {
+    [updated] = await db.update(businesses).set({ receiptSettings: next, updatedAt: new Date() })
+      .where(eq(businesses.id, businessId)).returning();
+  } catch (error) {
+    try { await removeReceiptLogoObject(path); } catch (cleanupError) {
+      logger.warn({ businessId, message: cleanupError instanceof Error ? cleanupError.message : String(cleanupError) }, "Could not clean up receipt logo after database save failure");
+    }
+    throw error;
   }
-  res.status(201).json(await serializeReceiptSettings(updated));
+  if (!updated) {
+    try { await removeReceiptLogoObject(path); } catch { /* The business reference was not saved; best-effort object cleanup. */ }
+    throw new NotFoundError("Business not found");
+  }
+  if (previousPath && previousPath !== path) {
+    try { await removeReceiptLogoObject(previousPath); } catch (cleanupError) {
+      logger.warn({ businessId, message: cleanupError instanceof Error ? cleanupError.message : String(cleanupError) }, "New receipt logo was saved but the previous object could not be removed");
+    }
+  }
+  const settingsResponse = await serializeReceiptSettings(updated);
+  res.status(201).json({ ...settingsResponse, logoUrl: verifiedLogoUrl, hasLogo: true });
 });
 
 router.delete("/businesses/me/receipt-logo", requireUser, requireRole("owner"), async (req, res) => {
