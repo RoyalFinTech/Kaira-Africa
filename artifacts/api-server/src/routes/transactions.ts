@@ -26,7 +26,8 @@ import { recordActivity } from "../repositories/activity-logs";
 import { displayName } from "../lib/display-name";
 import { NotFoundError, BadRequestError, HttpError } from "../lib/http-errors";
 import { toMinorUnits, fromMinorUnits } from "../lib/money";
-import { env } from "../config/env";
+import { requireSupabaseStorageConfig } from "../lib/supabase-storage";
+import { supabaseStorageHeaders } from "../lib/supabase-storage-headers";
 
 const router: IRouter = Router();
 const CURRENCIES = ["GMD", "NGN", "USD", "EUR", "GBP"] as const;
@@ -43,23 +44,15 @@ const transactionUpdateInput = z.object({
   notes: z.string().trim().max(4000).nullable().optional(),
 }).refine((value) => Object.keys(value).length > 0, "Provide at least one transaction field to update.");
 
-function storageConfig() {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Private transaction attachment storage is not configured. You can still record transactions without an attachment.");
-  }
-  return { base: env.SUPABASE_URL.replace(/\/$/, ""), key: env.SUPABASE_SERVICE_ROLE_KEY };
-}
-
 async function signAttachment(path: string | null) {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path;
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
   try {
-    const { base, key } = storageConfig();
+    const { base, key } = requireSupabaseStorageConfig("Private transaction attachment storage");
     const objectPath = path.split("/").map(encodeURIComponent).join("/");
     const response = await fetch(`${base}/storage/v1/object/sign/transaction-attachments/${objectPath}`, {
       method: "POST",
-      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
       body: JSON.stringify({ expiresIn: 3600 }),
     });
     if (!response.ok) return null;
@@ -191,13 +184,13 @@ router.post("/transactions/:id/attachment", requireUser, requireRole("owner", "a
   if (!bytes.length || bytes.length > 5 * 1024 * 1024 || bytes.toString("base64").replace(/=+$/, "") !== encoded.replace(/=+$/, "")) {
     throw new BadRequestError("The receipt must be a valid file no larger than 5 MB.");
   }
-  const { base, key } = storageConfig();
+  const { base, key } = requireSupabaseStorageConfig("Private transaction attachment storage");
   const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "pdf";
   const path = `${businessId}/${tx.id}/${Date.now()}-${randomUUID()}.${extension}`;
   const url = `${base}/storage/v1/object/transaction-attachments/${path.split("/").map(encodeURIComponent).join("/")}`;
   const upload = await fetch(url, {
     method: "POST",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType, "x-upsert": "false" },
+    headers: supabaseStorageHeaders(key, { "Content-Type": mimeType, "x-upsert": "false" }),
     body: bytes,
   });
   if (!upload.ok) throw new HttpError(502, "attachment_upload_failed", "The receipt could not be saved to private storage. The transaction remains saved; please retry the upload.");
@@ -220,12 +213,12 @@ router.delete("/transactions/:id/attachment", requireUser, requireRole("owner", 
   const tx = await getTransaction(businessId, req.params.id as string);
   if (!tx) throw new NotFoundError("Transaction not found");
   if (tx.attachmentPath && !/^https?:\/\//i.test(tx.attachmentPath)) {
-    const { base, key } = storageConfig();
+    const { base, key } = requireSupabaseStorageConfig("Private transaction attachment storage");
     let response: Response;
     try {
       response = await fetch(`${base}/storage/v1/object/transaction-attachments`, {
         method: "DELETE",
-        headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
         body: JSON.stringify({ prefixes: [tx.attachmentPath] }),
       });
     } catch {
