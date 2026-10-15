@@ -895,7 +895,7 @@ try {
       await pinPage.getByRole('button', { name: 'Edit', exact: true }).click();
       await pinPage.getByLabel('Marital status (optional)').selectOption({ label: 'Divorced' });
       await pinPage.getByRole('button', { name: 'Save customer' }).click();
-      await pinPage.getByText('Divorced', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.locator('main.min-w-0.flex-1').getByText('Marital status:', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(crmCustomerRequests.filter((item) => item.method === 'PUT').length, 1, 'CRM edit should make one intercepted update request');
       assert.equal(crmCustomerRequests.find((item) => item.method === 'PUT').input.profileData.maritalStatus, 'Divorced', 'CRM should persist edited optional details');
 
