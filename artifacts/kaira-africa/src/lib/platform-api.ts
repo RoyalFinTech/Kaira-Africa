@@ -2,6 +2,45 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
+type ApiErrorRecord = Record<string, unknown>;
+
+function asErrorRecord(value: unknown): ApiErrorRecord | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as ApiErrorRecord
+    : null;
+}
+
+function firstIssueMessage(value: unknown): string | null {
+  if (!Array.isArray(value)) return null;
+  for (const issue of value) {
+    const record = asErrorRecord(issue);
+    if (typeof record?.message === "string" && record.message.trim()) {
+      const path = Array.isArray(record.path) ? record.path.filter((part) => typeof part === "string" || typeof part === "number").join(".") : "";
+      return path ? path + ": " + record.message.trim() : record.message.trim();
+    }
+    if (typeof issue === "string" && issue.trim()) return issue.trim();
+  }
+  return null;
+}
+
+/** Normalizes common API error envelopes so the UI never renders "[object Object]". */
+function readableApiError(data: unknown, status: number): string {
+  const root = asErrorRecord(data);
+  const nestedError = asErrorRecord(root?.error);
+  const message = typeof nestedError?.message === "string"
+    ? nestedError.message.trim()
+    : typeof root?.message === "string"
+      ? root.message.trim()
+      : typeof root?.error === "string"
+        ? root.error.trim()
+        : "";
+  const issues = firstIssueMessage(nestedError?.issues) ?? firstIssueMessage(root?.issues) ?? firstIssueMessage(root?.errors);
+  if (message && issues && /validation failed|invalid request/i.test(message)) return message + ": " + issues;
+  if (message && message !== "[object Object]") return message;
+  if (issues) return issues;
+  return "Request failed with status " + status + ". Please try again.";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(API_BASE_URL + path, {
@@ -13,8 +52,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message || data?.error || "Request failed with status " + response.status);
+  let data: unknown = null;
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // Some proxies return plain text/HTML for infrastructure failures.
+      // Avoid displaying raw markup to the user or throwing a JSON parser error.
+      data = { message: text.trim().startsWith("<") ? "" : text.trim().slice(0, 400) };
+    }
+  }
+  if (!response.ok) throw new Error(readableApiError(data, response.status));
+  if (data === null) throw new Error("The server returned an empty response. Please try again.");
   return data as T;
 }
 
