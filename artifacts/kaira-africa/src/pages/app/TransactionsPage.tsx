@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Plus, Search, Download, ArrowLeftRight, WalletCards, CheckCircle2, Clock3,
-  AlertCircle, Banknote, ReceiptText, Upload, Camera, FileText, ExternalLink,
+  AlertCircle, Banknote, ReceiptText, Upload, Camera, ExternalLink,
   PencilLine, LoaderCircle, X, Save, Trash2, CircleDollarSign, TrendingUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,6 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { PageTransition } from "@/components/common/PageTransition";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -475,7 +473,7 @@ export default function TransactionsPage() {
             </div>
           </div>
           <div className="pointer-events-none absolute -right-6 bottom-0 top-0 hidden w-[39%] items-center justify-center sm:flex">
-            <img src="/kaira-transactions-premium-card.webp" alt="" className="h-[94%] max-w-full rounded-xl object-contain opacity-90 drop-shadow-2xl" />
+            <img src="/kaira-transactions-premium-card.svg" alt="" className="h-[94%] max-w-full rounded-xl object-contain opacity-90 drop-shadow-2xl" />
           </div>
           <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl" />
         </section>
