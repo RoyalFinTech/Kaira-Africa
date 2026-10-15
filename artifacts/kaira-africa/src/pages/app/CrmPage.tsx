@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Phone, Mail, CalendarDays, MessageSquare, CheckCircle2, UserRound, Camera, Trash2, Pencil, Download, Printer, X, Save, Users, Clock3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,6 +135,8 @@ function CustomerForm({ initial, saving, error, onCancel, onSave }: {
 export default function CrmPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => { const timer = window.setTimeout(() => setDebouncedSearch(search), 250); return () => window.clearTimeout(timer); }, [search]);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ManagedCrmCustomer | null>(null);
   const [selected, setSelected] = useState<ManagedCrmCustomer | null>(null);
@@ -148,7 +150,7 @@ export default function CrmPage() {
   const [activitySaving, setActivitySaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: overview, isLoading: overviewLoading, isError: overviewError } = useQuery({ queryKey: ["crm-overview"], queryFn: getCrmOverview });
-  const { data: crmData, isLoading, isError } = useQuery({ queryKey: ["crm-customers", search], queryFn: () => searchCrmCustomers(search) });
+  const { data: crmData, isLoading, isError } = useQuery({ queryKey: ["crm-customers", debouncedSearch], queryFn: () => searchCrmCustomers(debouncedSearch) });
   const customers = crmData?.customers ?? [];
   const metrics = overview?.metrics;
   const openForm = (customer?: ManagedCrmCustomer) => { setEditing(customer ?? null); setSelected(null); setFormError(null); setFormOpen(true); };
@@ -203,6 +205,7 @@ export default function CrmPage() {
       <Card><CardContent className="flex items-center gap-4 p-5"><div className="rounded-xl bg-amber-500/10 p-3 text-amber-600"><Clock3 className="h-5 w-5"/></div><div><p className="text-xs text-muted-foreground">Open follow-ups</p><p className="text-2xl font-bold">{metrics?.openFollowUps ?? "—"}</p><p className="text-xs text-muted-foreground">Reminders still to complete</p></div></CardContent></Card>
     </div>
     <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="grid gap-3 p-4 sm:grid-cols-3"><div><p className="text-sm font-semibold">Customer profile</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Core identity and contact details. First and last name are required; other fields are optional.</p></div><div><p className="text-sm font-semibold">Relationship notes</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Record service preferences, feedback and useful follow-up context, keeping notes factual and respectful.</p></div><div><p className="text-sm font-semibold">Industry-specific fields</p><p className="mt-1 text-xs leading-5 text-muted-foreground">DOB, marital status and emergency contact are optional. Collect sensitive details only when relevant and appropriately authorised.</p></div></CardContent></Card>
+    {formError && !formOpen && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{formError}</div>}
     {formOpen && <Card><CardHeader className="flex flex-row items-center justify-between"><div><CardTitle>{editing ? "Edit customer profile" : "Create customer profile"}</CardTitle><p className="mt-1 text-sm text-muted-foreground">Fields marked optional can be left blank and completed later.</p></div><Button variant="ghost" size="icon" onClick={() => {setFormOpen(false);setFormError(null);}}><X className="h-4 w-4"/></Button></CardHeader><CardContent><CustomerForm key={editing?.id ?? "new-customer"} initial={editing ? fromCustomer(editing) : blankDraft()} saving={saving} error={formError} onCancel={() => setFormOpen(false)} onSave={saveCustomer}/></CardContent></Card>}
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <Card className="xl:col-span-2"><CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Customer directory</CardTitle><p className="mt-1 text-sm text-muted-foreground">Search names, phone, email, company, date of birth and saved profile details.</p></div><Badge variant="secondary">{filteredCount} records</Badge></div><div className="relative mt-3"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input className="pl-9" placeholder="Search any saved customer detail…" value={search} onChange={(e) => setSearch(e.target.value)}/></div></CardHeader><CardContent>
