@@ -2,6 +2,55 @@ import { getToken } from "./api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
+/**
+ * Kaira's API errors are shaped like { error: { code, message, issues } }.
+ * Normalize those envelopes before passing them to React so an object can
+ * never leak into a user-facing message as "[object Object]".
+ */
+function problemMessage(value: unknown): string | null {
+  if (typeof value === "string") {
+    const message = value.trim();
+    if (!message || /^<(?:!doctype|html|body)/i.test(message)) return null;
+    return message.slice(0, 800);
+  }
+
+  if (Array.isArray(value)) {
+    const messages = value
+      .map((item) => problemMessage(item))
+      .filter((message): message is string => Boolean(message));
+    return messages.length ? [...new Set(messages)].join("; ") : null;
+  }
+
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+
+  const issueList = Array.isArray(record.issues)
+    ? record.issues.map((issue) => {
+        if (!issue || typeof issue !== "object") return problemMessage(issue);
+        const entry = issue as Record<string, unknown>;
+        const message = problemMessage(entry.message);
+        const path = Array.isArray(entry.path)
+          ? entry.path.map(String).filter(Boolean).join(".")
+          : typeof entry.path === "string" ? entry.path : "";
+        return message ? (path ? path + ": " + message : message) : null;
+      }).filter((message): message is string => Boolean(message))
+    : [];
+
+  for (const key of ["message", "detail", "description", "error_description"] as const) {
+    const message = problemMessage(record[key]);
+    if (message) return issueList.length ? message + ": " + issueList.join("; ") : message;
+  }
+
+  for (const key of ["error", "errors", "issues", "reason"] as const) {
+    const message = problemMessage(record[key]);
+    if (message) return message;
+  }
+
+  return typeof record.code === "string" && record.code.trim()
+    ? "Request failed (" + record.code.trim() + ")."
+    : null;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(API_BASE_URL + path, {
@@ -12,9 +61,25 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...(options.headers || {}),
     },
   });
+
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(data?.message || data?.error || "Request failed with status " + response.status);
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    const message = problemMessage(data) || "Request failed with status " + response.status + ".";
+    throw new Error(message);
+  }
+
+  if (typeof data === "string" && /^<(?:!doctype|html|body)/i.test(data.trim())) {
+    throw new Error("Kaira Africa received an unreadable response from the server. Please try again.");
+  }
   return data as T;
 }
 
