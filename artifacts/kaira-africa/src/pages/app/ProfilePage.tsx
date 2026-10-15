@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, Building2, Calendar, CheckCircle2, Edit2, Shield, LogOut, CircleHelp } from 'lucide-react';
+import { User, Mail, Phone, Building2, Calendar, CheckCircle2, Edit2, Shield, LogOut, CircleHelp, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -220,7 +220,7 @@ export default function ProfilePage() {
                 try { await removeProfileAvatar(); await refetchUser(); setAvatarMessage('Photo removed. Your default avatar is now shown.'); }
                 catch (error) { setAvatarError(error instanceof Error ? error.message : 'Could not remove the photo.'); }
                 finally { setAvatarBusy(false); }
-              }} className="mb-2 h-7 text-xs text-muted-foreground"><icon name="trash-2" /> Remove photo</Button>
+              }} className="mb-2 h-7 text-xs text-muted-foreground"><Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove photo</Button>}
 
               <h2 className="font-display text-xl font-bold text-foreground">
                 {user.firstName} {user.lastName}
