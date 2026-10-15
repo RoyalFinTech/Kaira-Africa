@@ -331,6 +331,7 @@ try {
     createdAt: nowIso,
     lastLoginAt: null,
   };
+  let failNextReceiptLogoUpload = false;
   let receiptBrandingFixture = {
     companyName: visualBusiness.name,
     address: visualBusiness.address,
@@ -448,6 +449,18 @@ try {
       return;
     }
     if (pathname.endsWith('/api/businesses/me/receipt-logo') && method === 'POST') {
+      if (failNextReceiptLogoUpload) {
+        failNextReceiptLogoUpload = false;
+        await route.fulfill({
+          status: 502,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: {
+            code: 'receipt_logo_upload_failed',
+            message: 'Private logo storage refused the upload (HTTP 403). The logo was not saved. Please retry.',
+          } }),
+        });
+        return;
+      }
       const input = JSON.parse(request.postData() || '{}');
       receiptBrandingFixture = { ...receiptBrandingFixture, logoUrl: input.dataUrl || null, hasLogo: Boolean(input.dataUrl) };
       await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify(receiptBrandingFixture) });
@@ -1019,8 +1032,25 @@ try {
       await pinPage.getByRole('button', { name: 'Save branding settings' }).click();
       await pinPage.getByText('Receipt branding saved. Your next print will use these details.').waitFor({ state: 'visible', timeout: 10_000 });
       const logoFile = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
+
+      // Exercise the same nested error payload returned by the API error
+      // handler and confirm the user never sees "[object Object]".
+      failNextReceiptLogoUpload = true;
+      await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo-fail.png', mimeType: 'image/png', buffer: logoFile });
+      const logoFailureCard = pinPage.getByRole('alert').filter({ hasText: 'Logo upload failed' });
+      await logoFailureCard.waitFor({ state: 'visible', timeout: 10_000 });
+      const logoFailureText = await logoFailureCard.innerText();
+      assert.ok(logoFailureText.includes('Private logo storage refused the upload (HTTP 403)'), 'Structured API upload errors should display the nested message');
+      assert.ok(!logoFailureText.includes('[object Object]'), 'Structured API upload errors should never display object object');
+      assert.ok(await logoFailureCard.getByRole('img', { name: 'Kaira Africa' }).count() > 0, 'Logo failure card should include Kaira Africa branding');
+
+      // A subsequent upload succeeds; only then does the app confirm it has
+      // re-read a persisted logo path and a usable signed image URL.
       await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
-      await pinPage.getByText('Logo uploaded to private storage and saved for future printouts.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Logo saved securely').waitFor({ state: 'visible', timeout: 10_000 });
+      const logoSuccessCard = pinPage.getByRole('status').filter({ hasText: 'Logo saved securely' });
+      assert.ok((await logoSuccessCard.innerText()).includes('confirmed a usable image link'), 'Logo success card must describe a confirmed stored logo');
+      assert.ok(await logoSuccessCard.getByRole('img', { name: 'Kaira Africa' }).count() > 0, 'Logo success card should include Kaira Africa branding');
       const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 10_000 });
