@@ -403,15 +403,21 @@ try {
   });
   assert.ok(pinHeroStats.complete && pinHeroStats.naturalWidth > 0, 'PIN sign-in hero image must render in the browser: ' + JSON.stringify({ pinHeroStats, heroImageFailures }));
   console.log('PIN LOGIN HERO RENDER VERIFIED:', JSON.stringify(pinHeroStats));
-  const phoneInput = pinPage.getByLabel('Phone number');
-  await phoneInput.fill('+220 87 1234567');
+  const networkSelector = pinPage.getByRole('combobox', { name: 'Mobile network' });
+  await networkSelector.click();
+  await pinPage.getByRole('option', { name: /Africell/ }).click();
+  const phoneInput = pinPage.getByLabel('Seven digit phone number');
+  await phoneInput.fill('1234567');
   await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
 
+  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).waitFor({ state: 'attached', timeout: 10_000 });
+  assert.equal(await pinPage.getByRole('button', { name: 'Continue to dashboard' }).isDisabled(), false, 'PIN sign-in should enable after a 7-digit number and six-digit PIN are entered');
   await pinPage.getByRole('button', { name: 'Continue to dashboard' }).click();
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
   assert.equal(pinLoginRequests.length, 1, 'PIN sign-in must call the login endpoint once');
   assert.equal(pinLoginRequests[0].pin, '482951', 'PIN sign-in must submit exactly the six-digit PIN');
-  assert.equal(pinLoginRequests[0].phoneNumber, '+220 87 1234567', 'PIN sign-in must submit the phone number linked to the account');
+  assert.equal(pinLoginRequests[0].phoneNumber, '+220871234567', 'PIN sign-in must submit the normalized country code, network prefix and seven subscriber digits');
   const dashboardHero = pinPage.locator('img[src="/kaira-dashboard-hero.webp"]');
   await dashboardHero.waitFor({ state: 'visible', timeout: 10_000 });
   const dashboardHeroStats = await dashboardHero.evaluate(async (img) => {
