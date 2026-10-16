@@ -105,6 +105,37 @@ function pinPhoneKey(req: Request): string {
   }
 }
 
+/** Creates a verification code only after route-level login checks permit OTP. */
+async function issueLoginOtp(req: Request, countryCode: string, number: string) {
+  const mostRecent = await getMostRecentOtp(countryCode, number);
+  if (mostRecent && Date.now() - mostRecent.createdAt.getTime() < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
+    throw new BadRequestError("Please wait a moment before requesting another code.");
+  }
+
+  const code = generateOtp();
+  const codeHash = hashOtp(code, `${countryCode}${number}`);
+  await createOtp({
+    phoneCountryCode: countryCode,
+    phoneNumber: number,
+    codeHash,
+    purpose: "login",
+  });
+  await sendOtpSms({ to: `${countryCode}${number}`, code });
+  await recordAuthEvent({
+    actorType: "unknown",
+    event: "otp_requested",
+    success: true,
+    ipAddress: req.ip,
+    userAgent: req.header("user-agent"),
+    metadata: { phone: `${countryCode}${number}` },
+  });
+  return RequestOtpResponse.parse({
+    phoneNumber: `${countryCode}${number}`,
+    expiresInSeconds: OTP_TTL_MINUTES * 60,
+    devOtp: IS_PRODUCTION ? null : code,
+  });
+}
+
 async function serializeUser(user: User) {
   let avatarUrl = user.avatarUrl;
   if (avatarUrl && !/^https?:\/\//i.test(avatarUrl) && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -391,6 +422,39 @@ router.post(
 
 // ─── Phone + OTP (business users) ───────────────────────────────────────────
 
+// ─── Phone sign-in routing ────────────────────────────────────────────────────
+// Returning users who already chose a PIN go directly to PIN entry. This
+// avoids generating repeat OTP rows and avoids coupling the UI to error text.
+router.post(
+  "/auth/start-login",
+  rateLimit({ scope: "login_start_ip", windowMs: 60 * 60 * 1000, max: 8, keyFn: ipKey, message: "Too many sign-in attempts from this device." }),
+  rateLimit({ scope: "login_start_phone", windowMs: 60 * 60 * 1000, max: 5, keyFn: requestBodyKey("phoneNumber"), message: "Too many sign-in attempts for this number." }),
+  validate({ body: RequestOtpBody }),
+  async (req, res) => {
+    const { countryCode, number } = normalizeGambianPhone(req.body.phoneNumber);
+    const existingUser = await getUserByPhone(countryCode, number);
+    if (existingUser && existingUser.status !== "active") {
+      await recordAuthEvent({
+        actorType: "user", actorId: existingUser.id, event: "login_route_blocked",
+        success: false, ipAddress: req.ip, userAgent: req.header("user-agent"),
+        metadata: { reason: "inactive_or_restricted" },
+      });
+      throw new ForbiddenError("This account is restricted. Please contact Kaira Africa support.");
+    }
+
+    const phoneNumber = `${countryCode}${number}`;
+    if (existingUser?.pinHash) {
+      res.json({ nextStep: "pin", phoneNumber });
+      return;
+    }
+
+    const otp = await issueLoginOtp(req, countryCode, number);
+    res.json({ nextStep: "otp", ...otp });
+  },
+);
+
+// Keep the dedicated OTP endpoint for first-time sign-up, accounts without
+// a PIN, and the explicit resend action on the OTP screen.
 router.post(
   "/auth/request-otp",
   rateLimit({ scope: "otp_request_ip", windowMs: 60 * 60 * 1000, max: 8, keyFn: ipKey, message: "Too many OTP requests from this device." }),
@@ -398,59 +462,13 @@ router.post(
   validate({ body: RequestOtpBody }),
   async (req, res) => {
     const { countryCode, number } = normalizeGambianPhone(req.body.phoneNumber);
-
-    // Returning users with a configured PIN must use PIN sign-in instead of
-    // receiving a fresh OTP on every visit. Accounts without a PIN can still
-    // recover through verified SMS and configure one from their profile.
     const existingUser = await getUserByPhone(countryCode, number);
     if (existingUser?.pinHash) {
       throw new BadRequestError(
         "This number already has PIN sign-in enabled. Continue with your six-digit PIN instead.",
       );
     }
-
-    const mostRecent = await getMostRecentOtp(countryCode, number);
-    if (
-      mostRecent &&
-      Date.now() - mostRecent.createdAt.getTime() < OTP_RESEND_COOLDOWN_SECONDS * 1000
-    ) {
-      throw new BadRequestError(
-        `Please wait a moment before requesting another code.`,
-      );
-    }
-
-    const code = generateOtp();
-    const codeHash = hashOtp(code, `${countryCode}${number}`);
-    await createOtp({
-      phoneCountryCode: countryCode,
-      phoneNumber: number,
-      codeHash,
-      purpose: "login",
-    });
-
-    // Actually goes through the SMS provider abstraction now — in
-    // development/staging (SMS_PROVIDER=mock) this logs instead of
-    // sending; in production it calls the configured real provider.
-    // Not swallowed: if a real provider genuinely fails to deliver,
-    // the request should fail rather than falsely report success.
-    await sendOtpSms({ to: `${countryCode}${number}`, code });
-
-    await recordAuthEvent({
-      actorType: "unknown",
-      event: "otp_requested",
-      success: true,
-      ipAddress: req.ip,
-      userAgent: req.header("user-agent"),
-      metadata: { phone: `${countryCode}${number}` },
-    });
-
-    res.json(
-      RequestOtpResponse.parse({
-        phoneNumber: `${countryCode}${number}`,
-        expiresInSeconds: OTP_TTL_MINUTES * 60,
-        devOtp: IS_PRODUCTION ? null : code,
-      }),
-    );
+    res.json(await issueLoginOtp(req, countryCode, number));
   },
 );
 
