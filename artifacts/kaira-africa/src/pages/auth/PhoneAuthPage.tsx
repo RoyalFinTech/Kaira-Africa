@@ -43,7 +43,6 @@ function isPinLoginRequired(error: unknown): boolean {
   const code = nestedError?.code ?? data?.code;
   const message = typeof candidate.message === "string" ? candidate.message.toLowerCase() : "";
   return code === "pin_login_required" ||
-    candidate.status === 409 ||
     message.includes("already has pin sign-in enabled");
 }
 
