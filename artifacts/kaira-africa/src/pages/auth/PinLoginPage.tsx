@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { KeyRound, ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
@@ -33,7 +33,7 @@ export default function PinLoginPage() {
   const [, setLocation] = useLocation();
   const initialPhone = localStorage.getItem("kaira_last_phone") || sessionStorage.getItem("kaira_pending_phone") || "";
   const initial = useMemo(() => splitGambianPhone(initialPhone), []);
-  const hasRememberedPhone = Boolean(initialPhone && /^\\d{7}$/.test(initial.subscriber));
+  const hasRememberedPhone = Boolean(initialPhone && /^\d{7}$/.test(initial.subscriber));
   const [showPhoneEditor, setShowPhoneEditor] = useState(!hasRememberedPhone);
   const [networkPrefix, setNetworkPrefix] = useState(initial.prefix);
   const [subscriberNumber, setSubscriberNumber] = useState(initial.subscriber);
@@ -64,7 +64,7 @@ export default function PinLoginPage() {
       submitLockRef.current = false;
       return;
     }
-    if (!/^\\d{6}$/.test(pinValue)) {
+    if (!/^\d{6}$/.test(pinValue)) {
       setError("Enter all six digits of your PIN.");
       pinInputRef.current?.focus();
       submitLockRef.current = false;
