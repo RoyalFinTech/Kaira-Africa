@@ -87,7 +87,16 @@ router.get("/admin/platform/records", requireAdmin, async (req, res) => {
 });
 
 router.get("/admin/platform/overview", requireAdmin, async (_req, res) => {
-  const since = new Date(); since.setDate(since.getDate() - 13);
+  const since = new Date();
+  since.setDate(since.getDate() - 13);
+  const userDay = sql.raw("date_trunc('day', users.created_at)");
+  const customerDay = sql.raw("date_trunc('day', customers.created_at)");
+  const stockLabel = sql<string>`case
+    when ${inventoryProducts.quantity} <= 0 then 'Out of stock'
+    when ${inventoryProducts.quantity} <= ${inventoryProducts.reorderLevel} then 'Low stock'
+    else 'In stock'
+  end`;
+
   const results = await Promise.all([
     db.select({ value: count() }).from(users),
     db.select({ value: count() }).from(businesses),
@@ -98,14 +107,36 @@ router.get("/admin/platform/overview", requireAdmin, async (_req, res) => {
     db.select({ label: businesses.country, value: count() }).from(businesses).groupBy(businesses.country).orderBy(desc(count())),
     db.select({ label: sql.raw("to_char(date_trunc('day', transactions.created_at), 'YYYY-MM-DD')"), value: sql.raw("coalesce(sum(case when transactions.type = 'payment' and transactions.status = 'completed' then transactions.amount_minor else 0 end), 0)") })
       .from(transactions).where(gte(transactions.createdAt, since)).groupBy(sql.raw("date_trunc('day', transactions.created_at)")).orderBy(sql.raw("date_trunc('day', transactions.created_at)")),
+    db.select({ label: sql.raw("to_char(date_trunc('day', users.created_at), 'YYYY-MM-DD')"), value: count() })
+      .from(users).where(gte(users.createdAt, since)).groupBy(userDay).orderBy(userDay),
+    db.select({ label: sql.raw("to_char(date_trunc('day', customers.created_at), 'YYYY-MM-DD')"), value: count() })
+      .from(customers).where(gte(customers.createdAt, since)).groupBy(customerDay).orderBy(customerDay),
+    db.select({ label: stockLabel, value: count() }).from(inventoryProducts).groupBy(stockLabel).orderBy(desc(count())),
+    db.select({
+      total: count(),
+      lowStock: sql<number>`coalesce(sum(case when ${inventoryProducts.quantity} <= ${inventoryProducts.reorderLevel} then 1 else 0 end), 0)`,
+    }).from(inventoryProducts),
   ]);
+
   const userCount = results[0][0]?.value ?? 0, businessCount = results[1][0]?.value ?? 0, customerCount = results[2][0]?.value ?? 0;
   const transactionCount = results[3][0]?.value ?? 0, revenue = results[4][0]?.value ?? 0;
+  const productSummary = results[11][0];
   res.json({
-    metrics: { users: Number(userCount), businesses: Number(businessCount), customers: Number(customerCount), transactions: Number(transactionCount), revenue: Number(revenue) / 100 },
+    metrics: {
+      users: Number(userCount),
+      businesses: Number(businessCount),
+      customers: Number(customerCount),
+      transactions: Number(transactionCount),
+      revenue: Number(revenue) / 100,
+      products: Number(productSummary?.total ?? 0),
+      lowStockProducts: Number(productSummary?.lowStock ?? 0),
+    },
     transactionsByStatus: results[5].map((r) => ({ label: r.label, value: Number(r.value) })),
     businessesByCountry: results[6].map((r) => ({ label: r.label || "Unknown", value: Number(r.value) })),
     revenueTrend: results[7].map((r) => ({ label: String(r.label), value: Number(r.value) / 100 })),
+    userGrowthTrend: results[8].map((r) => ({ label: String(r.label), value: Number(r.value) })),
+    customerGrowthTrend: results[9].map((r) => ({ label: String(r.label), value: Number(r.value) })),
+    productsByStockStatus: results[10].map((r) => ({ label: r.label, value: Number(r.value) })),
   });
 });
 
