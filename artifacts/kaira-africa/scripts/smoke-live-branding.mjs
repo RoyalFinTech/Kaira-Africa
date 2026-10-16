@@ -1046,9 +1046,11 @@ try {
       failNextReceiptLogoUpload = true;
       await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
       const failedUploadCard = pinPage.getByTestId('kaira-global-feedback');
-      await failedUploadCard.getByText('Logo upload failed', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await failedUploadCard.getByText(/Logo upload failed/, { exact: false }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Logo upload failed — not saved', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await failedUploadCard.getByText(/SUPABASE_SERVICE_ROLE_KEY/).waitFor({ state: 'visible', timeout: 10_000 });
       assert.ok(!(await failedUploadCard.innerText()).includes('[object Object]'), 'API error objects must render as readable messages, never [object Object]');
+      assert.ok(!(await pinPage.locator('body').innerText()).includes('[object Object]'), 'Inline receipt feedback must never render a raw object serialization');
       await pinPage.waitForFunction(() => {
         const printLogo = document.querySelector('#receipt-preview-print img.kaira-print-logo');
         return !printLogo;
@@ -1059,6 +1061,7 @@ try {
       // verified branding metadata and a secure preview URL.
       await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
       await pinPage.getByTestId('kaira-global-feedback').getByText('Logo uploaded successfully', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByText('Logo uploaded successfully', { exact: true }).last().waitFor({ state: 'visible', timeout: 10_000 });
       const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
       await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 10_000 });

@@ -22,6 +22,7 @@ const LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 type BrandForm = Required<Pick<ReceiptBrandingSettings,
   "companyName" | "address" | "phone" | "email" | "website" | "footerNote" | "showReceiptNumber" | "showCustomerDetails"
 >>;
+type ActionFeedback = { variant: "success" | "error" | "info"; title: string; message: string };
 
 function readableActionError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim() && error.message !== "[object Object]") {
@@ -66,6 +67,7 @@ export default function ReceiptBrandingPage() {
   const [saving, setSaving] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
   const [removingLogo, setRemovingLogo] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const canEdit = me?.role === "owner";
 
@@ -93,12 +95,15 @@ export default function ReceiptBrandingPage() {
       const saved = await updateReceiptBranding(payload);
       queryClient.setQueryData(["receipt-branding"], saved);
       setForm(initialForm(saved, business?.name));
+      const success = { variant: "success" as const, title: "Receipt branding saved", message: "Your business details and print preferences are saved. New printouts will use these settings." };
+      setActionFeedback(success);
     } catch (err) {
-      reportKairaFeedback({
-        variant: "error",
+      const failure = {
+        variant: "error" as const,
         title: "Receipt branding could not be saved",
         message: readableActionError(err, "Please check the form and try saving your receipt settings again."),
-      });
+      };
+      setActionFeedback(failure);
     } finally {
       setSaving(false);
     }
@@ -106,12 +111,17 @@ export default function ReceiptBrandingPage() {
 
   const uploadLogo = async (file: File | undefined) => {
     if (!file) return;
+    setActionFeedback(null);
     if (!LOGO_TYPES.includes(file.type)) {
-      reportKairaFeedback({ variant: "error", title: "Logo file not accepted", message: "Choose a JPEG, PNG or WebP logo." });
+      const failure = { variant: "error" as const, title: "Logo file not accepted", message: "Choose a JPEG, PNG or WebP logo." };
+      setActionFeedback(failure);
+      reportKairaFeedback(failure);
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
-      reportKairaFeedback({ variant: "error", title: "Logo file is too large", message: "Your logo must be 2 MB or smaller." });
+      const failure = { variant: "error" as const, title: "Logo file is too large", message: "Your logo must be 2 MB or smaller." };
+      setActionFeedback(failure);
+      reportKairaFeedback(failure);
       return;
     }
     setLogoBusy(true);
@@ -126,15 +136,18 @@ export default function ReceiptBrandingPage() {
       }
       queryClient.setQueryData(["receipt-branding"], saved);
       setLogoPreview(null);
+      const success = { variant: "success" as const, title: "Logo uploaded successfully", message: "Kaira Africa confirmed the logo is saved in private Supabase Storage and can be used for printouts." };
+      setActionFeedback(success);
     } catch (err) {
       // Never leave an in-memory file looking like a persisted business logo.
       // Restore the last saved logo (if any) via branding.logoUrl instead.
       setLogoPreview(null);
-      reportKairaFeedback({
-        variant: "error",
-        title: "Logo upload failed",
+      const failure = {
+        variant: "error" as const,
+        title: "Logo upload failed — not saved",
         message: readableActionError(err, "Kaira Africa could not upload your logo. Please try again."),
-      });
+      };
+      setActionFeedback(failure);
     } finally {
       setLogoBusy(false);
     }
@@ -146,12 +159,15 @@ export default function ReceiptBrandingPage() {
       const saved = await removeReceiptLogo();
       queryClient.setQueryData(["receipt-branding"], saved);
       setLogoPreview(null);
+      const success = { variant: "success" as const, title: "Logo removed", message: "The saved logo was removed from private storage and will no longer appear on new printouts." };
+      setActionFeedback(success);
     } catch (err) {
-      reportKairaFeedback({
-        variant: "error",
+      const failure = {
+        variant: "error" as const,
         title: "Logo could not be removed",
         message: readableActionError(err, "Kaira Africa could not remove the saved logo. Please try again."),
-      });
+      };
+      setActionFeedback(failure);
     } finally {
       setRemovingLogo(false);
     }
@@ -185,6 +201,15 @@ export default function ReceiptBrandingPage() {
             <Button type="button" variant="outline" disabled={isLoading || isError || saving || logoBusy || removingLogo} onClick={() => printKairaDocument("receipt-preview-print")}><Printer className="mr-2 h-4 w-4"/>Print sample / Save PDF</Button>
           </div>
         </div>
+
+        {actionFeedback && (
+          <KairaFeedbackCard
+            variant={actionFeedback.variant}
+            title={actionFeedback.title}
+            message={actionFeedback.message}
+            onDismiss={() => setActionFeedback(null)}
+          />
+        )}
 
         {branding?.storageConfigured === false && (
           <KairaFeedbackCard
