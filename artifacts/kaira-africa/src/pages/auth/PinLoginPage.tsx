@@ -8,6 +8,7 @@ import { GambiaFlag } from "@/components/common/GambiaFlag";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequestJson, setToken } from "@/lib/api-client";
+import { reportKairaFeedback } from "@/lib/platform-api";
 
 interface PinLoginResult {
   token: string;
@@ -81,13 +82,20 @@ export default function PinLoginPage() {
       localStorage.setItem("kaira_last_phone", result.user.phone || fullPhone);
       sessionStorage.removeItem("kaira_pending_phone");
       sessionStorage.removeItem("kaira_dev_otp");
+      reportKairaFeedback({
+        variant: "success",
+        title: "Welcome back",
+        message: "Your PIN was verified. Kaira Africa is opening your workspace.",
+      });
       if (!result.user.firstName) setLocation("/login/name");
       else if (!result.user.businessId) setLocation("/business-onboarding");
       else setLocation("/dashboard");
     } catch (cause) {
-      setError(cause instanceof Error && cause.message !== "[object Object]"
+      const message = cause instanceof Error && cause.message !== "[object Object]"
         ? cause.message
-        : "Kaira Africa could not verify that PIN. Check the six digits and try again.");
+        : "Kaira Africa could not verify that PIN. Check the six digits and try again.";
+      setError(message);
+      reportKairaFeedback({ variant: "error", title: "PIN sign-in failed", message });
       setPin("");
       pinInputRef.current?.focus();
     } finally {
