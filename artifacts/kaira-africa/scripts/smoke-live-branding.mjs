@@ -1135,7 +1135,7 @@ try {
       await pinPage.getByTestId('kaira-global-feedback').getByText('Profile photo saved', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       const headerAvatar = pinPage.locator('header img[alt="Fatou Jallow profile photo"]').first();
       await headerAvatar.waitFor({ state: 'visible', timeout: 10_000 });
-      const headerAvatarWidth = await headerAvatar.evaluate((img) => (img as HTMLImageElement).naturalWidth);
+      const headerAvatarWidth = await headerAvatar.evaluate((img) => img.naturalWidth);
       assert.ok(headerAvatarWidth > 0, 'Saved profile photo should render at the top of Kaira Africa in the header');
       assert.equal(profileAvatarRequests.length, 1, 'Profile avatar upload should call the authenticated avatar endpoint');
       assert.ok(profileAvatarRequests[0].bytes > 0, 'Profile avatar should submit non-empty image data');
