@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/form';
 import { useAdminLogin, ApiError } from '@workspace/api-client-react';
 import { setToken, setAdminInfo } from '@/lib/api-client';
+import { reportKairaFeedback } from '@/lib/platform-api';
 
 const adminSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -27,13 +28,12 @@ const adminSchema = z.object({
 
 type AdminForm = z.infer<typeof adminSchema>;
 
-type LoginState = 'idle' | 'loading' | 'error' | 'locked';
+type LoginState = 'idle' | 'loading';
 
 export default function AdminLoginPage() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [loginState, setLoginState] = useState<LoginState>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
 
   const form = useForm<AdminForm>({
     resolver: zodResolver(adminSchema),
@@ -46,20 +46,22 @@ export default function AdminLoginPage() {
         setToken(result.token);
         setAdminInfo(result.admin);
         setLoginState('idle');
+        reportKairaFeedback({
+          variant: 'success',
+          title: 'Administrator signed in',
+          message: 'Your secure Kaira Africa admin session is ready.',
+        });
         setLocation('/admin/dashboard');
       },
       onError: (error) => {
-        // 403 = account temporarily locked from repeated failures
-        // (see the backend's admin lockout logic) — distinct from a
-        // plain wrong-credentials 401, worth telling the person so
-        // they don't keep retrying a password that might be correct.
-        const locked = error instanceof ApiError && error.status === 403;
-        setLoginState(locked ? 'locked' : 'error');
-        setErrorMsg(
-          locked
-            ? error.message
-            : 'Invalid credentials. Please check your email and password.',
-        );
+        const status = error instanceof ApiError ? error.status : 0;
+        const locked = status === 403;
+        reportKairaFeedback({
+          variant: 'error',
+          title: status === 503 ? 'Admin portal setup required' : locked ? 'Administrator access restricted' : 'Sign-in unsuccessful',
+          message: error instanceof Error ? error.message : 'Please check your administrator credentials and try again.',
+        });
+        setLoginState('idle');
         form.setValue('password', '');
       },
     },
@@ -76,6 +78,8 @@ export default function AdminLoginPage() {
       {/* ── Left Panel — Admin Identity ── */}
       <div className="hidden lg:flex lg:w-[42%] flex-col justify-between p-12 relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 60%, #0f2417 100%)' }}>
+        <img src="/kaira-dashboard-hero.webp" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-30" />
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/85 to-emerald-950/90" />
 
         {/* Circuit/grid pattern overlay */}
         <div className="absolute inset-0 opacity-[0.04]">
@@ -169,42 +173,21 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            {/* Security warning */}
-            <div className="mb-6 p-3 rounded-lg bg-slate-100 dark:bg-slate-900 border border-border">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                🛡️ This portal is reserved for authorized Kaira Africa administrators. Unauthorized access attempts may be logged and monitored.
+            {/* Clearly separated restriction notice */}
+            <div className="mb-6 overflow-hidden rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50 via-white to-slate-50 shadow-sm">
+              <div className="flex items-start gap-3 border-b border-amber-200/80 bg-amber-100/60 px-4 py-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-amber-400 shadow-sm">
+                  <Shield className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-amber-950">Restricted portal</p>
+                  <p className="mt-0.5 text-sm font-semibold text-slate-900">Authorized administrators only</p>
+                </div>
+              </div>
+              <p className="px-4 py-3 text-xs leading-5 text-slate-600">
+                This area provides access to platform-level records and controls. Login attempts are monitored; no public administrator registration is available.
               </p>
             </div>
-
-            {/* Error state */}
-            {loginState === 'error' && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2"
-              >
-                <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
-                <p className="text-sm text-destructive">{errorMsg}</p>
-              </motion.div>
-            )}
-
-            {loginState === 'locked' && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 flex items-start gap-2"
-              >
-                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">Account Restricted</p>
-                  <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
-                    Your administrator access has been temporarily restricted. Contact the system administrator.
-                  </p>
-                </div>
-              </motion.div>
-            )}
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -217,7 +200,6 @@ export default function AdminLoginPage() {
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="admin@kaira.africa"
                           autoComplete="email"
                           autoFocus
                           {...field}
@@ -238,7 +220,6 @@ export default function AdminLoginPage() {
                         <div className="relative">
                           <Input
                             type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
                             autoComplete="current-password"
                             {...field}
                           />
