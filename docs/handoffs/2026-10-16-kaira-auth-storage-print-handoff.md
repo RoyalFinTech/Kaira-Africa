@@ -2,8 +2,9 @@
 
 **Last updated:** 2026-10-16  
 **Repository:** https://github.com/RoyalFinTech/Kaira-Africa  
-**Work branch:** `fix/profile-storage-and-pin-signin`  
-**Purpose:** Resume the open print/storage/login QA work without relying on prior chat context.
+**Latest deployed commit:** `5c747e9c99fd977ea702a0e9b36c7ba644717ebd`  
+**Merged PR:** [#55 — profile storage and returning-user PIN login](https://github.com/RoyalFinTech/Kaira-Africa/pull/55)  
+**Purpose:** Resume the remaining screenshot-led feedback-card redesign and real-account storage verification without relying on prior chat context.
 
 ## Live services
 
@@ -32,7 +33,7 @@ The app contains a dedicated Receipt & Print Branding page (`/receipt-branding`)
 - The on-screen sample can pass its current unsaved form branding into the printable sample so the sample and paper/PDF output match.
 - Daily Ledger printing fetches all pages in the selected date range instead of silently printing only the currently visible page.
 - Smoke test coverage inspects print-media CSS and expected logo/reference/footer content for the sample, transaction, CRM and ledger documents, and checks a 101-row ledger fixture.
-- At the last Render check, the frontend and API deploys for this merge were marked `live`. Prior pre-PR-45 release smoke/backend runs passed; check Actions for the post-PR-45 runs before citing the latest status.
+- At the last Render check, the frontend and API deploys for this merge were marked `live`.
 
 ## What was discovered in the current QA
 
@@ -61,11 +62,18 @@ The latest main commit `b88a8383998161100153e2aa3baeaf09c388570b` already improv
 - `PhoneAuthPage` tried to detect returning-user PIN login from the error text. It needs the stable `pin_login_required` response code/status and must redirect to `/login/pin`, not leave the user on the OTP flow.
 - The PIN screen required clicking Continue after the sixth digit and asked for the phone again, even when the phone was saved from registration/OTP on the current device.
 
-## Current branch work (not yet presumed live)
+## Merged and deployed: profile storage and returning-user PIN login — PR #55
 
-Branch: `fix/profile-storage-and-pin-signin`
+- PR: https://github.com/RoyalFinTech/Kaira-Africa/pull/55
+- Merge commit: `5c747e9c99fd977ea702a0e9b36c7ba644717ebd`
+- Render Frontend deploy `dep-db8tqp7avr4c739mfn60` reached `live` on the merge commit.
+- Render API deploy `dep-db8tqp7avr4c739mfmu0` reached `live` on the merge commit.
+- The post-merge Live Kaira Branding Smoke Test passed: https://github.com/RoyalFinTech/Kaira-Africa/actions/runs/38872613578
+- Smoke log confirms returning-user routing, automatic sign-in after PIN digit six, profile avatar upload/removal fixture flows, profile photo displayed in the Header, readable storage-error feedback, mobile widths and all 14 primary navigation targets. Its POST requests use intercepted fixtures and did not modify real accounts or storage.
+- Pre-merge Backend CI on PR55 passed typechecks, frontend build, unit tests, migration checks, API health and Docker production-image build. Post-merge Backend CI run: https://github.com/RoyalFinTech/Kaira-Africa/actions/runs/38872613447 (check latest status before citing full completion).
 
-The branch has been updated to:
+The merged implementation:
+
 
 1. Reuse the shared Supabase Storage config/header helpers in the profile avatar upload, signing and removal routes.
 2. Validate base64 data and make profile-photo storage errors more actionable without exposing secrets.
@@ -78,13 +86,13 @@ The branch has been updated to:
 
 All browser smoke writes in this workflow are intercepted fixture responses; they must not create production test users or production transactions.
 
-**Before describing these branch changes as completed in production:** open the PR, wait for Backend CI and the production image build to pass, merge, verify both Render deployments reach `live` on the merge commit, and inspect the post-merge Live Kaira Branding Smoke Test. If a test fails, fix the cause on a branch and rerun CI.
+**The code changes above are merged and deployed.** The visual feedback-card redesign is not complete, because the user intends to attach a screenshot in the next chat. The user-specific image/logo persistence is also still unverified: the automated browser tests use fixture responses and do not upload to the user's real account.
 
 ## User-requested work still pending
 
 1. The user will attach a screenshot showing the error-card appearance they dislike. Use that screenshot as the design reference and redesign the reusable `artifacts/kaira-africa/src/components/common/KairaFeedbackCard.tsx` and the `KairaFeedbackHost` in `artifacts/kaira-africa/src/App.tsx`. Keep a clear success checkmark, actionable failure icon, Kaira Africa logo/branding, readable hierarchy, mobile responsiveness, accessible announce/dismiss behavior and no raw object serialization. **Do not guess the desired new design before viewing their screenshot.**
 2. Verify that a newly uploaded receipt logo really creates an object in the private `receipt-logos` bucket and persists `businesses.receipt_settings.logoPath`. Then verify a new authenticated response returns `hasLogo: true` and a usable signed `logoUrl`.
-3. After a profile-photo upload in the user’s real account, verify a private `profile-avatars` object exists, the user row has a storage path, `GET /auth/me` returns a valid signed avatar URL, and the same image appears in the Profile card and top Header.
+3. After a profile-photo upload in the user’s real account, verify a private `profile-avatars` object exists, the user row has a storage path, `GET /auth/me` returns a valid signed avatar URL, and the same image appears in the Profile card and top Header. **Do not consider this done just because the fixture-only smoke passed.**
 4. Test returning-user PIN routing, new-user OTP verification and incomplete-registration/recovery paths separately. Six-digit PIN entry should log in automatically after digit six. A returning account with a PIN should skip OTP; accounts without a PIN should retain a secure verification/recovery path.
 5. Inspect actual live API/storage logs if uploads still fail after deployment. Never request or log user PINs/OTPs; never expose the server storage key in frontend code or docs.
 
