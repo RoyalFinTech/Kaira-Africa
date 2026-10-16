@@ -53,6 +53,7 @@ import {
   resetFailedLogins,
   updateAdminPassword,
   isLocked,
+  hasAnyAdminUsers,
 } from "../repositories/admin-users";
 import {
   createPasswordReset,
@@ -571,6 +572,25 @@ router.post(
   rateLimit({ scope: "admin_login_email", windowMs: 15 * 60 * 1000, max: 8, keyFn: requestBodyKey("email"), message: "Too many login attempts for this account." }),
   validate({ body: AdminLoginBody }),
   async (req, res) => {
+    // Never create or silently elevate an account during login. If the
+    // administrator table is empty, return a setup error instead of making
+    // every credential look wrong. First-admin provisioning remains an
+    // explicit, secret-managed operations task.
+    if (!(await hasAnyAdminUsers())) {
+      await recordAuthEvent({
+        actorType: "unknown",
+        event: "admin_login_unavailable",
+        success: false,
+        ipAddress: req.ip,
+        metadata: { reason: "no_admin_accounts_provisioned" },
+      });
+      throw new HttpError(
+        503,
+        "admin_not_configured",
+        "Administrator access has not been provisioned for this environment. The platform owner must create the first administrator account before sign-in can work.",
+      );
+    }
+
     const admin = await getAdminByEmail(req.body.email);
 
     // Constant-shape failure path regardless of whether the email
