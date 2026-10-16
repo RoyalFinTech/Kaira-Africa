@@ -147,10 +147,21 @@ export const getAiInsights = () => request<AiInsight[]>("/api/ai/insights");
 export const generateAiInsights = () => request<AiInsight[]>("/api/ai/insights/generate", { method: "POST", body: "{}" });
 
 export interface AdminOverview {
-  metrics: { users: number; businesses: number; customers: number; transactions: number; revenue: number };
+  metrics: {
+    users: number;
+    businesses: number;
+    customers: number;
+    transactions: number;
+    revenue: number;
+    products: number;
+    lowStockProducts: number;
+  };
   transactionsByStatus: { label: string; value: number }[];
   businessesByCountry: { label: string; value: number }[];
   revenueTrend: { label: string; value: number }[];
+  userGrowthTrend: { label: string; value: number }[];
+  customerGrowthTrend: { label: string; value: number }[];
+  productsByStockStatus: { label: string; value: number }[];
 }
 export const getAdminOverview = () => request<AdminOverview>("/api/admin/platform/overview");
 export interface PaginationMeta {
