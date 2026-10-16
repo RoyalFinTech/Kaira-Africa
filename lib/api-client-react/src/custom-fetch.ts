@@ -148,26 +148,56 @@ function truncate(text: string, maxLength = 300): string {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
+function readErrorMessage(value: unknown, depth = 0): string | undefined {
+  if (depth > 5 || value == null) return undefined;
+
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text || /^\[object object\]$/i.test(text) || /^<!doctype html/i.test(text) || /^<html/i.test(text)) return undefined;
+    if ((text.startsWith("{") || text.startsWith("[")) && depth < 5) {
+      try {
+        const nested = readErrorMessage(JSON.parse(text), depth + 1);
+        if (nested) return nested;
+      } catch {
+        // Keep a normal human-readable sentence; discard malformed object-like payloads below.
+      }
+      if (text.startsWith("{") || text.startsWith("[")) return undefined;
+    }
+    return truncate(text);
+  }
+
+  if (Array.isArray(value)) {
+    const messages = value
+      .map((item) => readErrorMessage(item, depth + 1))
+      .filter((item): item is string => Boolean(item));
+    return messages.length ? truncate(messages.slice(0, 4).join(" · ")) : undefined;
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["message", "detail", "error_description", "title", "error", "issues", "errors", "data", "cause", "response"]) {
+      const message = readErrorMessage(record[key], depth + 1);
+      if (message && !/^error$/i.test(message)) return message;
+    }
+  }
+  return undefined;
+}
+
 function buildErrorMessage(response: Response, data: unknown): string {
   const prefix = `HTTP ${response.status} ${response.statusText}`;
-
   if (typeof data === "string") {
-    const text = data.trim();
-    return text ? `${prefix}: ${truncate(text)}` : prefix;
+    const message = readErrorMessage(data);
+    return message ? `${prefix}: ${message}` : prefix;
   }
 
   const title = getStringField(data, "title");
   const detail = getStringField(data, "detail");
-  const message =
-    getStringField(data, "message") ??
-    getStringField(data, "error_description") ??
-    getStringField(data, "error");
+  const message = readErrorMessage(data);
 
   if (title && detail) return `${prefix}: ${title} — ${detail}`;
   if (detail) return `${prefix}: ${detail}`;
   if (message) return `${prefix}: ${message}`;
   if (title) return `${prefix}: ${title}`;
-
   return prefix;
 }
 

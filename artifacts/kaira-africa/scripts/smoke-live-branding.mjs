@@ -300,6 +300,7 @@ try {
   const crmFixtureCustomers = [];
   const profileAvatarRequests = [];
   let profileAvatarDeleteCount = 0;
+  let failNextProfileAvatarUpload = false;
   let pinEnabled = false;
   const nowIso = new Date().toISOString();
   const visualBusiness = {
@@ -406,6 +407,22 @@ try {
         status: 200,
         headers: corsHeaders,
         body: JSON.stringify({ token: 'usr_visual_smoke_token', isNewUser: false, user: visualUser }),
+      });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/request-otp') && method === 'POST') {
+      // Known returning user with PIN: test the real redirect decision without
+      // creating a production OTP or touching a real user record.
+      await route.fulfill({
+        status: 409,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: {
+            code: 'pin_login_required',
+            message: 'This number already has PIN sign-in enabled. Continue with your six-digit PIN instead.',
+          },
+        }),
       });
       return;
     }
@@ -592,6 +609,20 @@ try {
     }
 
     if (pathname.endsWith('/api/auth/profile/avatar') && method === 'POST') {
+      if (failNextProfileAvatarUpload) {
+        failNextProfileAvatarUpload = false;
+        await route.fulfill({
+          status: 503,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            error: {
+              code: 'supabase_storage_not_configured',
+              message: 'Profile photo storage is unavailable because the Kaira Africa API is missing SUPABASE_URL or its server-side Supabase Storage key.',
+            },
+          }),
+        });
+        return;
+      }
       const input = JSON.parse(request.postData() || '{}');
       const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
       profileAvatarRequests.push({ dataUrlPrefix: dataUrl.slice(0, 30), bytes: dataUrl.includes(',') ? Buffer.from(dataUrl.split(',')[1], 'base64').byteLength : 0 });
@@ -775,14 +806,28 @@ try {
   await phoneInput.fill('1234567');
   await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
 
-  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).waitFor({ state: 'visible', timeout: 10_000 });
-  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).waitFor({ state: 'attached', timeout: 10_000 });
-  assert.equal(await pinPage.getByRole('button', { name: 'Continue to dashboard' }).isDisabled(), false, 'PIN sign-in should enable after a 7-digit number and six-digit PIN are entered');
-  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).click();
+  // The sixth digit must submit PIN sign-in automatically; there is no Continue action.
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
-  assert.equal(pinLoginRequests.length, 1, 'PIN sign-in must call the login endpoint once');
+  assert.equal(await pinPage.getByRole('button', { name: 'Continue to dashboard' }).count(), 0, 'PIN login must not require a Continue button');
+  assert.equal(pinLoginRequests.length, 1, 'PIN sign-in must call the login endpoint once automatically after digit six');
   assert.equal(pinLoginRequests[0].pin, '482951', 'PIN sign-in must submit exactly the six-digit PIN');
   assert.equal(pinLoginRequests[0].phoneNumber, '+220871234567', 'PIN sign-in must submit the normalized country code, network prefix and seven subscriber digits');
+
+  // When an existing PIN-enabled number is submitted from the phone screen,
+  // the app should skip OTP and take the remembered phone to the PIN screen.
+  await pinPage.goto(baseUrl + '/login?returning-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByPlaceholder('*******').fill('1234567');
+  await pinPage.getByRole('button', { name: 'Continue' }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/login/pin', { timeout: 10_000 });
+  assert.equal(await pinPage.getByLabel('Seven digit phone number').count(), 0, 'Returning-user PIN screen should not require re-entering the phone number');
+  assert.equal(await pinPage.getByTestId('remembered-pin-phone').innerText(), '+220871234567', 'Returning-user PIN screen must show the remembered full phone number');
+  assert.equal(await pinPage.getByRole('heading', { name: /verification code/i }).count(), 0, 'Returning user with PIN must skip the OTP screen');
+  await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
+  await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
+  assert.equal(pinLoginRequests.length, 2, 'Returning-user PIN sign-in should call the login endpoint after digit six');
+  assert.equal(pinLoginRequests[1].pin, '482951', 'Returning-user PIN sign-in submits the entered six-digit PIN');
+  assert.equal(pinLoginRequests[1].phoneNumber, '+220871234567', 'Returning-user PIN sign-in reuses the saved phone number');
   const dashboardHero = pinPage.locator('img[src="/kaira-dashboard-hero.webp"]');
   await dashboardHero.waitFor({ state: 'visible', timeout: 10_000 });
   const dashboardHeroStats = await dashboardHero.evaluate(async (img) => {
@@ -1102,13 +1147,29 @@ try {
       const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
       await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'profile-avatar.png', mimeType: 'image/png', buffer: onePixelPng });
       await pinPage.getByText('Profile photo updated.').waitFor({ state: 'visible', timeout: 10_000 });
-      await pinPage.locator('header img[alt="Fatou Jallow profile photo"]').first().waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByTestId('kaira-global-feedback').getByText('Profile photo saved', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+      const headerAvatar = pinPage.locator('header img[alt="Fatou Jallow profile photo"]').first();
+      await headerAvatar.waitFor({ state: 'visible', timeout: 10_000 });
+      const headerAvatarWidth = await headerAvatar.evaluate((img) => img.naturalWidth);
+      assert.ok(headerAvatarWidth > 0, 'Saved profile photo should render at the top of Kaira Africa in the header');
       assert.equal(profileAvatarRequests.length, 1, 'Profile avatar upload should call the authenticated avatar endpoint');
       assert.ok(profileAvatarRequests[0].bytes > 0, 'Profile avatar should submit non-empty image data');
       await pinPage.getByRole('button', { name: 'Remove photo' }).click();
       await pinPage.getByText('Photo removed. Your default avatar is now shown.').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByTestId('kaira-global-feedback').getByText('Profile photo removed', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(profileAvatarDeleteCount, 1, 'Profile avatar removal should call the authenticated delete endpoint');
-      console.log('PROFILE AVATAR UPLOAD AND REMOVAL VERIFIED:', JSON.stringify({ uploads: profileAvatarRequests.length, removals: profileAvatarDeleteCount }));
+
+      // Verify the actual failure card is readable and never shows raw object serialization.
+      failNextProfileAvatarUpload = true;
+      await pinPage.getByRole('button', { name: 'Upload profile photo' }).click();
+      await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'profile-avatar-failed.png', mimeType: 'image/png', buffer: onePixelPng });
+      const profileFailureCard = pinPage.getByTestId('kaira-global-feedback');
+      await profileFailureCard.getByText(/Profile photo storage is unavailable/).waitFor({ state: 'visible', timeout: 10_000 });
+      const profileFailureText = await profileFailureCard.innerText();
+      assert.ok(!profileFailureText.includes('[object Object]'), 'Profile upload failure feedback must contain a human-readable message');
+      assert.ok(!profileFailureText.startsWith('{'), 'Profile upload failure feedback must not display a raw JSON object');
+      assert.equal(profileAvatarRequests.length, 1, 'Failed profile-photo upload must not be counted as a successful upload');
+      console.log('PROFILE AVATAR SUCCESS, HEADER DISPLAY, REMOVAL AND STORAGE ERROR FEEDBACK VERIFIED:', JSON.stringify({ uploads: profileAvatarRequests.length, removals: profileAvatarDeleteCount }));
     }
 
     if (routePath === '/inventory') {

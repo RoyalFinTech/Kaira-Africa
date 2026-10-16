@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRight, KeyRound, ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
+import { KeyRound, ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KairaLogo } from "@/components/common/KairaLogo";
 import { GambiaFlag } from "@/components/common/GambiaFlag";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequestJson, setToken } from "@/lib/api-client";
+import { reportKairaFeedback } from "@/lib/platform-api";
 
 interface PinLoginResult {
   token: string;
@@ -33,6 +34,8 @@ export default function PinLoginPage() {
   const [, setLocation] = useLocation();
   const initialPhone = localStorage.getItem("kaira_last_phone") || sessionStorage.getItem("kaira_pending_phone") || "";
   const initial = useMemo(() => splitGambianPhone(initialPhone), []);
+  const hasRememberedPhone = Boolean(initialPhone && /^\d{7}$/.test(initial.subscriber));
+  const [showPhoneEditor, setShowPhoneEditor] = useState(!hasRememberedPhone);
   const [networkPrefix, setNetworkPrefix] = useState(initial.prefix);
   const [subscriberNumber, setSubscriberNumber] = useState(initial.subscriber);
   const [pin, setPin] = useState("");
@@ -40,6 +43,7 @@ export default function PinLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const pinInputRef = useRef<HTMLInputElement>(null);
+  const submitLockRef = useRef(false);
 
   const fullPhone = useMemo(() => `+220${networkPrefix === "none" ? "" : networkPrefix}${subscriberNumber}`, [networkPrefix, subscriberNumber]);
   const completePhone = networkPrefix === "none" ? /^\d{7}$/.test(subscriberNumber) : /^\d{7}$/.test(subscriberNumber);
@@ -52,36 +56,65 @@ export default function PinLoginPage() {
     }
   }, []);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitPin = useCallback(async (pinValue: string) => {
+    if (submitLockRef.current || submitting) return;
+    submitLockRef.current = true;
     setError(null);
     if (!completePhone) {
       setError("Enter the seven subscriber digits for your selected Gambian network.");
+      submitLockRef.current = false;
       return;
     }
-    if (!/^\d{6}$/.test(pin)) {
+    if (!/^\d{6}$/.test(pinValue)) {
       setError("Enter all six digits of your PIN.");
       pinInputRef.current?.focus();
+      submitLockRef.current = false;
       return;
     }
+
     setSubmitting(true);
     try {
       const result = await apiRequestJson<PinLoginResult>("/auth/login-pin", {
         method: "POST",
-        body: JSON.stringify({ phoneNumber: fullPhone, pin }),
+        body: JSON.stringify({ phoneNumber: fullPhone, pin: pinValue }),
       });
       setToken(result.token);
       localStorage.setItem("kaira_last_phone", result.user.phone || fullPhone);
+      sessionStorage.removeItem("kaira_pending_phone");
+      sessionStorage.removeItem("kaira_dev_otp");
+      reportKairaFeedback({
+        variant: "success",
+        title: "Welcome back",
+        message: "Your PIN was verified. Kaira Africa is opening your workspace.",
+      });
       if (!result.user.firstName) setLocation("/login/name");
       else if (!result.user.businessId) setLocation("/business-onboarding");
       else setLocation("/dashboard");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "We couldn't sign you in. Please try again.");
+      const message = cause instanceof Error && cause.message !== "[object Object]"
+        ? cause.message
+        : "Kaira Africa could not verify that PIN. Check the six digits and try again.";
+      setError(message);
+      reportKairaFeedback({ variant: "error", title: "PIN sign-in failed", message });
       setPin("");
       pinInputRef.current?.focus();
     } finally {
       setSubmitting(false);
     }
+  }, [completePhone, fullPhone, setLocation, submitting]);
+
+  useEffect(() => {
+    if (pin.length !== 6) {
+      submitLockRef.current = false;
+      return;
+    }
+    if (!completePhone || submitting || submitLockRef.current) return;
+    void submitPin(pin);
+  }, [pin, completePhone, submitting, submitPin]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submitPin(pin);
   };
 
   return (
@@ -113,27 +146,36 @@ export default function PinLoginPage() {
           <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose your mobile network, enter your number and unlock your account with your six-digit PIN.</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-5 sm:mt-7">
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-semibold">Gambian phone number</legend>
-              <div className="flex min-w-0 overflow-hidden rounded-xl border border-input bg-background shadow-sm transition focus-within:ring-2 focus-within:ring-ring/30">
-                <div className="flex shrink-0 items-center gap-2 border-r border-input bg-muted/70 px-2.5 sm:px-3">
-                  <GambiaFlag width={25} height={17} />
-                  <span className="text-sm font-semibold text-foreground">+220</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <Select value={networkPrefix} onValueChange={(value) => { setNetworkPrefix(value); setError(null); }}>
-                    <SelectTrigger aria-label="Mobile network" className="h-9 w-full rounded-none border-0 bg-transparent px-2 text-xs font-semibold shadow-none focus:ring-0 sm:h-10 sm:px-3 sm:text-sm">
-                      <SelectValue placeholder="Choose network" />
-                    </SelectTrigger>
-                    <SelectContent>{NETWORKS.map((network) => <SelectItem key={network.prefix} value={network.prefix}>{network.name}{network.prefix !== "none" ? ` (${network.prefix})` : ""}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <div className="px-2 pb-2 sm:px-3">
-                    <Input type="tel" inputMode="numeric" autoComplete="tel-national" value={subscriberNumber} onChange={(event) => { setSubscriberNumber(event.target.value.replace(/\D/g, "").slice(0, 7)); setError(null); }} placeholder="7-digit number" maxLength={7} className="h-9 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0 sm:text-lg" aria-label="Seven digit phone number" required />
+            {showPhoneEditor ? (
+              <fieldset disabled={submitting} className="space-y-2">
+                <legend className="text-sm font-semibold">Gambian phone number</legend>
+                <div className="flex min-w-0 overflow-hidden rounded-xl border border-input bg-background shadow-sm transition focus-within:ring-2 focus-within:ring-ring/30">
+                  <div className="flex shrink-0 items-center gap-2 border-r border-input bg-muted/70 px-2.5 sm:px-3">
+                    <GambiaFlag width={25} height={17} />
+                    <span className="text-sm font-semibold text-foreground">+220</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Select value={networkPrefix} onValueChange={(value) => { setNetworkPrefix(value); setError(null); }}>
+                      <SelectTrigger aria-label="Mobile network" className="h-9 w-full rounded-none border-0 bg-transparent px-2 text-xs font-semibold shadow-none focus:ring-0 sm:h-10 sm:px-3 sm:text-sm">
+                        <SelectValue placeholder="Choose network" />
+                      </SelectTrigger>
+                      <SelectContent>{NETWORKS.map((network) => <SelectItem key={network.prefix} value={network.prefix}>{network.name}{network.prefix !== "none" ? ` (${network.prefix})` : ""}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <div className="px-2 pb-2 sm:px-3">
+                      <Input type="tel" inputMode="numeric" autoComplete="tel-national" value={subscriberNumber} onChange={(event) => { setSubscriberNumber(event.target.value.replace(/\D/g, "").slice(0, 7)); setError(null); }} placeholder="7-digit number" maxLength={7} className="h-9 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0 sm:text-lg" aria-label="Seven digit phone number" required />
+                    </div>
                   </div>
                 </div>
+                <p className="text-xs leading-5 text-muted-foreground">Select the network linked to your account. Your number is saved on this device for faster sign-in.</p>
+              </fieldset>
+            ) : (
+              <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Phone number confirmed</p>
+                <p className="mt-1 text-lg font-bold tracking-wide text-foreground" data-testid="remembered-pin-phone">{fullPhone}</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">You only need your PIN on this device. Your phone number stays saved here for faster, simpler sign-in.</p>
+                <Button type="button" variant="link" size="sm" disabled={submitting} onClick={() => { setShowPhoneEditor(true); setPin(""); setError(null); }} className="mt-1 h-auto px-0">Use a different number</Button>
               </div>
-              <p className="text-xs leading-5 text-muted-foreground">Select the network linked to your account. Your number is saved on this device for faster sign-in.</p>
-            </fieldset>
+            )}
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
@@ -161,9 +203,13 @@ export default function PinLoginPage() {
 
             {error && <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm leading-5 text-destructive">{error}</p>}
 
-            <Button type="submit" size="lg" disabled={submitting || !completePhone || pin.length !== 6} className="h-12 w-full gap-2 rounded-xl font-semibold shadow-sm sm:h-13">
-              {submitting ? "Signing you in…" : "Continue to dashboard"}{!submitting && <ArrowRight className="h-4 w-4" />}
-            </Button>
+            <div className="min-h-12 rounded-xl border border-primary/10 bg-muted/30 px-4 py-3 text-center" role="status" aria-live="polite">
+              {submitting
+                ? <span className="font-medium text-primary">Verifying your PIN and signing you in…</span>
+                : pin.length === 6
+                  ? <span className="font-medium text-primary">Checking your PIN…</span>
+                  : <span className="text-sm text-muted-foreground">Enter the sixth digit to sign in automatically. You will not need to press Continue.</span>}
+            </div>
           </form>
 
           <div className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.04] p-3.5 sm:mt-6 sm:p-4">

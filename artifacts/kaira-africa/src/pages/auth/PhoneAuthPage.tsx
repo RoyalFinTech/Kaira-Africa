@@ -31,6 +31,21 @@ const phoneSchema = z.object({
 
 type PhoneForm = z.infer<typeof phoneSchema>;
 
+function isPinLoginRequired(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { status?: unknown; message?: unknown; data?: unknown };
+  const data = candidate.data && typeof candidate.data === "object"
+    ? candidate.data as Record<string, unknown>
+    : null;
+  const nestedError = data?.error && typeof data.error === "object"
+    ? data.error as Record<string, unknown>
+    : null;
+  const code = nestedError?.code ?? data?.code;
+  const message = typeof candidate.message === "string" ? candidate.message.toLowerCase() : "";
+  return code === "pin_login_required" ||
+    message.includes("already has pin sign-in enabled");
+}
+
 export default function PhoneAuthPage() {
   const [, setLocation] = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
@@ -62,14 +77,18 @@ export default function PhoneAuthPage() {
         setLocation('/login/otp');
       },
       onError: (error) => {
-        if (error.message.toLowerCase().includes("already has pin sign-in enabled")) {
+        if (isPinLoginRequired(error)) {
+          // This is a known returning-user path, not an OTP failure. Remember only
+          // the phone number and take the user directly to PIN entry—never store a PIN.
           const phoneNumber = `+220${networkPrefix}${form.getValues("phone")}`;
           sessionStorage.setItem("kaira_pending_phone", phoneNumber);
           localStorage.setItem("kaira_last_phone", phoneNumber);
+          sessionStorage.removeItem("kaira_dev_otp");
+          setFormError(null);
           setLocation("/login/pin");
           return;
         }
-        setFormError(error.message);
+        setFormError(error.message || "Kaira Africa could not start sign-in. Please check your connection and try again.");
       },
     },
   });

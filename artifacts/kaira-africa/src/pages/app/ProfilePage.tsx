@@ -25,7 +25,7 @@ import { PinSettingsCard } from '@/components/common/PinSettingsCard';
 import { useGetMe, useGetMyBusiness, useUpdateProfile, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { formatDate } from '@/lib/utils';
-import { uploadProfileAvatar, removeProfileAvatar } from '@/lib/platform-api';
+import { uploadProfileAvatar, removeProfileAvatar, reportKairaFeedback } from '@/lib/platform-api';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'Required'),
@@ -127,15 +127,43 @@ export default function ProfilePage() {
   const handleAvatarFile = async (file: File | undefined) => {
     if (!file) return;
     setAvatarError(null); setAvatarMessage(null);
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setAvatarError('Choose a JPEG, PNG or WebP image.'); return; }
-    if (file.size > 2 * 1024 * 1024) { setAvatarError('Choose an image that is 2 MB or smaller.'); return; }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      const message = 'Choose a JPEG, PNG or WebP image.';
+      setAvatarError(message);
+      reportKairaFeedback({ variant: 'error', title: 'Profile photo not accepted', message });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      const message = 'Choose an image that is 2 MB or smaller.';
+      setAvatarError(message);
+      reportKairaFeedback({ variant: 'error', title: 'Profile photo is too large', message });
+      return;
+    }
     setAvatarBusy(true);
     try {
-      await uploadProfileAvatar(await readProfileImage(file));
+      const dataUrl = await readProfileImage(file);
+      await uploadProfileAvatar(dataUrl);
+      // Refresh GET /auth/me so the signed private avatar URL updates in both
+      // the Profile card and the Header's shared useGetMe query.
       await refetchUser();
       await queryClient.invalidateQueries();
       setAvatarMessage('Profile photo updated.');
-    } catch (error) { setAvatarError(error instanceof Error ? error.message : 'Profile photo upload failed.'); }
+      reportKairaFeedback({
+        variant: 'success',
+        title: 'Profile photo saved',
+        message: 'Your photo is saved securely and will appear on your profile and the Kaira Africa header.',
+      });
+    } catch (error) {
+      const message = error instanceof Error && error.message !== '[object Object]'
+        ? error.message
+        : 'Kaira Africa could not upload your profile photo. Please try again.';
+      setAvatarError(message);
+      // Server/network failures are already reported by platform-api's shared
+      // request helper. FileReader errors happen before an API call.
+      if (message.startsWith('Could not read this image')) {
+        reportKairaFeedback({ variant: 'error', title: 'Profile photo could not be read', message });
+      }
+    }
     finally { setAvatarBusy(false); }
   };
 
@@ -223,8 +251,21 @@ export default function ProfilePage() {
               {avatarError && <p role="alert" className="mb-2 max-w-[220px] text-xs text-destructive">{avatarError}</p>}
               {user.avatarUrl && <Button type="button" variant="ghost" size="sm" disabled={avatarBusy} onClick={async () => {
                 setAvatarError(null); setAvatarMessage(null); setAvatarBusy(true);
-                try { await removeProfileAvatar(); await refetchUser(); setAvatarMessage('Photo removed. Your default avatar is now shown.'); }
-                catch (error) { setAvatarError(error instanceof Error ? error.message : 'Could not remove the photo.'); }
+                try {
+                  await removeProfileAvatar();
+                  await refetchUser();
+                  await queryClient.invalidateQueries();
+                  setAvatarMessage('Photo removed. Your default avatar is now shown.');
+                  reportKairaFeedback({
+                    variant: 'success',
+                    title: 'Profile photo removed',
+                    message: 'Your saved photo was removed. Kaira Africa is showing your default avatar again.',
+                  });
+                } catch (error) {
+                  const message = error instanceof Error && error.message !== '[object Object]'
+                    ? error.message : 'Could not remove the photo.';
+                  setAvatarError(message);
+                }
                 finally { setAvatarBusy(false); }
               }} className="mb-2 h-7 text-xs text-muted-foreground"><Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove photo</Button>}
 

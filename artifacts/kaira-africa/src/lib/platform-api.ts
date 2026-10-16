@@ -308,8 +308,20 @@ export const uploadCrmCustomerPhoto = (id: string, dataUrl: string) =>
   request<ManagedCrmCustomer>("/api/crm/customers/" + encodeURIComponent(id) + "/photo", { method: "POST", body: JSON.stringify({ dataUrl }) });
 export const removeCrmCustomerPhoto = (id: string) =>
   request<ManagedCrmCustomer>("/api/crm/customers/" + encodeURIComponent(id) + "/photo", { method: "DELETE" });
-export const uploadProfileAvatar = (dataUrl: string) =>
-  request<{ avatarUrl: string | null }>("/api/auth/profile/avatar", { method: "POST", body: JSON.stringify({ dataUrl }) });
+export const uploadProfileAvatar = async (dataUrl: string) => {
+  const updated = await request<{ avatarUrl: string | null }>("/api/auth/profile/avatar", {
+    method: "POST",
+    body: JSON.stringify({ dataUrl }),
+  });
+  // A 2xx response is not sufficient if Kaira cannot create the time-limited
+  // signed URL required to display a private avatar in the Profile/Header.
+  if (!updated.avatarUrl) {
+    const message = "Kaira Africa received the upload but could not verify a private preview link. Check the server-side Supabase Storage configuration, then try again.";
+    reportKairaFeedback({ variant: "error", title: "Profile photo upload could not be verified", message });
+    throw new Error(message);
+  }
+  return updated;
+};
 export const removeProfileAvatar = () =>
   request<{ avatarUrl: string | null }>("/api/auth/profile/avatar", { method: "DELETE" });
 export type TransactionCurrency = "GMD" | "NGN" | "USD" | "EUR" | "GBP";

@@ -69,6 +69,9 @@ import { hashPin, isSixDigitPin, isStrongPin, verifyPin } from "../lib/pin";
 import { sendOtpSms } from "../services/sms.service";
 import { sendPasswordResetEmail } from "../services/email.service";
 import { env, isProd } from "../config/env";
+import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
+import { supabaseStorageHeaders } from "../lib/supabase-storage-headers";
+import { logger } from "../lib/logger";
 import { db, users, type User } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -105,31 +108,83 @@ function pinPhoneKey(req: Request): string {
   }
 }
 
-async function serializeUser(user: User) {
-  let avatarUrl = user.avatarUrl;
-  if (avatarUrl && !/^https?:\/\//i.test(avatarUrl) && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const base = env.SUPABASE_URL.replace(/\/$/, "");
-      const path = avatarUrl.split("/").map(encodeURIComponent).join("/");
-      const response = await fetch(`${base}/storage/v1/object/sign/profile-avatars/${path}`, {
-        method: "POST", headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ expiresIn: 3600 }),
-      });
-      if (response.ok) {
-        const signed = await response.json() as { signedURL?: string; signedUrl?: string };
-        const url = signed.signedURL ?? signed.signedUrl;
-        if (url) avatarUrl = url.startsWith("http") ? url : url.startsWith("/storage/v1/") ? base + url : `${base}/storage/v1${url.startsWith("/") ? "" : "/"}${url}`;
-        else avatarUrl = null;
-      } else avatarUrl = null;
-    } catch { avatarUrl = null; }
+async function signProfileAvatar(path: string | null): Promise<string | null> {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!hasSupabaseStorageConfig()) return null;
+
+  try {
+    const { base, key } = requireSupabaseStorageConfig("Profile photo storage");
+    const objectPath = path.split("/").map(encodeURIComponent).join("/");
+    const response = await fetch(`${base}/storage/v1/object/sign/profile-avatars/${objectPath}`, {
+      method: "POST",
+      headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
+      body: JSON.stringify({ expiresIn: 3600 }),
+    });
+    if (!response.ok) return null;
+    const signed = await response.json() as { signedURL?: string; signedUrl?: string };
+    const url = signed.signedURL ?? signed.signedUrl;
+    if (!url) return null;
+    return url.startsWith("http") ? url
+      : url.startsWith("/storage/v1/") ? base + url
+      : `${base}/storage/v1${url.startsWith("/") ? "" : "/"}${url}`;
+  } catch {
+    // The account and profile remain usable even if a signed avatar URL cannot be created.
+    return null;
   }
+}
+
+async function describeProfilePhotoUploadFailure(response: Response): Promise<string> {
+  let remoteMessage = "";
+  try {
+    const body: unknown = await response.json();
+    const readMessage = (value: unknown, depth = 0): string => {
+      if (depth > 4 || value == null) return "";
+      if (typeof value === "string") {
+        const text = value.trim();
+        if (!text || /^\[object object\]$/i.test(text)) return "";
+        if ((text.startsWith("{") || text.startsWith("[")) && depth < 4) {
+          try { return readMessage(JSON.parse(text), depth + 1); } catch { return text.slice(0, 180); }
+        }
+        return text.slice(0, 180);
+      }
+      if (Array.isArray(value)) return value.map((item) => readMessage(item, depth + 1)).filter(Boolean).slice(0, 3).join(" · ");
+      if (typeof value !== "object") return "";
+      const record = value as Record<string, unknown>;
+      for (const key of ["message", "detail", "error_description", "error", "issues", "errors", "title"]) {
+        const result = readMessage(record[key], depth + 1);
+        if (result) return result;
+      }
+      return "";
+    };
+    remoteMessage = readMessage(body);
+  } catch {
+    // Use the safe status-specific message below if Storage did not return JSON.
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    return "Supabase Storage rejected Kaira Africa's server credentials. Confirm SUPABASE_URL and either SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY are set on the Kaira Africa API service in Render.";
+  }
+  if (response.status === 404) {
+    return "The private profile-avatars bucket or upload path was not found in the Supabase project used by Kaira Africa.";
+  }
+  if (response.status === 413) {
+    return "This photo is too large for profile storage. Choose an image no larger than 2 MB.";
+  }
+  if (response.status === 400 && /mime|content.?type|image/i.test(remoteMessage)) {
+    return "Supabase Storage rejected this image format. Choose a JPEG, PNG or WebP photo.";
+  }
+  return `Supabase Storage rejected the profile photo upload (HTTP ${response.status})${remoteMessage ? ": " + remoteMessage : ". Check the private profile-avatars bucket and the Kaira Africa API Storage configuration."}`;
+}
+
+async function serializeUser(user: User) {
   return {
     id: user.id,
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
     phone: `${user.phoneCountryCode}${user.phoneNumber}`,
-    avatarUrl,
+    avatarUrl: await signProfileAvatar(user.avatarUrl),
     role: user.role,
     businessId: user.businessId,
     createdAt: user.createdAt.toISOString(),
@@ -162,46 +217,68 @@ router.patch(
 
 
 router.post("/auth/profile/avatar", requireUser, async (req, res) => {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Profile photo storage is not configured. You can still use your account without a photo.");
-  }
+  const { base, key } = requireSupabaseStorageConfig("Profile photo storage");
   const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
   const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
   if (!match) throw new BadRequestError("Choose a JPEG, PNG or WebP image.");
   const bytes = Buffer.from(match[2], "base64");
-  if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new BadRequestError("Profile photos must be 2 MB or smaller.");
-  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  if (!bytes.length || bytes.length > 2 * 1024 * 1024 ||
+      bytes.toString("base64").replace(/=+$/, "") !== match[2].replace(/=+$/, "")) {
+    throw new BadRequestError("Profile photos must be valid JPEG, PNG or WebP images no larger than 2 MB.");
+  }
   const ext = match[1] === "jpeg" ? "jpg" : match[1];
   const path = `${req.user!.id}/${randomUUID()}.${ext}`;
-  const upload = await fetch(`${base}/storage/v1/object/profile-avatars/${path.split("/").map(encodeURIComponent).join("/")}`, {
-    method: "POST",
-    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": `image/${match[1]}`, "x-upsert": "false" },
-    body: bytes,
-  });
-  if (!upload.ok) throw new HttpError(502, "photo_upload_failed", "Your profile photo could not be uploaded. Please try another image.");
+  let upload: Response;
+  try {
+    upload = await fetch(`${base}/storage/v1/object/profile-avatars/${path.split("/").map(encodeURIComponent).join("/")}`, {
+      method: "POST",
+      headers: supabaseStorageHeaders(key, { "Content-Type": `image/${match[1]}`, "x-upsert": "false" }),
+      body: bytes,
+    });
+  } catch {
+    throw new HttpError(502, "profile_storage_unreachable", "Kaira Africa could not reach Supabase Storage. Check the API's Supabase URL and network connection, then try again.");
+  }
+  if (!upload.ok) {
+    const message = await describeProfilePhotoUploadFailure(upload);
+    logger.error({ userId: req.user!.id, statusCode: upload.status }, "Supabase Storage rejected a profile-photo upload");
+    throw new HttpError(502, "photo_upload_failed", message);
+  }
   const updated = await updateUserProfile(req.user!.id, { avatarUrl: path });
-  if (!updated) throw new NotFoundError("User not found");
+  if (!updated) {
+    // Do not leave an unreferenced private file if the user row disappeared mid-request.
+    try {
+      await fetch(`${base}/storage/v1/object/profile-avatars`, {
+        method: "DELETE",
+        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ prefixes: [path] }),
+      });
+    } catch { /* Best-effort cleanup only; preserve the actual database outcome. */ }
+    throw new NotFoundError("User not found");
+  }
   res.json(UpdateProfileResponse.parse(await serializeUser(updated)));
 });
 
 router.delete("/auth/profile/avatar", requireUser, async (req, res) => {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new HttpError(503, "service_unavailable", "Profile photo storage is not configured.");
-  }
+  const { base, key } = requireSupabaseStorageConfig("Profile photo storage");
   const user = await getUserById(req.user!.id);
   if (!user) throw new NotFoundError("User not found");
   if (user.avatarUrl && !/^https?:\/\//i.test(user.avatarUrl)) {
     let response: Response;
     try {
-      response = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/profile-avatars`, {
+      response = await fetch(`${base}/storage/v1/object/profile-avatars`, {
         method: "DELETE",
-        headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
         body: JSON.stringify({ prefixes: [user.avatarUrl] }),
       });
     } catch {
-      throw new HttpError(502, "photo_remove_failed", "Your profile photo could not be removed from private storage. Please try again.");
+      throw new HttpError(502, "photo_remove_failed", "Kaira Africa could not reach private storage to remove your photo. Please try again.");
     }
-    if (!response.ok) throw new HttpError(502, "photo_remove_failed", "Your profile photo could not be removed from private storage. Please try again.");
+    if (!response.ok) {
+      logger.error({ userId: req.user!.id, statusCode: response.status }, "Supabase Storage rejected profile-photo removal");
+      throw new HttpError(502, "photo_remove_failed", response.status === 401 || response.status === 403
+        ? "Supabase Storage rejected Kaira Africa's server credentials. Check the server-only Supabase key on Render."
+        : "The profile photo could not be removed from private storage. Please try again.");
+    }
   }
   // Explicitly clear the column rather than leaving a stale storage path.
   const [cleared] = await db.update(users).set({ avatarUrl: null, updatedAt: new Date() }).where(eq(users.id, req.user!.id)).returning();
@@ -404,7 +481,9 @@ router.post(
     // recover through verified SMS and configure one from their profile.
     const existingUser = await getUserByPhone(countryCode, number);
     if (existingUser?.pinHash) {
-      throw new BadRequestError(
+      throw new HttpError(
+        409,
+        "pin_login_required",
         "This number already has PIN sign-in enabled. Continue with your six-digit PIN instead.",
       );
     }

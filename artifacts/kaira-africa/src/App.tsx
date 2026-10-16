@@ -183,6 +183,21 @@ function SplashGatedOnboarding() {
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
+function isPinLoginRequired(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as { status?: unknown; message?: unknown; data?: unknown };
+  const data = record.data && typeof record.data === "object"
+    ? record.data as Record<string, unknown>
+    : null;
+  const nestedError = data?.error && typeof data.error === "object"
+    ? data.error as Record<string, unknown>
+    : null;
+  const code = nestedError?.code ?? data?.code;
+  const message = typeof record.message === "string" ? record.message.toLowerCase() : "";
+  return code === "pin_login_required" ||
+    (record.status === 409 && message.includes("pin sign-in enabled"));
+}
+
 function handleUnauthorized(error: unknown): boolean {
   if (error instanceof ApiError && error.status === 401) {
     // Session expired or invalid — clear it and send the person to
@@ -226,6 +241,9 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: handleQueryError }),
   mutationCache: new MutationCache({
     onError: (error) => {
+      // A PIN-required response is a normal returning-user branch. The phone
+      // page will route directly to PIN sign-in; do not display a failure alert.
+      if (isPinLoginRequired(error)) return;
       if (!handleUnauthorized(error)) showKairaApiError(error);
     },
   }),
