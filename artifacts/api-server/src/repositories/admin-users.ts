@@ -1,8 +1,15 @@
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { db, adminUsers, type AdminUser } from "@workspace/db";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
+
+/** Used to distinguish an unprovisioned portal from incorrect credentials. */
+export async function hasAnyAdminUsers(): Promise<boolean> {
+  const [row] = await db.select({ total: count() }).from(adminUsers);
+  return Number(row.total) > 0;
+}
+
 
 export async function getAdminByEmail(
   email: string,
