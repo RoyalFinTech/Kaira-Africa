@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, KeyRound, ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
@@ -55,7 +55,7 @@ export default function PinLoginPage() {
     }
   }, []);
 
-  const submitPin = async (pinValue: string) => {
+  const submitPin = useCallback(async (pinValue: string) => {
     if (submitLockRef.current || submitting) return;
     if (!completePhone) {
       setError("Enter the seven subscriber digits for your selected Gambian network.");
@@ -92,7 +92,7 @@ export default function PinLoginPage() {
       submitLockRef.current = false;
       setSubmitting(false);
     }
-  };
+  }, [completePhone, fullPhone, setLocation, submitting]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -109,7 +109,7 @@ export default function PinLoginPage() {
     if (!completePhone || submitting || lastAutoSubmittedPinRef.current === pin) return;
     lastAutoSubmittedPinRef.current = pin;
     void submitPin(pin);
-  }, [pin, completePhone, submitting]);
+  }, [pin, completePhone, submitting, submitPin]);
 
   return (
     <div className="min-h-[100dvh] bg-background lg:flex">
