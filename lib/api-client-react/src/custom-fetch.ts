@@ -149,24 +149,44 @@ function truncate(text: string, maxLength = 300): string {
 }
 
 function buildErrorMessage(response: Response, data: unknown): string {
-  const prefix = `HTTP ${response.status} ${response.statusText}`;
+  const prefix = `Request failed (HTTP ${response.status})`;
 
   if (typeof data === "string") {
     const text = data.trim();
-    return text ? `${prefix}: ${truncate(text)}` : prefix;
+    return text ? truncate(text) : prefix;
   }
 
   const title = getStringField(data, "title");
   const detail = getStringField(data, "detail");
-  const message =
-    getStringField(data, "message") ??
-    getStringField(data, "error_description") ??
-    getStringField(data, "error");
+  const directMessage = getStringField(data, "message") ?? getStringField(data, "error_description");
+  const nestedError = data && typeof data === "object"
+    ? (data as Record<string, unknown>).error
+    : undefined;
+  const nestedMessage = getStringField(nestedError, "message") ??
+    getStringField(nestedError, "detail") ??
+    getStringField(nestedError, "error_description");
 
-  if (title && detail) return `${prefix}: ${title} — ${detail}`;
-  if (detail) return `${prefix}: ${detail}`;
-  if (message) return `${prefix}: ${message}`;
-  if (title) return `${prefix}: ${title}`;
+  const issues = nestedError && typeof nestedError === "object"
+    ? (nestedError as Record<string, unknown>).issues
+    : data && typeof data === "object"
+      ? (data as Record<string, unknown>).issues
+      : undefined;
+  const firstIssue = Array.isArray(issues)
+    ? issues.find((issue) => issue && typeof issue === "object" && typeof (issue as Record<string, unknown>).message === "string") as Record<string, unknown> | undefined
+    : undefined;
+  const issueMessage = firstIssue
+    ? [getStringField(firstIssue, "path"), getStringField(firstIssue, "message")].filter(Boolean).join(": ")
+    : undefined;
+
+  // Kaira's API envelope is { error: { code, message, issues? } }. Read the
+  // nested message first so login forms and global feedback show useful wording
+  // instead of "HTTP 400" or JavaScript's "[object Object]".
+  const message = nestedMessage ?? directMessage ?? issueMessage ??
+    (typeof nestedError === "string" ? nestedError : undefined);
+
+  if (message) return truncate(message);
+  if (detail) return truncate(detail);
+  if (title) return truncate(title);
 
   return prefix;
 }
