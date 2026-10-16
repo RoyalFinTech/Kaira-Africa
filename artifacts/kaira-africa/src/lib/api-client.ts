@@ -110,14 +110,27 @@ export async function apiRequestJson<T>(
 
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const data = payload as { message?: unknown; error?: unknown } | null;
-    const message =
-      typeof data?.message === "string"
-        ? data.message
-        : typeof data?.error === "string"
-          ? data.error
-          : `Request failed (${response.status})`;
-    throw new Error(message);
+    const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : null;
+    const nestedError = data?.error;
+    const nestedMessage = nestedError && typeof nestedError === "object"
+      ? (nestedError as Record<string, unknown>).message
+      : undefined;
+    const nestedIssues = nestedError && typeof nestedError === "object"
+      ? (nestedError as Record<string, unknown>).issues
+      : data?.issues;
+    const firstIssue = Array.isArray(nestedIssues)
+      ? nestedIssues.find((issue) => issue && typeof issue === "object" && typeof (issue as Record<string, unknown>).message === "string") as Record<string, unknown> | undefined
+      : undefined;
+    const issueMessage = firstIssue
+      ? [firstIssue.path, firstIssue.message].filter((value) => typeof value === "string" && value.trim()).join(": ")
+      : undefined;
+    const message = [
+      data?.message,
+      typeof nestedMessage === "string" ? nestedMessage : undefined,
+      issueMessage,
+      typeof nestedError === "string" ? nestedError : undefined,
+    ].find((candidate) => typeof candidate === "string" && candidate.trim()) as string | undefined;
+    throw new Error(message || `Request failed (HTTP ${response.status}). Please try again.`);
   }
   return payload as T;
 }
