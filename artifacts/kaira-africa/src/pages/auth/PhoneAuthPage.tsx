@@ -19,7 +19,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { BRAND } from '@/lib/brand';
-import { useRequestOtp } from '@workspace/api-client-react';
+import { apiRequestJson } from '@/lib/api-client';
+import { reportKairaFeedback } from '@/lib/platform-api';
 
 // Gambian mobile validation: selected operator prefix + 7 subscriber digits
 const phoneSchema = z.object({
@@ -30,11 +31,14 @@ const phoneSchema = z.object({
 });
 
 type PhoneForm = z.infer<typeof phoneSchema>;
+type LoginStartResult =
+  | { nextStep: 'pin'; phoneNumber: string }
+  | { nextStep: 'otp'; phoneNumber: string; expiresInSeconds: number; devOtp?: string | null };
 
 export default function PhoneAuthPage() {
   const [, setLocation] = useLocation();
-  const [formError, setFormError] = useState<string | null>(null);
   const [networkPrefix, setNetworkPrefix] = useState('87');
+  const [isStartingLogin, setIsStartingLogin] = useState(false);
   const networks = [
     { prefix: '87', name: 'Africell' },
     { prefix: '83', name: 'QCell' },
@@ -47,36 +51,40 @@ export default function PhoneAuthPage() {
     defaultValues: { phone: '' },
   });
 
-  const requestOtp = useRequestOtp({
-    mutation: {
-      onSuccess: (data, variables) => {
-        sessionStorage.setItem('kaira_pending_phone', variables.data.phoneNumber);
-        // devOtp is only ever populated outside production (see the
-        // backend's RequestOtpResponse) — OTPPage reads this same key
-        // for its dev-mode banner.
-        if (data.devOtp) {
-          sessionStorage.setItem('kaira_dev_otp', data.devOtp);
-        } else {
-          sessionStorage.removeItem('kaira_dev_otp');
-        }
-        setLocation('/login/otp');
-      },
-      onError: (error) => {
-        if (error.message.toLowerCase().includes("already has pin sign-in enabled")) {
-          const phoneNumber = `+220${networkPrefix}${form.getValues("phone")}`;
-          sessionStorage.setItem("kaira_pending_phone", phoneNumber);
-          localStorage.setItem("kaira_last_phone", phoneNumber);
-          setLocation("/login/pin");
-          return;
-        }
-        setFormError(error.message);
-      },
-    },
-  });
+  const onSubmit = async (data: PhoneForm) => {
+    const submittedPhone = `+220${networkPrefix}${data.phone}`;
+    setIsStartingLogin(true);
+    try {
+      // The API decides whether this number needs PIN sign-in or first-time
+      // verification. A returning PIN user never creates another OTP row.
+      const result = await apiRequestJson<LoginStartResult>('/auth/start-login', {
+        method: 'POST',
+        body: JSON.stringify({ phoneNumber: submittedPhone }),
+      });
+      const phoneNumber = result.phoneNumber || submittedPhone;
+      sessionStorage.setItem('kaira_pending_phone', phoneNumber);
+      localStorage.setItem('kaira_last_phone', phoneNumber);
 
-  const onSubmit = (data: PhoneForm) => {
-    setFormError(null);
-    requestOtp.mutate({ data: { phoneNumber: `+220${networkPrefix}${data.phone}` } });
+      if (result.nextStep === 'pin') {
+        sessionStorage.removeItem('kaira_dev_otp');
+        setLocation('/login/pin');
+        return;
+      }
+
+      // OTPs are returned by the backend only for first-time accounts or
+      // accounts that have not yet configured a PIN. The UI never invents one.
+      if (result.devOtp) sessionStorage.setItem('kaira_dev_otp', result.devOtp);
+      else sessionStorage.removeItem('kaira_dev_otp');
+      setLocation('/login/otp');
+    } catch (error) {
+      reportKairaFeedback({
+        variant: 'error',
+        title: 'We couldn’t continue sign-in',
+        message: error instanceof Error ? error.message : 'Please check your phone number and try again.',
+      });
+    } finally {
+      setIsStartingLogin(false);
+    }
   };
 
   return (
@@ -206,7 +214,7 @@ export default function PhoneAuthPage() {
                 Enter your phone number
               </h1>
               <p className="text-muted-foreground text-sm">
-                We'll send a verification code to confirm your identity.
+                Enter your number to continue. Returning users go straight to their PIN; verification is reserved for accounts that still need it.
               </p>
             </div>
 
@@ -250,23 +258,16 @@ export default function PhoneAuthPage() {
                   )}
                 />
 
-                {formError && (
-                  <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 -mt-2" role="alert">
-                    <KairaLogo width={26} className="shrink-0 rounded bg-white p-0.5" />
-                    <p className="text-sm text-destructive">{formError}</p>
-                  </div>
-                )}
-
                 <Button
                   type="submit"
                   size="lg"
                   className="w-full font-semibold"
-                  disabled={requestOtp.isPending}
+                  disabled={isStartingLogin}
                 >
-                  {requestOtp.isPending ? (
+                  {isStartingLogin ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      Sending code…
+                      Checking your account…
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
