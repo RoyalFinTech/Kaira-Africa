@@ -481,7 +481,9 @@ router.post(
     // recover through verified SMS and configure one from their profile.
     const existingUser = await getUserByPhone(countryCode, number);
     if (existingUser?.pinHash) {
-      throw new BadRequestError(
+      throw new HttpError(
+        409,
+        "pin_login_required",
         "This number already has PIN sign-in enabled. Continue with your six-digit PIN instead.",
       );
     }
