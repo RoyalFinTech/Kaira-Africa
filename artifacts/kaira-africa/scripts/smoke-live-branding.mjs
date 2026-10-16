@@ -300,6 +300,7 @@ try {
   const crmFixtureCustomers = [];
   const profileAvatarRequests = [];
   let profileAvatarDeleteCount = 0;
+  let failNextProfileAvatarUpload = false;
   let pinEnabled = false;
   const nowIso = new Date().toISOString();
   const visualBusiness = {
@@ -608,6 +609,20 @@ try {
     }
 
     if (pathname.endsWith('/api/auth/profile/avatar') && method === 'POST') {
+      if (failNextProfileAvatarUpload) {
+        failNextProfileAvatarUpload = false;
+        await route.fulfill({
+          status: 503,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            error: {
+              code: 'supabase_storage_not_configured',
+              message: 'Profile photo storage is unavailable because the Kaira Africa API is missing SUPABASE_URL or its server-side Supabase Storage key.',
+            },
+          }),
+        });
+        return;
+      }
       const input = JSON.parse(request.postData() || '{}');
       const dataUrl = typeof input.dataUrl === 'string' ? input.dataUrl : '';
       profileAvatarRequests.push({ dataUrlPrefix: dataUrl.slice(0, 30), bytes: dataUrl.includes(',') ? Buffer.from(dataUrl.split(',')[1], 'base64').byteLength : 0 });
@@ -1143,7 +1158,18 @@ try {
       await pinPage.getByText('Photo removed. Your default avatar is now shown.').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByTestId('kaira-global-feedback').getByText('Profile photo removed', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(profileAvatarDeleteCount, 1, 'Profile avatar removal should call the authenticated delete endpoint');
-      console.log('PROFILE AVATAR UPLOAD AND REMOVAL VERIFIED:', JSON.stringify({ uploads: profileAvatarRequests.length, removals: profileAvatarDeleteCount }));
+
+      // Verify the actual failure card is readable and never shows raw object serialization.
+      failNextProfileAvatarUpload = true;
+      await pinPage.getByRole('button', { name: 'Upload profile photo' }).click();
+      await pinPage.locator('input[type="file"]').first().setInputFiles({ name: 'profile-avatar-failed.png', mimeType: 'image/png', buffer: onePixelPng });
+      const profileFailureCard = pinPage.getByTestId('kaira-global-feedback');
+      await profileFailureCard.getByText(/Profile photo storage is unavailable/).waitFor({ state: 'visible', timeout: 10_000 });
+      const profileFailureText = await profileFailureCard.innerText();
+      assert.ok(!profileFailureText.includes('[object Object]'), 'Profile upload failure feedback must contain a human-readable message');
+      assert.ok(!profileFailureText.startsWith('{'), 'Profile upload failure feedback must not display a raw JSON object');
+      assert.equal(profileAvatarRequests.length, 1, 'Failed profile-photo upload must not be counted as a successful upload');
+      console.log('PROFILE AVATAR SUCCESS, HEADER DISPLAY, REMOVAL AND STORAGE ERROR FEEDBACK VERIFIED:', JSON.stringify({ uploads: profileAvatarRequests.length, removals: profileAvatarDeleteCount }));
     }
 
     if (routePath === '/inventory') {
