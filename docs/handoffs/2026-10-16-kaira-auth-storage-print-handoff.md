@@ -50,7 +50,9 @@ Therefore, **the latest profile image and receipt logo that the user reported tr
 
 ### Profile photo storage bug
 
-The profile avatar routes in `artifacts/api-server/src/routes/auth.ts` were checking only `SUPABASE_SERVICE_ROLE_KEY`, even though the rest of Kaira Africa already has shared support for either the modern server-only `SUPABASE_SECRET_KEY` or legacy `SUPABASE_SERVICE_ROLE_KEY`. This causes a false “storage not configured” failure when only the modern secret key is set. The profile avatar routes also did not use `supabaseStorageHeaders()`, which knows that modern `sb_secret_` keys must be sent in the `apikey` header only (not as `Authorization: Bearer`).
+Render API logs recorded `POST /api/auth/profile/avatar` returning HTTP 503 at **2026-10-16 07:43:46 UTC**. In the main-branch version, the profile avatar routes checked only `SUPABASE_SERVICE_ROLE_KEY`, even though the shared storage helper and deployed receipt-logo/transaction/CRM upload code accept either the modern server-only `SUPABASE_SECRET_KEY` or legacy `SUPABASE_SERVICE_ROLE_KEY`. This can report “storage not configured” when the modern key is present and the legacy key is absent. The profile avatar routes also did not use `supabaseStorageHeaders()`, which sends modern `sb_secret_` keys on the `apikey` header only (not `Authorization: Bearer`). The current work branch updates that route to use the shared helper and more specific failure messages.
+
+The latest main commit `b88a8383998161100153e2aa3baeaf09c388570b` already improved receipt-logo persistence verification. A separate open PR #54 (`fix/receipt-logo-feedback-and-storage-diagnostics`) adds inline receipt-result feedback and smoke checks. Keep PR #54 under review; do not assume its card visual treatment is final, because the user intends to supply a screenshot for the requested error-card redesign.
 
 ### Returning-user PIN login bug
 
