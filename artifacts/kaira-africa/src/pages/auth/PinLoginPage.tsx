@@ -8,6 +8,7 @@ import { GambiaFlag } from "@/components/common/GambiaFlag";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequestJson, setToken } from "@/lib/api-client";
+import { reportKairaFeedback } from "@/lib/platform-api";
 
 interface PinLoginResult {
   token: string;
@@ -40,6 +41,8 @@ export default function PinLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const pinInputRef = useRef<HTMLInputElement>(null);
+  const submitLockRef = useRef(false);
+  const lastAutoSubmittedPinRef = useRef<string | null>(null);
 
   const fullPhone = useMemo(() => `+220${networkPrefix === "none" ? "" : networkPrefix}${subscriberNumber}`, [networkPrefix, subscriberNumber]);
   const completePhone = networkPrefix === "none" ? /^\d{7}$/.test(subscriberNumber) : /^\d{7}$/.test(subscriberNumber);
@@ -52,23 +55,25 @@ export default function PinLoginPage() {
     }
   }, []);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
+  const submitPin = async (pinValue: string) => {
+    if (submitLockRef.current || submitting) return;
     if (!completePhone) {
       setError("Enter the seven subscriber digits for your selected Gambian network.");
       return;
     }
-    if (!/^\d{6}$/.test(pin)) {
+    if (!/^\d{6}$/.test(pinValue)) {
       setError("Enter all six digits of your PIN.");
       pinInputRef.current?.focus();
       return;
     }
+
+    submitLockRef.current = true;
     setSubmitting(true);
+    setError(null);
     try {
       const result = await apiRequestJson<PinLoginResult>("/auth/login-pin", {
         method: "POST",
-        body: JSON.stringify({ phoneNumber: fullPhone, pin }),
+        body: JSON.stringify({ phoneNumber: fullPhone, pin: pinValue }),
       });
       setToken(result.token);
       localStorage.setItem("kaira_last_phone", result.user.phone || fullPhone);
@@ -76,13 +81,35 @@ export default function PinLoginPage() {
       else if (!result.user.businessId) setLocation("/business-onboarding");
       else setLocation("/dashboard");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "We couldn't sign you in. Please try again.");
+      reportKairaFeedback({
+        variant: "error",
+        title: "Sign-in unsuccessful",
+        message: cause instanceof Error ? cause.message : "Check your phone number and PIN, then try again.",
+      });
       setPin("");
       pinInputRef.current?.focus();
     } finally {
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submitPin(pin);
+  };
+
+  // Automatically submit when the PIN reaches six digits. This effect also
+  // handles a phone number completed after PIN entry and never stores the PIN.
+  useEffect(() => {
+    if (pin.length < 6) {
+      lastAutoSubmittedPinRef.current = null;
+      return;
+    }
+    if (!completePhone || submitting || lastAutoSubmittedPinRef.current === pin) return;
+    lastAutoSubmittedPinRef.current = pin;
+    void submitPin(pin);
+  }, [pin, completePhone, submitting]);
 
   return (
     <div className="min-h-[100dvh] bg-background lg:flex">
