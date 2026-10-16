@@ -97,7 +97,6 @@ export default function ReceiptBrandingPage() {
       setForm(initialForm(saved, business?.name));
       const success = { variant: "success" as const, title: "Receipt branding saved", message: "Your business details and print preferences are saved. New printouts will use these settings." };
       setActionFeedback(success);
-      reportKairaFeedback(success);
     } catch (err) {
       const failure = {
         variant: "error" as const,
@@ -105,7 +104,6 @@ export default function ReceiptBrandingPage() {
         message: readableActionError(err, "Please check the form and try saving your receipt settings again."),
       };
       setActionFeedback(failure);
-      reportKairaFeedback(failure);
     } finally {
       setSaving(false);
     }
@@ -140,7 +138,6 @@ export default function ReceiptBrandingPage() {
       setLogoPreview(null);
       const success = { variant: "success" as const, title: "Logo uploaded successfully", message: "Kaira Africa confirmed the logo is saved in private Supabase Storage and can be used for printouts." };
       setActionFeedback(success);
-      reportKairaFeedback(success);
     } catch (err) {
       // Never leave an in-memory file looking like a persisted business logo.
       // Restore the last saved logo (if any) via branding.logoUrl instead.
@@ -151,7 +148,6 @@ export default function ReceiptBrandingPage() {
         message: readableActionError(err, "Kaira Africa could not upload your logo. Please try again."),
       };
       setActionFeedback(failure);
-      reportKairaFeedback(failure);
     } finally {
       setLogoBusy(false);
     }
@@ -165,7 +161,6 @@ export default function ReceiptBrandingPage() {
       setLogoPreview(null);
       const success = { variant: "success" as const, title: "Logo removed", message: "The saved logo was removed from private storage and will no longer appear on new printouts." };
       setActionFeedback(success);
-      reportKairaFeedback(success);
     } catch (err) {
       const failure = {
         variant: "error" as const,
@@ -173,7 +168,6 @@ export default function ReceiptBrandingPage() {
         message: readableActionError(err, "Kaira Africa could not remove the saved logo. Please try again."),
       };
       setActionFeedback(failure);
-      reportKairaFeedback(failure);
     } finally {
       setRemovingLogo(false);
     }
