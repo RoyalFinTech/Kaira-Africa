@@ -22,7 +22,7 @@ import { PageTransition } from '@/components/common/PageTransition';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useGetMe, useGetMyBusiness, useGetBusinessStats, useGetRevenueAnalytics } from '@workspace/api-client-react';
 import { formatCurrency, formatDate, formatRelativeTime, getGreeting, getInitials, cn } from '@/lib/utils';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { getDailyLedger } from '@/lib/platform-api';
 
 export default function DashboardPage() {
@@ -47,6 +47,16 @@ export default function DashboardPage() {
   // the business genuinely has no completed payments in this window,
   // and the chart renders its own empty state for that (see below).
   const revenueData = revenueAnalytics?.data ?? [];
+  const todayActivityMix = [
+    { name: "Sales", value: todayLedger?.summary.sales ?? 0 },
+    { name: "Expenses", value: todayLedger?.summary.expenses ?? 0 },
+    { name: "Other income", value: todayLedger?.summary.otherIncome ?? 0 },
+  ].filter((item) => item.value > 0);
+  const todayActivityColors = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+  ];
 
   return (
     <PageTransition>
@@ -199,10 +209,28 @@ export default function DashboardPage() {
             <Link href="/daily-ledger"><Button variant="outline" size="sm">Open ledger <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-lg bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Sales recorded</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.sales || 0, 'GMD')}</p></div>
-              <div className="rounded-lg bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Expenses recorded</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.expenses || 0, 'GMD')}</p></div>
-              <div className="rounded-lg bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Unpaid debtor balance</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.outstandingDebt || 0, 'GMD')}</p></div>
+            <div className="grid grid-cols-1 items-center gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-primary/10 bg-muted/40 p-4"><p className="text-xs text-muted-foreground">Sales recorded today</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.sales || 0, 'GMD')}</p></div>
+                <div className="rounded-xl border border-primary/10 bg-muted/40 p-4"><p className="text-xs text-muted-foreground">Expenses recorded today</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.expenses || 0, 'GMD')}</p></div>
+                <div className="rounded-xl border border-primary/10 bg-muted/40 p-4"><p className="text-xs text-muted-foreground">Unpaid debtor balance</p><p className="mt-1 text-xl font-bold">{formatCurrency(todayLedger?.summary.outstandingDebt || 0, 'GMD')}</p><p className="mt-1 text-[10px] text-muted-foreground">Current outstanding balance</p></div>
+              </div>
+              <div className="min-w-0 rounded-xl border border-border/70 p-3">
+                <p className="px-1 text-sm font-semibold">Today's activity mix</p>
+                <p className="px-1 pt-1 text-xs text-muted-foreground">Sales, expenses and other income.</p>
+                {todayActivityMix.length === 0 ? (
+                  <div className="flex h-[190px] items-center justify-center px-3 text-center text-xs text-muted-foreground">No sales, expenses or other income recorded today.</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={190}>
+                    <PieChart>
+                      <Pie data={todayActivityMix} dataKey="value" nameKey="name" innerRadius={44} outerRadius={66} paddingAngle={3} label={({ value }) => value}>
+                        {todayActivityMix.map((item, index) => <Cell key={item.name} fill={todayActivityColors[index % todayActivityColors.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(Number(value), 'GMD')} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
