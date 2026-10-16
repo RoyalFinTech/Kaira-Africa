@@ -76,7 +76,39 @@ export function clearAdminInfo(): void {
   localStorage.removeItem(ADMIN_INFO_KEY);
 }
 
-/** Call once, at app startup (see main.tsx). */
+/** Extract a readable message from Kaira's nested API error envelope. */
+function readableErrorMessage(value: unknown, depth = 0): string | undefined {
+  if (depth > 5 || value == null) return undefined;
+  if (typeof value === "string") {
+    const message = value.trim();
+    if (!message || /^\[object object\]$/i.test(message) ||
+        /^<!doctype html/i.test(message) || /^<html/i.test(message)) return undefined;
+    if ((message.startsWith("{") || message.startsWith("[")) && depth < 5) {
+      try {
+        const nested = readableErrorMessage(JSON.parse(message), depth + 1);
+        if (nested) return nested;
+      } catch {
+        // Avoid showing serialized object payloads in the interface.
+      }
+      if (message.startsWith("{") || message.startsWith("[")) return undefined;
+    }
+    return message.slice(0, 500);
+  }
+  if (Array.isArray(value)) {
+    const messages = value.map((item) => readableErrorMessage(item, depth + 1))
+      .filter((item): item is string => Boolean(item));
+    return messages.length ? messages.slice(0, 4).join(" · ").slice(0, 500) : undefined;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["message", "detail", "error_description", "title", "error", "issues", "errors", "data", "cause"]) {
+      const message = readableErrorMessage(record[key], depth + 1);
+      if (message && !/^error$/i.test(message)) return message;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Small typed helper for the few auth endpoints that are introduced
  * outside the generated SDK. It shares the same API origin and bearer
@@ -110,13 +142,7 @@ export async function apiRequestJson<T>(
 
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const data = payload as { message?: unknown; error?: unknown } | null;
-    const message =
-      typeof data?.message === "string"
-        ? data.message
-        : typeof data?.error === "string"
-          ? data.error
-          : `Request failed (${response.status})`;
+    const message = readableErrorMessage(payload) || `Request failed (${response.status})`;
     throw new Error(message);
   }
   return payload as T;
