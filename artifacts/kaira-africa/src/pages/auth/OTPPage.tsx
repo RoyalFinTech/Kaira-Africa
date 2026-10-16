@@ -25,7 +25,7 @@ export default function OTPPage() {
   const [devOTP, setDevOTP] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const phone = sessionStorage.getItem('kaira_pending_phone') || '+220 XXX XXXX';
+  const phone = sessionStorage.getItem('kaira_pending_phone') || '';
 
   // Load dev OTP only in dev mode — populated by PhoneAuthPage from
   // the real backend response (RequestOtpResponse.devOtp), never
@@ -46,15 +46,24 @@ export default function OTPPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Auto-focus first input on mount
+  // OTP is only reachable after the backend has returned a real phone number.
+  // Never leave a direct /login/otp visit on a fake placeholder number.
   useEffect(() => {
+    if (!phone) {
+      setLocation('/login');
+      return;
+    }
     inputRefs.current[0]?.focus();
-  }, []);
+  }, [phone, setLocation]);
 
   const verifyOtp = useVerifyOtp();
   const requestOtp = useRequestOtp();
 
   const verifyOTP = useCallback((code: string) => {
+    if (!phone) {
+      setLocation('/login');
+      return;
+    }
     setStatus('verifying');
     setErrorMessage(null);
 
@@ -140,7 +149,10 @@ export default function OTPPage() {
   };
 
   const handleResend = () => {
-    if (!canResend) return;
+    if (!canResend || !phone) {
+      if (!phone) setLocation('/login');
+      return;
+    }
     setDigits(Array(OTP_LENGTH).fill(''));
     setStatus('idle');
     setErrorMessage(null);
