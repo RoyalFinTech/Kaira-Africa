@@ -288,6 +288,7 @@ try {
   });
 
   const pinLoginRequests = [];
+  const loginStartRequests = [];
   const pinSetRequests = [];
   const inventoryCreateRequests = [];
   const inventoryImageRequests = [];
@@ -397,6 +398,20 @@ try {
     const pathname = url.pathname;
     if (method === 'OPTIONS') {
       await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (pathname.endsWith('/api/auth/start-login') && method === 'POST') {
+      const input = JSON.parse(request.postData() || '{}');
+      loginStartRequests.push(input);
+      const isKnownPinUser = input.phoneNumber === '+220871234567';
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        body: JSON.stringify(isKnownPinUser
+          ? { nextStep: 'pin', phoneNumber: input.phoneNumber }
+          : { nextStep: 'otp', phoneNumber: input.phoneNumber, expiresInSeconds: 300, devOtp: '246810' }),
+      });
       return;
     }
 
@@ -741,9 +756,27 @@ try {
       heroImageFailures.push({ url: request.url(), error: request.failure()?.errorText || 'request failed' });
     }
   });
-  await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  // First-time / no-PIN accounts are routed through the existing dev OTP step.
+  await pinPage.goto(baseUrl + '/login?auth-routing-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.getByLabel('Gambian Phone Number').fill('7654321');
+  await pinPage.getByRole('button', { name: /Continue/ }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/login/otp', { timeout: 10_000 });
+  await pinPage.getByText('OTP: 246810', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+  assert.equal(loginStartRequests.length, 1, 'Phone login start should be requested once for an unconfigured account');
+  assert.equal(loginStartRequests[0].phoneNumber, '+220877654321', 'First-time phone should reach the routing API in canonical Gambian format');
+  await pinPage.getByRole('button', { name: 'Back' }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/login', { timeout: 10_000 });
+
+  // Returning users with a PIN should skip OTP completely and proceed to PIN entry.
+  await pinPage.getByLabel('Gambian Phone Number').fill('1234567');
+  await pinPage.getByRole('button', { name: /Continue/ }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/login/pin', { timeout: 10_000 });
   await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  assert.equal(loginStartRequests.length, 2, 'Returning phone should use one explicit login-start request');
+  assert.equal(loginStartRequests[1].phoneNumber, '+220871234567', 'Returning phone is normalized with +220 and its network prefix');
   await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
+
   const pinHero = pinPage.locator('img[src="/kaira-pin-login-hero.webp"]');
   await pinHero.waitFor({ state: 'visible', timeout: 10_000 });
   const pinHeroStats = await pinHero.evaluate(async (img) => {
@@ -773,16 +806,22 @@ try {
   await pinPage.getByRole('option', { name: /Africell/ }).click();
   const phoneInput = pinPage.getByLabel('Seven digit phone number');
   await phoneInput.fill('1234567');
-  await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
+  const pinCountBeforeAutoSubmit = pinLoginRequests.length;
+  await pinPage.getByLabel('Six-digit sign-in PIN. Tap to enter digits').fill('482951');
 
-  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).waitFor({ state: 'visible', timeout: 10_000 });
-  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).waitFor({ state: 'attached', timeout: 10_000 });
-  assert.equal(await pinPage.getByRole('button', { name: 'Continue to dashboard' }).isDisabled(), false, 'PIN sign-in should enable after a 7-digit number and six-digit PIN are entered');
-  await pinPage.getByRole('button', { name: 'Continue to dashboard' }).click();
+  // No button click: six digits should initiate PIN authentication by itself.
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
-  assert.equal(pinLoginRequests.length, 1, 'PIN sign-in must call the login endpoint once');
+  assert.equal(pinLoginRequests.length, pinCountBeforeAutoSubmit + 1, 'PIN should auto-submit exactly once when digit six is entered');
   assert.equal(pinLoginRequests[0].pin, '482951', 'PIN sign-in must submit exactly the six-digit PIN');
   assert.equal(pinLoginRequests[0].phoneNumber, '+220871234567', 'PIN sign-in must submit the normalized country code, network prefix and seven subscriber digits');
+  console.log('AUTH ROUTING AND SIX-DIGIT AUTO-SIGN-IN VERIFIED:', JSON.stringify({
+    loginStartRequests: loginStartRequests.length,
+    newUserRoute: '/login/otp',
+    returningUserRoute: '/login/pin',
+    pinLoginRequests: pinLoginRequests.length,
+    autoSubmit: true,
+  }));
+
   const dashboardHero = pinPage.locator('img[src="/kaira-dashboard-hero.webp"]');
   await dashboardHero.waitFor({ state: 'visible', timeout: 10_000 });
   const dashboardHeroStats = await dashboardHero.evaluate(async (img) => {
