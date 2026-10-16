@@ -802,7 +802,7 @@ try {
   // the app should skip OTP and take the remembered phone to the PIN screen.
   await pinPage.goto(baseUrl + '/login?returning-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await pinPage.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 10_000 });
-  await pinPage.getByLabel('Gambian Phone Number').fill('1234567');
+  await pinPage.getByPlaceholder('*******').fill('1234567');
   await pinPage.getByRole('button', { name: 'Continue' }).click();
   await pinPage.waitForURL((url) => url.pathname === '/login/pin', { timeout: 10_000 });
   assert.equal(await pinPage.getByLabel('Seven digit phone number').count(), 0, 'Returning-user PIN screen should not require re-entering the phone number');
