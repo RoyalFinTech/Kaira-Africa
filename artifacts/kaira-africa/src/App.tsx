@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -106,7 +107,7 @@ function readableFeedbackMessage(value: unknown, depth = 0): string | null {
 }
 
 function KairaFeedbackHost() {
-  const [feedback, setFeedback] = useState<KairaFeedbackDetail | null>(null);
+  const [feedback, setFeedback] = useState<(KairaFeedbackDetail & { id: number }) | null>(null);
 
   useEffect(() => {
     let dismissTimer: ReturnType<typeof setTimeout> | undefined;
@@ -118,11 +119,12 @@ function KairaFeedbackHost() {
         (detail.variant === 'error'
           ? 'Kaira Africa received an unreadable error response. Please try again.'
           : 'Kaira Africa completed the action, but there was no readable response detail.');
-      setFeedback({ ...detail, message });
+      setFeedback({ ...detail, message, id: Date.now() });
       if (dismissTimer) clearTimeout(dismissTimer);
-      // Feedback cards should never remain over controls and block the app.
-      // Users can dismiss earlier; longer errors remain visible briefly.
-      dismissTimer = setTimeout(() => setFeedback(null), detail.variant === 'error' ? 9000 : 6000);
+      // Keep errors visible long enough to read; never leave a banner stuck
+      // inside the page flow or covering the underlying controls.
+      const duration = detail.variant === 'error' ? 10_000 : detail.variant === 'success' ? 7_000 : 8_000;
+      dismissTimer = setTimeout(() => setFeedback(null), duration);
     };
     window.addEventListener('kaira:feedback', onFeedback);
     return () => {
@@ -131,15 +133,31 @@ function KairaFeedbackHost() {
     };
   }, []);
 
-  if (!feedback) return null;
   return (
-    <div className="fixed right-4 top-4 z-[200] w-[min(92vw,30rem)]" data-testid="kaira-global-feedback">
-      <KairaFeedbackCard
-        variant={feedback.variant}
-        title={feedback.title}
-        message={feedback.message}
-        onDismiss={() => setFeedback(null)}
-      />
+    <div
+      className="pointer-events-none fixed inset-x-0 top-3 z-[200] flex justify-center px-3 sm:inset-x-auto sm:right-4 sm:top-4 sm:w-[min(92vw,28rem)] sm:justify-end sm:px-0"
+      data-testid="kaira-global-feedback"
+      aria-label="Kaira Africa notifications"
+    >
+      <AnimatePresence initial={false} mode="wait">
+        {feedback && (
+          <motion.div
+            key={feedback.id}
+            initial={{ opacity: 0, y: -14, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="pointer-events-auto w-full"
+          >
+            <KairaFeedbackCard
+              variant={feedback.variant}
+              title={feedback.title}
+              message={feedback.message}
+              onDismiss={() => setFeedback(null)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
