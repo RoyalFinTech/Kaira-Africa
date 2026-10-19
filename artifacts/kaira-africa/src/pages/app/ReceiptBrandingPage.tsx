@@ -136,12 +136,17 @@ export default function ReceiptBrandingPage() {
 
   const uploadLogo = async (file: File | undefined) => {
     if (!file) return;
+    setActionFeedback(null);
     if (!LOGO_TYPES.includes(file.type)) {
-      reportKairaFeedback({ variant: "error", title: "Logo file not accepted", message: "Choose a JPEG, PNG or WebP logo." });
+      const message = "Choose a JPEG, PNG or WebP logo.";
+      setActionFeedback({ variant: "error", title: "Logo file not accepted", message });
+      reportKairaFeedback({ variant: "error", title: "Logo file not accepted", message });
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
-      reportKairaFeedback({ variant: "error", title: "Logo file is too large", message: "Your logo must be 2 MB or smaller." });
+      const message = "Your logo must be 2 MB or smaller.";
+      setActionFeedback({ variant: "error", title: "Logo file is too large", message });
+      reportKairaFeedback({ variant: "error", title: "Logo file is too large", message });
       return;
     }
     setLogoBusy(true);
@@ -156,14 +161,21 @@ export default function ReceiptBrandingPage() {
       }
       queryClient.setQueryData(["receipt-branding"], saved);
       setLogoPreview(null);
+      setActionFeedback({
+        variant: "success",
+        title: "Logo saved securely",
+        message: "Kaira Africa verified the saved logo in private storage. It will appear on your next receipt, customer record and ledger printout.",
+      });
     } catch (err) {
       // Never leave an in-memory file looking like a persisted business logo.
       // Restore the last saved logo (if any) via branding.logoUrl instead.
       setLogoPreview(null);
+      const message = readableActionError(err, "Kaira Africa could not upload your logo. Please try again.");
+      setActionFeedback({ variant: "error", title: "Logo upload failed", message });
       reportKairaFeedback({
         variant: "error",
         title: "Logo upload failed",
-        message: readableActionError(err, "Kaira Africa could not upload your logo. Please try again."),
+        message,
       });
     } finally {
       setLogoBusy(false);
