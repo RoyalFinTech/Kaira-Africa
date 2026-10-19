@@ -12,7 +12,6 @@ import { PrintableBusinessDocument, printKairaDocument } from "@/components/comm
 import { useGetMe, useGetMyBusiness } from "@workspace/api-client-react";
 import {
   getReceiptBranding, updateReceiptBranding, uploadReceiptLogo, removeReceiptLogo,
-  reportKairaFeedback,
   type ReceiptBrandingInput, type ReceiptBrandingSettings,
 } from "@/lib/platform-api";
 import { FileImage, LoaderCircle, Printer, Save, Trash2, UploadCloud } from "lucide-react";
@@ -124,11 +123,6 @@ export default function ReceiptBrandingPage() {
     } catch (err) {
       const message = readableActionError(err, "Please check the form and try saving your receipt settings again.");
       setActionFeedback({ variant: "error", title: "Receipt branding could not be saved", message });
-      reportKairaFeedback({
-        variant: "error",
-        title: "Receipt branding could not be saved",
-        message,
-      });
     } finally {
       setSaving(false);
     }
@@ -140,13 +134,11 @@ export default function ReceiptBrandingPage() {
     if (!LOGO_TYPES.includes(file.type)) {
       const message = "Choose a JPEG, PNG or WebP logo.";
       setActionFeedback({ variant: "error", title: "Logo file not accepted", message });
-      reportKairaFeedback({ variant: "error", title: "Logo file not accepted", message });
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
       const message = "Your logo must be 2 MB or smaller.";
       setActionFeedback({ variant: "error", title: "Logo file is too large", message });
-      reportKairaFeedback({ variant: "error", title: "Logo file is too large", message });
       return;
     }
     setLogoBusy(true);
@@ -172,11 +164,6 @@ export default function ReceiptBrandingPage() {
       setLogoPreview(null);
       const message = readableActionError(err, "Kaira Africa could not upload your logo. Please try again.");
       setActionFeedback({ variant: "error", title: "Logo upload failed", message });
-      reportKairaFeedback({
-        variant: "error",
-        title: "Logo upload failed",
-        message,
-      });
     } finally {
       setLogoBusy(false);
     }
@@ -197,11 +184,6 @@ export default function ReceiptBrandingPage() {
     } catch (err) {
       const message = readableActionError(err, "Kaira Africa could not remove the saved logo. Please try again.");
       setActionFeedback({ variant: "error", title: "Logo could not be removed", message });
-      reportKairaFeedback({
-        variant: "error",
-        title: "Logo could not be removed",
-        message,
-      });
     } finally {
       setRemovingLogo(false);
     }
