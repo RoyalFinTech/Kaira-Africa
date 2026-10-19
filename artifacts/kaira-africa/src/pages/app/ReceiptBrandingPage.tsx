@@ -183,16 +183,24 @@ export default function ReceiptBrandingPage() {
   };
 
   const deleteLogo = async () => {
+    setActionFeedback(null);
     setRemovingLogo(true);
     try {
       const saved = await removeReceiptLogo();
       queryClient.setQueryData(["receipt-branding"], saved);
       setLogoPreview(null);
+      setActionFeedback({
+        variant: "success",
+        title: "Logo removed",
+        message: "The saved logo was removed from private storage. New printouts will use your business name and details without a logo.",
+      });
     } catch (err) {
+      const message = readableActionError(err, "Kaira Africa could not remove the saved logo. Please try again.");
+      setActionFeedback({ variant: "error", title: "Logo could not be removed", message });
       reportKairaFeedback({
         variant: "error",
         title: "Logo could not be removed",
-        message: readableActionError(err, "Kaira Africa could not remove the saved logo. Please try again."),
+        message,
       });
     } finally {
       setRemovingLogo(false);
