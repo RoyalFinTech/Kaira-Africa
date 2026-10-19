@@ -29,7 +29,7 @@ function readableActionError(error: unknown, fallback: string, depth = 0): strin
   if (error instanceof Error) return readableActionError(error.message, fallback, depth + 1);
   if (typeof error === "string") {
     const value = error.trim();
-    if (!value || /^\\[object object\\]$/i.test(value)) return fallback;
+    if (!value || value.toLowerCase() === "[object object]") return fallback;
     if (value.startsWith("{") || value.startsWith("[")) {
       try { return readableActionError(JSON.parse(value), fallback, depth + 1); }
       catch { return fallback; }
