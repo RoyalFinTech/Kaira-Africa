@@ -87,6 +87,7 @@ export default function ReceiptBrandingPage() {
   const [saving, setSaving] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
   const [removingLogo, setRemovingLogo] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const canEdit = me?.role === "owner";
 
@@ -206,6 +207,15 @@ export default function ReceiptBrandingPage() {
             <Button type="button" variant="outline" disabled={isLoading || isError || saving || logoBusy || removingLogo} onClick={() => printKairaDocument("receipt-preview-print")}><Printer className="mr-2 h-4 w-4"/>Print sample / Save PDF</Button>
           </div>
         </div>
+
+        {actionFeedback && (
+          <KairaFeedbackCard
+            variant={actionFeedback.variant}
+            title={actionFeedback.title}
+            message={actionFeedback.message}
+            onDismiss={() => setActionFeedback(null)}
+          />
+        )}
 
         {branding?.storageConfigured === false && (
           <KairaFeedbackCard
