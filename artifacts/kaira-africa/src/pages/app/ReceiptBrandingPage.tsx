@@ -23,11 +23,32 @@ type BrandForm = Required<Pick<ReceiptBrandingSettings,
   "companyName" | "address" | "phone" | "email" | "website" | "footerNote" | "showReceiptNumber" | "showCustomerDetails"
 >>;
 
-function readableActionError(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message.trim() && error.message !== "[object Object]") {
-    return error.message;
+type ActionFeedback = { variant: "success" | "error" | "info"; title: string; message: string };
+
+function readableActionError(error: unknown, fallback: string, depth = 0): string {
+  if (depth > 5 || error == null) return fallback;
+  if (error instanceof Error) return readableActionError(error.message, fallback, depth + 1);
+  if (typeof error === "string") {
+    const value = error.trim();
+    if (!value || /^\\[object object\\]$/i.test(value)) return fallback;
+    if (value.startsWith("{") || value.startsWith("[")) {
+      try { return readableActionError(JSON.parse(value), fallback, depth + 1); }
+      catch { return fallback; }
+    }
+    if (value.startsWith("<!DOCTYPE") || value.startsWith("<html")) return fallback;
+    return value.slice(0, 500);
   }
-  if (typeof error === "string" && error.trim() && error !== "[object Object]") return error;
+  if (Array.isArray(error)) {
+    const messages = error.map((item) => readableActionError(item, "", depth + 1)).filter(Boolean);
+    return messages.length ? messages.slice(0, 5).join(" · ").slice(0, 500) : fallback;
+  }
+  if (typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    for (const key of ["message", "error_description", "detail", "details", "error", "title", "issues", "errors", "body", "data", "cause", "response"]) {
+      const message = readableActionError(record[key], "", depth + 1);
+      if (message) return message;
+    }
+  }
   return fallback;
 }
 
