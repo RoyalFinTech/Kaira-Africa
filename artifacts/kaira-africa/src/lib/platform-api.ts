@@ -35,9 +35,9 @@ function readableApiMessage(value: unknown, depth = 0): string | null {
   }
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
-    for (const key of ["message", "error_description", "detail", "details", "error", "title"]) {
+    for (const key of ["message", "error_description", "detail", "details", "error", "title", "issues", "errors", "hint", "cause", "response", "data", "body"]) {
       const message = readableApiMessage(record[key], depth + 1);
-      if (message) return message;
+      if (message && !/^error$/i.test(message)) return message;
     }
   }
   return null;
