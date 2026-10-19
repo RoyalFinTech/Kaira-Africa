@@ -248,6 +248,12 @@ try {
   await mobileBanner.waitFor({ state: 'visible', timeout: 10_000 });
   const mobileLogo = mobileBanner.locator('img[alt="Kaira Africa"]');
   await mobileLogo.waitFor({ state: 'visible', timeout: 10_000 });
+  // Visibility is not the same as image readiness. Wait for the CDN image to
+  // finish loading before asserting naturalWidth to avoid a transient false failure.
+  await mobilePage.waitForFunction(() => {
+    const img = document.querySelector('section[aria-label="Kaira Africa business platform"] img[alt="Kaira Africa"]');
+    return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+  }, null, { timeout: 10_000 });
   const mobileLogoStats = await mobileLogo.evaluate((img) => {
     const rect = img.getBoundingClientRect();
     return { width: rect.width, height: rect.height, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
