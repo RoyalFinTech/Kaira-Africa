@@ -35,15 +35,19 @@ function readableApiMessage(value: unknown, depth = 0): string | null {
   }
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
-    for (const key of ["message", "error_description", "detail", "details", "error", "title"]) {
+    for (const key of ["message", "error_description", "detail", "details", "error", "title", "issues", "errors", "hint", "cause", "response", "data", "body"]) {
       const message = readableApiMessage(record[key], depth + 1);
-      if (message) return message;
+      if (message && !/^error$/i.test(message)) return message;
     }
   }
   return null;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const receiptPageOwnsFeedback = path.endsWith("/receipt-settings") || path.endsWith("/receipt-logo");
+  const emitFeedback = (detail: { variant: "success" | "error" | "info"; title: string; message: string }) => {
+    if (!receiptPageOwnsFeedback) reportKairaFeedback(detail);
+  };
   const token = getToken();
   let response: Response;
   try {
@@ -57,7 +61,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     });
   } catch {
     const message = "Kaira Africa could not reach the server. Check your connection and try again.";
-    reportKairaFeedback({ variant: "error", title: "Connection problem", message });
+    emitFeedback({ variant: "error", title: "Connection problem", message });
     throw new Error(message);
   }
   const text = await response.text();
@@ -72,13 +76,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (!response.ok) {
     const message = readableApiMessage(data) || "Request failed with status " + response.status + ". Please try again.";
-    reportKairaFeedback({ variant: "error", title: "Kaira Africa couldn't complete that request", message });
+    emitFeedback({ variant: "error", title: "Kaira Africa couldn't complete that request", message });
     throw new Error(message);
   }
 
   const method = (options.method || "GET").toUpperCase();
   if (path.endsWith("/receipt-settings") && method === "PATCH") {
-    reportKairaFeedback({
+    emitFeedback({
       variant: "success",
       title: "Receipt branding saved",
       message: "Your business details and print preferences were saved successfully.",
@@ -89,16 +93,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       const message = branding?.hasLogo
         ? "The logo may be stored, but its secure preview link could not be verified. Refresh the page and retry."
         : "The server did not confirm that your logo was saved. Please try uploading it again.";
-      reportKairaFeedback({ variant: "error", title: "Logo upload could not be verified", message });
+      emitFeedback({ variant: "error", title: "Logo upload could not be verified", message });
       throw new Error(message);
     }
-    reportKairaFeedback({
+    emitFeedback({
       variant: "success",
       title: "Logo uploaded successfully",
       message: "Kaira Africa verified the saved logo and secure preview link. It is ready for printouts.",
     });
   } else if (path.endsWith("/receipt-logo") && method === "DELETE") {
-    reportKairaFeedback({
+    emitFeedback({
       variant: "success",
       title: "Logo removed",
       message: "The custom logo was removed from your receipt branding.",
