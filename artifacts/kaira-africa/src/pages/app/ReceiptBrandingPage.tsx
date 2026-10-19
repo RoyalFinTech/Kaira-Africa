@@ -100,6 +100,7 @@ export default function ReceiptBrandingPage() {
 
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionFeedback(null);
     setSaving(true);
     try {
       const payload: ReceiptBrandingInput = {
@@ -115,11 +116,18 @@ export default function ReceiptBrandingPage() {
       const saved = await updateReceiptBranding(payload);
       queryClient.setQueryData(["receipt-branding"], saved);
       setForm(initialForm(saved, business?.name));
+      setActionFeedback({
+        variant: "success",
+        title: "Receipt branding saved",
+        message: "Your business details and print preferences are saved. Your next printout will use these settings.",
+      });
     } catch (err) {
+      const message = readableActionError(err, "Please check the form and try saving your receipt settings again.");
+      setActionFeedback({ variant: "error", title: "Receipt branding could not be saved", message });
       reportKairaFeedback({
         variant: "error",
         title: "Receipt branding could not be saved",
-        message: readableActionError(err, "Please check the form and try saving your receipt settings again."),
+        message,
       });
     } finally {
       setSaving(false);
