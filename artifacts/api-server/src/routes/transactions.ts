@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
-  db, transactions,
+  db, transactions, customers,
 } from "@workspace/db";
 import {
   ListTransactionsQueryParams,
@@ -121,6 +121,15 @@ router.post(
   async (req, res) => {
     const businessId = requireBusiness(req);
     const input = transactionInput.parse(req.body);
+    // A transaction must never attach a customer owned by another business.
+    // Scope the lookup by both identifiers to avoid cross-business data access.
+    if (input.customerId) {
+      const [customer] = await db.select({ id: customers.id })
+        .from(customers)
+        .where(and(eq(customers.id, input.customerId), eq(customers.businessId, businessId)))
+        .limit(1);
+      if (!customer) throw new NotFoundError("Customer not found");
+    }
     if (!Number.isFinite(input.amount) || input.amount <= 0) {
       throw new BadRequestError("Amount must be greater than zero.");
     }
