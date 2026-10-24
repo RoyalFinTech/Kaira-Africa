@@ -300,9 +300,9 @@ export interface ManagedCrmCustomerInput {
   firstName: string; lastName: string; email?: string; phone?: string; company?: string;
   country?: string; city?: string; status?: "active" | "inactive"; profileData?: CrmProfileData;
 }
-export const searchCrmCustomers = (search = "") =>
-  request<{ customers: ManagedCrmCustomer[]; total: number }>(
-    "/api/crm/customers" + (search ? "?" + new URLSearchParams({ search }).toString() : "")
+export const searchCrmCustomers = (search = "", offset = 0, limit = 200) =>
+  request<{ customers: ManagedCrmCustomer[]; total: number; offset?: number; limit?: number }>(
+    "/api/crm/customers?" + new URLSearchParams({ ...(search ? { search } : {}), offset: String(offset), limit: String(limit) }).toString()
   );
 export const createManagedCrmCustomer = (input: ManagedCrmCustomerInput) =>
   request<ManagedCrmCustomer>("/api/crm/customers", { method: "POST", body: JSON.stringify(input) });
