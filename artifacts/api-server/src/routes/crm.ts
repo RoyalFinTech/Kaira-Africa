@@ -85,13 +85,20 @@ router.get("/crm/customers", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const rawSearch = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 120) : "";
   const term = rawSearch.replace(/[,%_]/g, (ch) => "\\" + ch);
+  const parsedLimit = Number.parseInt(String(req.query.limit ?? "200"), 10);
+  const parsedOffset = Number.parseInt(String(req.query.offset ?? "0"), 10);
+  const limit = Number.isFinite(parsedLimit) ? Math.min(200, Math.max(1, parsedLimit)) : 200;
+  const offset = Number.isFinite(parsedOffset) ? Math.min(1_000_000, Math.max(0, parsedOffset)) : 0;
   const where = and(eq(customers.businessId, businessId), rawSearch ? or(
     ilike(customers.firstName, `%${term}%`), ilike(customers.lastName, `%${term}%`),
     ilike(customers.email, `%${term}%`), ilike(customers.phone, `%${term}%`),
     ilike(customers.company, `%${term}%`), sql`${customers.profileData}::text ILIKE ${`%${term}%`}`,
   ) : undefined);
-  const rows = await db.select().from(customers).where(where).orderBy(desc(customers.updatedAt)).limit(200);
-  res.json({ customers: await Promise.all(rows.map(serializeCustomer)), total: rows.length });
+  const [rows, totals] = await Promise.all([
+    db.select().from(customers).where(where).orderBy(desc(customers.updatedAt), desc(customers.id)).limit(limit).offset(offset),
+    db.select({ total: count() }).from(customers).where(where),
+  ]);
+  res.json({ customers: await Promise.all(rows.map(serializeCustomer)), total: Number(totals[0]?.total ?? 0), limit, offset });
 });
 
 router.post("/crm/customers", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
