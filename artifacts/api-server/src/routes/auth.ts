@@ -226,6 +226,11 @@ router.post("/auth/profile/avatar", requireUser, async (req, res) => {
       bytes.toString("base64").replace(/=+$/, "") !== match[2].replace(/=+$/, "")) {
     throw new BadRequestError("Profile photos must be valid JPEG, PNG or WebP images no larger than 2 MB.");
   }
+  // Capture the previous object before upload so replacement can clean it up
+  // only after the new object path has been persisted successfully.
+  const previousUser = await getUserById(req.user!.id);
+  if (!previousUser) throw new NotFoundError("User not found");
+
   const ext = match[1] === "jpeg" ? "jpg" : match[1];
   const path = `${req.user!.id}/${randomUUID()}.${ext}`;
   let upload: Response;
@@ -254,6 +259,26 @@ router.post("/auth/profile/avatar", requireUser, async (req, res) => {
       });
     } catch { /* Best-effort cleanup only; preserve the actual database outcome. */ }
     throw new NotFoundError("User not found");
+  }
+
+  // The new path is now saved. Clean up the old private object afterward so a
+  // failed upload or database update never destroys the user's existing photo.
+  const previousPath = previousUser.avatarUrl;
+  if (previousPath && previousPath !== path && !/^https?:\/\//i.test(previousPath)) {
+    try {
+      const cleanup = await fetch(`${base}/storage/v1/object/profile-avatars`, {
+        method: "DELETE",
+        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ prefixes: [previousPath] }),
+      });
+      if (!cleanup.ok) {
+        logger.warn({ userId: req.user!.id, statusCode: cleanup.status }, "Previous profile photo cleanup failed after replacement");
+      }
+    } catch {
+      // The replacement is already saved; cleanup can be retried without
+      // reporting a false upload failure to the user.
+      logger.warn({ userId: req.user!.id }, "Previous profile photo cleanup was unreachable after replacement");
+    }
   }
   res.json(UpdateProfileResponse.parse(await serializeUser(updated)));
 });
