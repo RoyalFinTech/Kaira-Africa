@@ -161,6 +161,13 @@ export default function CrmPage() {
   const [editing, setEditing] = useState<ManagedCrmCustomer | null>(null);
   const [selected, setSelected] = useState<ManagedCrmCustomer | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [printCustomers, setPrintCustomers] = useState<ManagedCrmCustomer[]>([]);
+  const [printAllRequested, setPrintAllRequested] = useState(false);
+  useEffect(() => {
+    if (!printAllRequested) return;
+    setPrintAllRequested(false);
+    window.setTimeout(() => printKairaDocument("crm-directory-print"), 0);
+  }, [printAllRequested, printCustomers]);
   const [saving, setSaving] = useState(false);
   const [customerId, setCustomerId] = useState("");
   const [title, setTitle] = useState("");
@@ -224,20 +231,48 @@ export default function CrmPage() {
     } catch (error) { setActivityError(error instanceof Error ? error.message : "Could not save this activity."); }
     finally { setActivitySaving(false); }
   };
-  const exportCsv = () => {
-    const headers = ["First name","Last name","Phone","Email","Company","Date of birth","Marital status","Occupation","City","Country","Status","Notes"];
-    const rows = customers.map((c) => [c.firstName,c.lastName,c.phone ?? "",c.email ?? "",c.company ?? "",c.profileData?.dateOfBirth ?? "",c.profileData?.maritalStatus ?? "",c.profileData?.occupation ?? "",c.city ?? "",c.country ?? "",c.status,c.profileData?.internalNotes ?? ""]);
-    const escape = (value: unknown) => '"' + String(value ?? "").replace(/"/g,'""') + '"';
-    const csv = [headers,...rows].map((row) => row.map(escape).join(",")).join("\r\n");
-    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "kaira-crm-customers.csv"; a.click(); URL.revokeObjectURL(url);
+  const fetchAllMatchingCustomers = async () => {
+    const allCustomers: ManagedCrmCustomer[] = [];
+    let offset = 0;
+    let total = Number.POSITIVE_INFINITY;
+    while (offset < total) {
+      const page = await searchCrmCustomers(debouncedSearch, offset, 200);
+      allCustomers.push(...page.customers);
+      total = page.total;
+      if (page.customers.length === 0) break;
+      offset += page.customers.length;
+    }
+    return allCustomers;
+  };
+  const exportCsv = async () => {
+    try {
+      const allCustomers = await fetchAllMatchingCustomers();
+      const headers = ["First name","Last name","Phone","Email","Company","Date of birth","Marital status","Occupation","City","Country","Status","Notes"];
+      const rows = allCustomers.map((c) => [c.firstName,c.lastName,c.phone ?? "",c.email ?? "",c.company ?? "",c.profileData?.dateOfBirth ?? "",c.profileData?.maritalStatus ?? "",c.profileData?.occupation ?? "",c.city ?? "",c.country ?? "",c.status,c.profileData?.internalNotes ?? ""]);
+      const escape = (value: unknown) => '"' + String(value ?? "").replace(/"/g,'""') + '"';
+      const csv = [headers,...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+      const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+      const a = document.createElement("a"); a.href = url; a.download = "kaira-crm-customers.csv"; a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Could not export the complete customer list. Please try again.");
+    }
+  };
+  const printCompleteDirectory = async () => {
+    setFormError(null);
+    try {
+      setPrintCustomers(await fetchAllMatchingCustomers());
+      setPrintAllRequested(true);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Could not load the complete customer directory for printing.");
+    }
   };
   const filteredCount = crmData?.total ?? 0;
 
   return <PageTransition><div className="mx-auto max-w-7xl space-y-6 print:max-w-none">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
       <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-primary"><Users className="h-3.5 w-3.5"/> Customer relationship workspace</div><h1 className="font-display text-3xl font-bold tracking-tight">Customer CRM</h1><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Keep customer details, preferences, conversations and next steps together. Start with the basics and add optional information only when it helps serve the customer.</p></div>
-      <div className="flex flex-wrap gap-2 print:hidden"><Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4"/>Export CSV</Button><Button variant="outline" onClick={() => printKairaDocument("crm-directory-print")}><Printer className="mr-2 h-4 w-4"/>Print / PDF</Button><Button onClick={() => openForm()}><Plus className="mr-2 h-4 w-4"/>Add customer</Button></div>
+      <div className="flex flex-wrap gap-2 print:hidden"><Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4"/>Export CSV</Button><Button variant="outline" onClick={printCompleteDirectory}><Printer className="mr-2 h-4 w-4"/>Print / PDF</Button><Button onClick={() => openForm()}><Plus className="mr-2 h-4 w-4"/>Add customer</Button></div>
     </div>
     <section className="relative isolate overflow-hidden rounded-2xl border border-emerald-900/10 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-5 shadow-sm sm:p-7">
       <div className="relative z-10 max-w-xl">
@@ -273,7 +308,7 @@ export default function CrmPage() {
     <PrintableBusinessDocument id="crm-directory-print" title="Customer directory" documentNumber={String(customers.length) + " customer records"} issuedAt={new Date().toLocaleString()}>
       <table>
         <thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Company</th><th>Status</th></tr></thead>
-        <tbody>{customers.map((customer) => <tr key={customer.id}><td>{customer.firstName} {customer.lastName}</td><td>{customer.phone || "—"}</td><td>{customer.email || "—"}</td><td>{customer.company || "—"}</td><td>{customer.status}</td></tr>)}</tbody>
+        <tbody>{printCustomers.map((customer) => <tr key={customer.id}><td>{customer.firstName} {customer.lastName}</td><td>{customer.phone || "—"}</td><td>{customer.email || "—"}</td><td>{customer.company || "—"}</td><td>{customer.status}</td></tr>)}</tbody>
       </table>
     </PrintableBusinessDocument>
     {selected && <PrintableBusinessDocument id="crm-customer-print" title="Customer profile" documentNumber={selected.id} issuedAt={new Date().toLocaleString()} status={selected.status.toUpperCase()}>
