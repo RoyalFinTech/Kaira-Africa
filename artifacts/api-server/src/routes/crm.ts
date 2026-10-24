@@ -154,7 +154,7 @@ router.post("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin
   }
 
   // The replacement is persisted. Clean up the previous private object afterward.
-  if (previousPath && previousPath !== path && !/^https?:\\/\\//i.test(previousPath)) {
+  if (previousPath && previousPath !== path && !/^https?:\/\//i.test(previousPath)) {
     try {
       const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
       const cleanup = await fetch(`${base}/storage/v1/object/customer-photos`, {
