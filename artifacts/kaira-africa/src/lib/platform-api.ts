@@ -113,7 +113,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export interface CrmCustomer {
   id: string; firstName: string; lastName: string; email: string | null; phone: string | null;
-  company: string | null; status: string; totalSpend: number; transactionCount: number; createdAt: string;
+  company: string | null; status: string; spendByCurrency: Record<string, number>; transactionCount: number; createdAt: string;
 }
 export interface CrmInteraction {
   id: string; customerId: string; customerName: string; userName: string; type: string;

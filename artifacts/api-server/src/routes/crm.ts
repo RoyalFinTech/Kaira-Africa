@@ -164,15 +164,22 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
 
 router.get("/crm/overview", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
-  const [customerRows, interactions, [{ openFollowUps }]] = await Promise.all([
+  const [customerRows, spendRows, interactions, [{ openFollowUps }]] = await Promise.all([
     db.select({
       id: customers.id, firstName: customers.firstName, lastName: customers.lastName,
       email: customers.email, phone: customers.phone, company: customers.company, status: customers.status,
       createdAt: customers.createdAt,
-      totalSpend: sql.raw("coalesce(sum(case when transactions.status = 'completed' and transactions.type = 'payment' then transactions.amount_minor else 0 end), 0)"),
       transactionCount: sql.raw("count(transactions.id) filter (where transactions.status = 'completed')"),
     }).from(customers).leftJoin(transactions, eq(transactions.customerId, customers.id))
       .where(eq(customers.businessId, businessId)).groupBy(customers.id).orderBy(desc(customers.createdAt)).limit(100),
+    db.select({
+      customerId: transactions.customerId,
+      currency: transactions.currency,
+      amountMinor: sql.raw("coalesce(sum(case when transactions.status = 'completed' and transactions.type = 'payment' then transactions.amount_minor else 0 end), 0)"),
+    }).from(transactions).where(and(
+      eq(transactions.businessId, businessId),
+      sql`transactions.customer_id IS NOT NULL`,
+    )).groupBy(transactions.customerId, transactions.currency),
     db.select({
       id: crmInteractions.id, customerId: crmInteractions.customerId,
       customerName: sql.raw("concat(customers.first_name, ' ', customers.last_name)"),
@@ -186,8 +193,15 @@ router.get("/crm/overview", requireUser, async (req, res) => {
       eq(crmInteractions.businessId, businessId), isNull(crmInteractions.completedAt), gte(crmInteractions.nextActionAt, new Date())
     )),
   ]);
+  const spendByCustomer = new Map<string, Record<string, number>>();
+  for (const row of spendRows) {
+    if (!row.customerId) continue;
+    const currencies = spendByCustomer.get(row.customerId) ?? {};
+    currencies[row.currency] = Number(row.amountMinor) / 100;
+    spendByCustomer.set(row.customerId, currencies);
+  }
   res.json({
-    customers: customerRows.map((c) => ({ ...c, totalSpend: Number(c.totalSpend) / 100,
+    customers: customerRows.map((c) => ({ ...c, spendByCurrency: spendByCustomer.get(c.id) ?? {},
       transactionCount: Number(c.transactionCount), createdAt: c.createdAt.toISOString() })),
     interactions: interactions.map((i) => ({ ...i, customerName: String(i.customerName), userName: String(i.userName),
       nextActionAt: i.nextActionAt?.toISOString() || null, completedAt: i.completedAt?.toISOString() || null,
