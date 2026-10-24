@@ -133,9 +133,43 @@ router.post("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin
   const [customer] = await db.select().from(customers).where(and(eq(customers.id, req.params.id as string), eq(customers.businessId, businessId))).limit(1);
   if (!customer) throw new NotFoundError("Customer not found");
   const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
+  const previousPath = customer.avatarUrl;
   const path = await uploadCustomerPhoto(businessId, customer.id, dataUrl);
-  const [updated] = await db.update(customers).set({ avatarUrl: path, updatedAt: new Date() })
-    .where(and(eq(customers.id, customer.id), eq(customers.businessId, businessId))).returning();
+  let updated: typeof customer | undefined;
+  try {
+    [updated] = await db.update(customers).set({ avatarUrl: path, updatedAt: new Date() })
+      .where(and(eq(customers.id, customer.id), eq(customers.businessId, businessId))).returning();
+    if (!updated) throw new NotFoundError("Customer not found");
+  } catch (error) {
+    // The database did not adopt the new object path; remove only the new upload.
+    try {
+      const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
+      await fetch(`${base}/storage/v1/object/customer-photos`, {
+        method: "DELETE",
+        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ prefixes: [path] }),
+      });
+    } catch { /* Best-effort cleanup; preserve the database error. */ }
+    throw error;
+  }
+
+  // The replacement is persisted. Clean up the previous private object afterward.
+  if (previousPath && previousPath !== path && !/^https?:\\/\\//i.test(previousPath)) {
+    try {
+      const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
+      const cleanup = await fetch(`${base}/storage/v1/object/customer-photos`, {
+        method: "DELETE",
+        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ prefixes: [previousPath] }),
+      });
+      if (!cleanup.ok) {
+        console.warn("Previous CRM customer photo cleanup failed after replacement", { customerId: customer.id, statusCode: cleanup.status });
+      }
+    } catch {
+      // Do not report a failed upload when the replacement is already saved.
+      console.warn("Previous CRM customer photo cleanup was unreachable after replacement", { customerId: customer.id });
+    }
+  }
   res.json(await serializeCustomer(updated));
 });
 
