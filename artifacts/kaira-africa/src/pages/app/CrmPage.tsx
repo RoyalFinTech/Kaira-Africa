@@ -250,8 +250,8 @@ export default function CrmPage() {
       const headers = ["First name","Last name","Phone","Email","Company","Date of birth","Marital status","Occupation","City","Country","Status","Notes"];
       const rows = allCustomers.map((c) => [c.firstName,c.lastName,c.phone ?? "",c.email ?? "",c.company ?? "",c.profileData?.dateOfBirth ?? "",c.profileData?.maritalStatus ?? "",c.profileData?.occupation ?? "",c.city ?? "",c.country ?? "",c.status,c.profileData?.internalNotes ?? ""]);
       const escape = (value: unknown) => '"' + String(value ?? "").replace(/"/g,'""') + '"';
-      const csv = [headers,...rows].map((row) => row.map(escape).join(",")).join("\\r\\n");
-      const url = URL.createObjectURL(new Blob(["\\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+      const csv = [headers,...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+      const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
       const a = document.createElement("a"); a.href = url; a.download = "kaira-crm-customers.csv"; a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
