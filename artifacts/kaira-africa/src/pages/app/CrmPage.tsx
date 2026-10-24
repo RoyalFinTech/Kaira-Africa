@@ -224,13 +224,28 @@ export default function CrmPage() {
     } catch (error) { setActivityError(error instanceof Error ? error.message : "Could not save this activity."); }
     finally { setActivitySaving(false); }
   };
-  const exportCsv = () => {
-    const headers = ["First name","Last name","Phone","Email","Company","Date of birth","Marital status","Occupation","City","Country","Status","Notes"];
-    const rows = customers.map((c) => [c.firstName,c.lastName,c.phone ?? "",c.email ?? "",c.company ?? "",c.profileData?.dateOfBirth ?? "",c.profileData?.maritalStatus ?? "",c.profileData?.occupation ?? "",c.city ?? "",c.country ?? "",c.status,c.profileData?.internalNotes ?? ""]);
-    const escape = (value: unknown) => '"' + String(value ?? "").replace(/"/g,'""') + '"';
-    const csv = [headers,...rows].map((row) => row.map(escape).join(",")).join("\r\n");
-    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "kaira-crm-customers.csv"; a.click(); URL.revokeObjectURL(url);
+  const exportCsv = async () => {
+    try {
+      const allCustomers: ManagedCrmCustomer[] = [];
+      let offset = 0;
+      let total = Number.POSITIVE_INFINITY;
+      while (offset < total) {
+        const page = await searchCrmCustomers(debouncedSearch, offset, 200);
+        allCustomers.push(...page.customers);
+        total = page.total;
+        if (page.customers.length === 0) break;
+        offset += page.customers.length;
+      }
+      const headers = ["First name","Last name","Phone","Email","Company","Date of birth","Marital status","Occupation","City","Country","Status","Notes"];
+      const rows = allCustomers.map((c) => [c.firstName,c.lastName,c.phone ?? "",c.email ?? "",c.company ?? "",c.profileData?.dateOfBirth ?? "",c.profileData?.maritalStatus ?? "",c.profileData?.occupation ?? "",c.city ?? "",c.country ?? "",c.status,c.profileData?.internalNotes ?? ""]);
+      const escape = (value: unknown) => '"' + String(value ?? "").replace(/"/g,'""') + '"';
+      const csv = [headers,...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+      const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+      const a = document.createElement("a"); a.href = url; a.download = "kaira-crm-customers.csv"; a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Could not export the complete customer list. Please try again.");
+    }
   };
   const filteredCount = crmData?.total ?? 0;
 
