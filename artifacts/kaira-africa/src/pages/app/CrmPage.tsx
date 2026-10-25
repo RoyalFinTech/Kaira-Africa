@@ -240,12 +240,12 @@ export default function CrmPage() {
     } catch (error) { setActivityError(error instanceof Error ? error.message : "Could not save this activity."); }
     finally { setActivitySaving(false); }
   };
-  const fetchAllMatchingCustomers = async () => {
+  const fetchAllMatchingCustomers = async (searchTerm = debouncedSearch) => {
     const allCustomers: ManagedCrmCustomer[] = [];
     let offset = 0;
     let total = Number.POSITIVE_INFINITY;
     while (offset < total) {
-      const page = await searchCrmCustomers(debouncedSearch, offset, 200);
+      const page = await searchCrmCustomers(searchTerm, offset, 200);
       allCustomers.push(...page.customers);
       total = page.total;
       if (page.customers.length === 0) break;
@@ -255,7 +255,7 @@ export default function CrmPage() {
   };
   const exportCsv = async () => {
     try {
-      const allCustomers = await fetchAllMatchingCustomers();
+      const allCustomers = await fetchAllMatchingCustomers(search.trim());
       const headers = ["First name","Last name","Phone","Email","Company","Date of birth","Marital status","Occupation","City","Country","Status","Notes"];
       const rows = allCustomers.map((c) => [c.firstName,c.lastName,c.phone ?? "",c.email ?? "",c.company ?? "",c.profileData?.dateOfBirth ?? "",c.profileData?.maritalStatus ?? "",c.profileData?.occupation ?? "",c.city ?? "",c.country ?? "",c.status,c.profileData?.internalNotes ?? ""]);
       const escape = (value: unknown) => '"' + String(value ?? "").replace(/"/g,'""') + '"';
@@ -270,7 +270,7 @@ export default function CrmPage() {
   const printCompleteDirectory = async () => {
     setFormError(null);
     try {
-      setPrintCustomers(await fetchAllMatchingCustomers());
+      setPrintCustomers(await fetchAllMatchingCustomers(search.trim()));
       setPrintAllRequested(true);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not load the complete customer directory for printing.");
