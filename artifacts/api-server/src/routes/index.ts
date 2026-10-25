@@ -15,6 +15,7 @@ import aiRouter from "./ai";
 import adminPlatformRouter from "./admin-platform";
 import dailyLedgerRouter from "./daily-ledger";
 import investmentsRouter from "./investments";
+import savingsRouter from "./savings";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(aiRouter);
 router.use(adminPlatformRouter);
 router.use(dailyLedgerRouter);
 router.use(investmentsRouter);
+router.use(savingsRouter);
 
 export default router;
