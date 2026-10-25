@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.savings_entries (
   amount_minor bigint NOT NULL CHECK (amount_minor > 0),
   currency char(3) NOT NULL DEFAULT 'GMD' CHECK (currency IN ('GMD','NGN','USD')),
   saved_date date NOT NULL DEFAULT CURRENT_DATE,
-  destination_type text NOT NULL CHECK (destination_type IN ('mobile_money','bank','microfinance','cash','savings_group','other')),
+  destination_type text NOT NULL CHECK (destination_type IN ('mobile_money','bank','microfinance','cash','savings_box','savings_group','other')),
   provider text NOT NULL CHECK (length(trim(provider)) BETWEEN 2 AND 100),
   reference text,
   notes text,
