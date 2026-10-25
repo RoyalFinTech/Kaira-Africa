@@ -23,7 +23,7 @@ const entryInput = z.object({
   amount: z.number().finite().positive().max(1_000_000_000),
   currency: z.enum(currencies).default("GMD"),
   savedDate: z.string().regex(datePattern).optional(),
-  destinationType: z.enum(["mobile_money","bank","microfinance","cash","savings_group","other"]),
+  destinationType: z.enum(["mobile_money","bank","microfinance","cash","savings_box","savings_group","other"]),
   provider: z.string().trim().min(2).max(100),
   reference: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(500).optional(),
