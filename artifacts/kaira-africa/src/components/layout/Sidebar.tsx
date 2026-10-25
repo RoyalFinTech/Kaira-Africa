@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   ReceiptText,
   PiggyBank,
+  Wallet,
   Settings2,
   LogOut,
   User,
