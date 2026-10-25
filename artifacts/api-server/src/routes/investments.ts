@@ -8,6 +8,13 @@ import { fromMinorUnits, toMinorUnits } from "../lib/money";
 
 const router: IRouter = Router();
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+function isValidCalendarDate(value: string) {
+  if (!datePattern.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+const calendarDate = z.string().refine(isValidCalendarDate, "Enter a valid calendar date in YYYY-MM-DD format.");
 const currencies = ["GMD", "NGN", "USD"] as const;
 const categories = [
   "Retail shop / mini-market", "Wholesale / distribution", "Foodstuff / grocery",
@@ -32,10 +39,10 @@ const createPlanInput = z.object({
   additionalCosts: z.number().finite().min(0).max(1_000_000_000).default(0),
   expectedRevenue: z.number().finite().positive().max(1_000_000_000),
   expectedProfit: z.number().finite().min(0).max(1_000_000_000),
-  targetDate: z.string().regex(datePattern).optional(),
+  targetDate: calendarDate.optional(),
 });
 const createDailyInput = z.object({
-  recordDate: z.string().regex(datePattern).optional(),
+  recordDate: calendarDate.optional(),
   sales: z.number().finite().min(0).max(1_000_000_000),
   expenses: z.number().finite().min(0).max(1_000_000_000),
   notes: z.string().trim().max(500).optional(),
@@ -102,7 +109,7 @@ router.get("/investment-plans/:id/daily", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const [plan] = await db.select().from(investmentPlans).where(and(eq(investmentPlans.id,z.string().uuid().parse(req.params.id)),eq(investmentPlans.businessId,businessId))).limit(1);
   if (!plan) throw new NotFoundError("Investment plan not found.");
-  const query = z.object({ startDate: z.string().regex(datePattern).optional(), endDate: z.string().regex(datePattern).optional() }).parse(req.query);
+  const query = z.object({ startDate: calendarDate.optional(), endDate: calendarDate.optional() }).parse(req.query);
   const conditions = [eq(investmentDailyRecords.businessId,businessId),eq(investmentDailyRecords.planId,plan.id)];
   if (query.startDate) conditions.push(gte(investmentDailyRecords.recordDate,query.startDate));
   if (query.endDate) conditions.push(lte(investmentDailyRecords.recordDate,query.endDate));
