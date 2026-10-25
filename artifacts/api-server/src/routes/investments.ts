@@ -112,6 +112,9 @@ router.get("/investment-plans/:id/daily", requireUser, async (req, res) => {
 router.post("/investment-plans/:id/daily", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const input = createDailyInput.parse(req.body);
+  if (input.recordDate && input.recordDate > new Date().toISOString().slice(0, 10)) {
+    throw new BadRequestError("Daily records cannot be dated in the future.");
+  }
   const [plan] = await db.select().from(investmentPlans).where(and(eq(investmentPlans.id,z.string().uuid().parse(req.params.id)),eq(investmentPlans.businessId,businessId))).limit(1);
   if (!plan) throw new NotFoundError("Investment plan not found.");
   if (plan.status !== "active") throw new BadRequestError("Only active investment plans can receive daily records.");
