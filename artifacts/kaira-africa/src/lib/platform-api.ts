@@ -427,5 +427,5 @@ export const createSavingsGoal=(input:{name:string;purpose?:string;currency:Savi
   request<SavingsGoal>("/api/savings/goals",{method:"POST",body:JSON.stringify(input)});
 export const updateSavingsGoalStatus=(id:string,status:"active"|"completed"|"paused"|"archived")=>
   request<SavingsGoal>("/api/savings/goals/"+encodeURIComponent(id)+"/status",{method:"PATCH",body:JSON.stringify({status})});
-export const createSavingsEntry=(input:{goalId?:string;entryType:"deposit"|"withdrawal";amount:number;currency:SavingsCurrency;savedDate?:string;destinationType:"mobile_money"|"bank"|"microfinance"|"cash"|"savings_group"|"other";provider:string;reference?:string;notes?:string})=>
+export const createSavingsEntry=(input:{goalId?:string;entryType:"deposit"|"withdrawal";amount:number;currency:SavingsCurrency;savedDate?:string;destinationType:"mobile_money"|"bank"|"microfinance"|"cash"|"savings_box"|"savings_group"|"other";provider:string;reference?:string;notes?:string})=>
   request<SavingsEntry>("/api/savings/entries",{method:"POST",body:JSON.stringify(input)});
