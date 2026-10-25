@@ -9,12 +9,19 @@ import { fromMinorUnits, toMinorUnits } from "../lib/money";
 const router: IRouter = Router();
 const currencies = ["GMD", "NGN", "USD"] as const;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+function isValidCalendarDate(value: string) {
+  if (!datePattern.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+const calendarDate = z.string().refine(isValidCalendarDate, "Enter a valid calendar date in YYYY-MM-DD format.");
 const goalInput = z.object({
   name: z.string().trim().min(2).max(120),
   purpose: z.string().trim().max(500).optional(),
   currency: z.enum(currencies).default("GMD"),
   targetAmount: z.number().finite().positive().max(1_000_000_000),
-  targetDate: z.string().regex(datePattern).optional(),
+  targetDate: calendarDate.optional(),
   savingFrequency: z.enum(["daily","weekly","monthly","flexible"]).default("weekly"),
 });
 const entryInput = z.object({
@@ -22,7 +29,7 @@ const entryInput = z.object({
   entryType: z.enum(["deposit","withdrawal"]).default("deposit"),
   amount: z.number().finite().positive().max(1_000_000_000),
   currency: z.enum(currencies).default("GMD"),
-  savedDate: z.string().regex(datePattern).optional(),
+  savedDate: calendarDate.optional(),
   destinationType: z.enum(["mobile_money","bank","microfinance","cash","savings_box","savings_group","other"]),
   provider: z.string().trim().min(2).max(100),
   reference: z.string().trim().max(120).optional(),
