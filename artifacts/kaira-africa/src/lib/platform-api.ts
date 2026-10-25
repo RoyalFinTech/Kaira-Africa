@@ -379,3 +379,30 @@ export const uploadReceiptLogo = (dataUrl: string) =>
   request<ReceiptBrandingSettings>("/api/businesses/me/receipt-logo", { method: "POST", body: JSON.stringify({ dataUrl }) });
 export const removeReceiptLogo = () =>
   request<ReceiptBrandingSettings>("/api/businesses/me/receipt-logo", { method: "DELETE" });
+
+
+export type InvestmentCurrency = "GMD" | "NGN" | "USD";
+export interface InvestmentPlan {
+  id: string; name: string; businessCategory: string; customCategory: string | null;
+  businessModel: "offline" | "online" | "hybrid"; description: string | null;
+  currency: InvestmentCurrency; initialInvestment: number; additionalCosts: number;
+  expectedRevenue: number; expectedProfit: number; targetDate: string | null;
+  status: "active" | "paused" | "completed" | "archived"; createdAt: string;
+  actualSales: number; actualExpenses: number; actualNet: number; daysRecorded: number;
+}
+export interface InvestmentDailyRecord {
+  id: string; planId: string; recordDate: string; sales: number; expenses: number;
+  notes: string | null; createdAt: string;
+}
+export const getInvestmentPlans = () => request<{ plans: InvestmentPlan[] }>("/api/investment-plans");
+export const createInvestmentPlan = (input: {
+  name: string; businessCategory: string; customCategory?: string; businessModel: "offline" | "online" | "hybrid";
+  description?: string; currency: InvestmentCurrency; initialInvestment: number; additionalCosts: number;
+  expectedRevenue: number; expectedProfit: number; targetDate?: string;
+}) => request<InvestmentPlan>("/api/investment-plans", { method: "POST", body: JSON.stringify(input) });
+export const updateInvestmentPlanStatus = (id: string, status: InvestmentPlan["status"]) =>
+  request<InvestmentPlan>("/api/investment-plans/" + encodeURIComponent(id) + "/status", { method: "PATCH", body: JSON.stringify({ status }) });
+export const getInvestmentDailyRecords = (id: string) =>
+  request<{ records: InvestmentDailyRecord[] }>("/api/investment-plans/" + encodeURIComponent(id) + "/daily");
+export const createInvestmentDailyRecord = (id: string, input: { recordDate?: string; sales: number; expenses: number; notes?: string }) =>
+  request<InvestmentDailyRecord>("/api/investment-plans/" + encodeURIComponent(id) + "/daily", { method: "POST", body: JSON.stringify(input) });
