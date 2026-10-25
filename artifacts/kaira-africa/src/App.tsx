@@ -42,6 +42,7 @@ const CrmPage            = lazy(() => import('@/pages/app/CrmPage'));
 const InventoryPage      = lazy(() => import('@/pages/app/InventoryPage'));
 const AiReportsPage      = lazy(() => import('@/pages/app/AiReportsPage'));
 const DailyLedgerPage    = lazy(() => import('@/pages/app/DailyLedgerPage'));
+const InvestmentPlannerPage = lazy(() => import('@/pages/app/InvestmentPlannerPage'));
 const ReceiptBrandingPage = lazy(() => import('@/pages/app/ReceiptBrandingPage'));
 const LegalPage          = lazy(() => import('@/pages/LegalPage'));
 
