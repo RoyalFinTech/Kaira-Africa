@@ -49,6 +49,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'CRM', href: '/crm', icon: UserCheck },
       { label: 'Inventory', href: '/inventory', icon: Package },
       { label: 'Investment Planner', href: '/investments', icon: PiggyBank },
+      { label: 'Savings Tracker', href: '/savings', icon: Wallet },
       { label: 'Receipt Branding', href: '/receipt-branding', icon: ReceiptText },
     ],
   },
