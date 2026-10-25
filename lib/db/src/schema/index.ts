@@ -13,5 +13,5 @@ export * from "./reports";
 export * from "./crm";
 export * from "./inventory";
 export * from "./ai-insights";
-
 export * from "./daily-ledger";
+export * from "./investments";
