@@ -85,6 +85,13 @@
       "when": 1792963200000,
       "tag": "0011_investment_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792924800000,
+      "tag": "0012_savings_tracker",
+      "breakpoints": true
     }
   ]
 }
