@@ -406,3 +406,26 @@ export const getInvestmentDailyRecords = (id: string) =>
   request<{ records: InvestmentDailyRecord[] }>("/api/investment-plans/" + encodeURIComponent(id) + "/daily");
 export const createInvestmentDailyRecord = (id: string, input: { recordDate?: string; sales: number; expenses: number; notes?: string }) =>
   request<InvestmentDailyRecord>("/api/investment-plans/" + encodeURIComponent(id) + "/daily", { method: "POST", body: JSON.stringify(input) });
+
+
+export type SavingsCurrency = "GMD" | "NGN" | "USD";
+export interface SavingsGoal {
+  id:string; name:string; purpose:string|null; currency:SavingsCurrency; targetAmount:number;
+  targetDate:string|null; savingFrequency:"daily"|"weekly"|"monthly"|"flexible"; status:string;
+  savedAmount:number; progressPercent:number; createdAt:string;
+}
+export interface SavingsEntry {
+  id:string; goalId:string|null; entryType:"deposit"|"withdrawal"; amount:number; currency:SavingsCurrency;
+  savedDate:string; destinationType:string; provider:string; reference:string|null; notes:string|null; createdAt:string;
+}
+export interface SavingsOverview {
+  goals:SavingsGoal[]; entries:SavingsEntry[];
+  totals:{currency:SavingsCurrency;deposits:number;withdrawals:number;balance:number}[];
+}
+export const getSavingsOverview=()=>request<SavingsOverview>("/api/savings/overview");
+export const createSavingsGoal=(input:{name:string;purpose?:string;currency:SavingsCurrency;targetAmount:number;targetDate?:string;savingFrequency:"daily"|"weekly"|"monthly"|"flexible"})=>
+  request<SavingsGoal>("/api/savings/goals",{method:"POST",body:JSON.stringify(input)});
+export const updateSavingsGoalStatus=(id:string,status:"active"|"completed"|"paused"|"archived")=>
+  request<SavingsGoal>("/api/savings/goals/"+encodeURIComponent(id)+"/status",{method:"PATCH",body:JSON.stringify({status})});
+export const createSavingsEntry=(input:{goalId?:string;entryType:"deposit"|"withdrawal";amount:number;currency:SavingsCurrency;savedDate?:string;destinationType:"mobile_money"|"bank"|"microfinance"|"cash"|"savings_group"|"other";provider:string;reference?:string;notes?:string})=>
+  request<SavingsEntry>("/api/savings/entries",{method:"POST",body:JSON.stringify(input)});
