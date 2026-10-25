@@ -33,3 +33,8 @@ CREATE TABLE IF NOT EXISTS investment_daily_records (
 );
 CREATE INDEX IF NOT EXISTS investment_daily_business_date_idx ON investment_daily_records(business_id,record_date);
 CREATE INDEX IF NOT EXISTS investment_daily_plan_date_idx ON investment_daily_records(plan_id,record_date);
+
+-- These tables are accessed through the authenticated, business-scoped API.
+-- RLS is defense in depth against accidental direct Data API exposure.
+ALTER TABLE public.investment_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.investment_daily_records ENABLE ROW LEVEL SECURITY;
