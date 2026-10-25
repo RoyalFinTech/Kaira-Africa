@@ -44,17 +44,27 @@ router.get("/savings/overview", requireUser, async (req,res) => {
   const goals=await db.select().from(savingsGoals).where(eq(savingsGoals.businessId,businessId)).orderBy(desc(savingsGoals.createdAt));
   const entries=await db.select().from(savingsEntries).where(eq(savingsEntries.businessId,businessId))
     .orderBy(desc(savingsEntries.savedDate),desc(savingsEntries.createdAt)).limit(500);
-  const currencyTotals = new Map<string,{deposits:number;withdrawals:number;balance:number}>();
-  for(const e of entries){
-    const c=e.currency; const t=currencyTotals.get(c)??{deposits:0,withdrawals:0,balance:0};
-    const amount=fromMinorUnits(Number(e.amountMinor),c);
-    if(e.entryType==="deposit"){t.deposits+=amount;t.balance+=amount;}else{t.withdrawals+=amount;t.balance-=amount;}
-    currencyTotals.set(c,t);
-  }
-  const goalTotals = new Map<string,number>();
-  for(const e of entries) if(e.goalId){const amount=fromMinorUnits(Number(e.amountMinor),e.currency);goalTotals.set(e.goalId,(goalTotals.get(e.goalId)??0)+(e.entryType==="deposit"?amount:-amount));}
-  res.json({goals:goals.map(g=>({...serializeGoal(g),savedAmount:Number((goalTotals.get(g.id)??0).toFixed(2)),progressPercent:Math.min(100,Math.max(0,Math.round(((goalTotals.get(g.id)??0)/fromMinorUnits(Number(g.targetMinor),g.currency))*100)))})),
-    entries:entries.map(serializeEntry), totals:[...currencyTotals.entries()].map(([currency,v])=>({currency,...Object.fromEntries(Object.entries(v).map(([k,n])=>[k,Number(n.toFixed(2))]))}))});
+  // The activity list is intentionally capped for response size. Financial totals must
+  // be calculated across the complete ledger, not just the most recent 500 rows.
+  const currencyRows = await db.select({
+    currency: savingsEntries.currency,
+    depositsMinor: sql<number>`coalesce(sum(case when ${savingsEntries.entryType} = 'deposit' then ${savingsEntries.amountMinor} else 0 end), 0)`,
+    withdrawalsMinor: sql<number>`coalesce(sum(case when ${savingsEntries.entryType} = 'withdrawal' then ${savingsEntries.amountMinor} else 0 end), 0)`,
+  }).from(savingsEntries).where(eq(savingsEntries.businessId,businessId)).groupBy(savingsEntries.currency);
+  const goalRows = await db.select({
+    goalId: savingsEntries.goalId,
+    balanceMinor: sql<number>`coalesce(sum(case when ${savingsEntries.entryType} = 'deposit' then ${savingsEntries.amountMinor} else -${savingsEntries.amountMinor} end), 0)`,
+  }).from(savingsEntries).where(and(eq(savingsEntries.businessId,businessId),sql`${savingsEntries.goalId} is not null`)).groupBy(savingsEntries.goalId);
+  const goalTotals = new Map(goalRows.filter(r=>r.goalId).map(r=>[r.goalId!,Number(r.balanceMinor)]));
+  const totals = currencyRows.map(row => {
+    const deposits=fromMinorUnits(Number(row.depositsMinor),row.currency);
+    const withdrawals=fromMinorUnits(Number(row.withdrawalsMinor),row.currency);
+    return {currency:row.currency,deposits,withdrawals,balance:Number((deposits-withdrawals).toFixed(2))};
+  });
+  res.json({goals:goals.map(g=>{
+    const savedAmount=fromMinorUnits(goalTotals.get(g.id)??0,g.currency);
+    return {...serializeGoal(g),savedAmount,progressPercent:Math.min(100,Math.max(0,Math.round((savedAmount/fromMinorUnits(Number(g.targetMinor),g.currency))*100)))};
+  }),entries:entries.map(serializeEntry),totals});
 });
 router.post("/savings/goals", requireUser, async(req,res)=>{
   const businessId=requireBusiness(req), input=goalInput.parse(req.body);
