@@ -94,15 +94,37 @@ router.post("/savings/entries", requireUser, async(req,res)=>{
     if(!goal) throw new NotFoundError("Savings goal not found for this business.");
     if(goal.currency!==input.currency) throw new BadRequestError("The entry currency must match the selected goal. Use a separate goal for another currency.");
   }
-  if(input.entryType==="withdrawal" && input.goalId){
-    const prior=await db.select({type:savingsEntries.entryType,amount:savingsEntries.amountMinor}).from(savingsEntries)
-      .where(and(eq(savingsEntries.goalId,input.goalId),eq(savingsEntries.businessId,businessId)));
-    const balance=prior.reduce((sum,e)=>sum+(e.type==="deposit"?Number(e.amount):-Number(e.amount)),0);
-    if(toMinorUnits(input.amount,input.currency)>balance) throw new BadRequestError("This withdrawal is greater than the recorded savings for the selected goal.");
+  const amountMinor = toMinorUnits(input.amount,input.currency);
+  let e: typeof savingsEntries.$inferSelect | undefined;
+  if(input.entryType==="withdrawal"){
+    // Unassigned entries form their own per-currency pool. They do not borrow
+    // from goal balances, and goal withdrawals cannot consume the unassigned pool.
+    // Serialize withdrawals for the same business + pool to prevent concurrent
+    // requests from both spending the same recorded balance.
+    const scope = input.goalId ? `goal:${input.goalId}` : `unassigned:${input.currency}`;
+    e = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${businessId + ":" + scope}, 0))`);
+      const filters = input.goalId
+        ? and(eq(savingsEntries.businessId,businessId),eq(savingsEntries.goalId,input.goalId))
+        : and(eq(savingsEntries.businessId,businessId),sql`${savingsEntries.goalId} is null`,eq(savingsEntries.currency,input.currency));
+      const prior = await tx.select({type:savingsEntries.entryType,amount:savingsEntries.amountMinor})
+        .from(savingsEntries).where(filters);
+      const balance = prior.reduce((sum,row)=>sum+(row.type==="deposit"?Number(row.amount):-Number(row.amount)),0);
+      if(amountMinor>balance) throw new BadRequestError(input.goalId
+        ? "This withdrawal is greater than the recorded savings for the selected goal."
+        : `This withdrawal is greater than the unassigned recorded savings balance in ${input.currency}. Choose a savings goal or record a deposit first.`);
+      const [created] = await tx.insert(savingsEntries).values({businessId,goalId:input.goalId||null,createdBy:req.user!.id,entryType:input.entryType,
+        amountMinor,currency:input.currency,savedDate:input.savedDate||today(),
+        destinationType:input.destinationType,provider:input.provider,reference:input.reference||null,notes:input.notes||null}).returning();
+      return created;
+    });
+  } else {
+    const [created] = await db.insert(savingsEntries).values({businessId,goalId:input.goalId||null,createdBy:req.user!.id,entryType:input.entryType,
+      amountMinor,currency:input.currency,savedDate:input.savedDate||today(),
+      destinationType:input.destinationType,provider:input.provider,reference:input.reference||null,notes:input.notes||null}).returning();
+    e = created;
   }
-  const [e]=await db.insert(savingsEntries).values({businessId,goalId:input.goalId||null,createdBy:req.user!.id,entryType:input.entryType,
-    amountMinor:toMinorUnits(input.amount,input.currency),currency:input.currency,savedDate:input.savedDate||today(),
-    destinationType:input.destinationType,provider:input.provider,reference:input.reference||null,notes:input.notes||null}).returning();
+  if(!e) throw new Error("Savings entry could not be created.");
   res.status(201).json(serializeEntry(e));
 });
 export default router;
