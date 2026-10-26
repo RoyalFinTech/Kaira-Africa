@@ -4,6 +4,8 @@ import { HttpError } from "./http-errors";
 export type SupabaseStorageConfig = {
   base: string;
   key: string;
+  /** Auth headers compatible with modern secret keys and legacy service-role JWTs. */
+  headers: Record<string, string>;
 };
 
 /** Storage is enabled when the project URL and either modern or legacy server key are configured. */
@@ -30,5 +32,9 @@ export function requireSupabaseStorageConfig(featureName = "Private Supabase Sto
     );
   }
 
-  return { base: env.SUPABASE_URL!.replace(/\/$/, ""), key: key! };
+  const headers: Record<string, string> = { apikey: key! };
+  // Modern sb_secret_* keys are not JWTs and must not be sent as Bearer tokens.
+  // Legacy service-role JWTs require the Authorization header.
+  if (!env.SUPABASE_SECRET_KEY) headers.Authorization = `Bearer ${key!}`;
+  return { base: env.SUPABASE_URL!.replace(/\/$/, ""), key: key!, headers };
 }

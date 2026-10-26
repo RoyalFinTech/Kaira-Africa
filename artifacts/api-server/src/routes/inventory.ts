@@ -6,7 +6,7 @@ import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
-import { env } from "../config/env";
+import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
 
 const router: IRouter = Router();
 
@@ -30,18 +30,18 @@ function serialize(p: typeof inventoryProducts.$inferSelect) {
 async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
   const product = serialize(p);
   if (!p.imageUrl || /^https?:\/\//i.test(p.imageUrl)) return product;
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ...product, imageUrl: null };
+  if (!hasSupabaseStorageConfig()) return { ...product, imageUrl: null };
+  const storage = requireSupabaseStorageConfig("Inventory product image storage");
 
   // Product photos are private. Store the object path in Postgres and return
   // a short-lived signed URL to authenticated business users only.
-  const baseUrl = env.SUPABASE_URL.replace(/\/$/, "");
+  const baseUrl = storage.base;
   const objectPath = p.imageUrl.split("/").map(encodeURIComponent).join("/");
   try {
     const response = await fetch(`${baseUrl}/storage/v1/object/sign/inventory-images/${objectPath}`, {
       method: "POST",
       headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        ...storage.headers,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ expiresIn: 86400 }),
@@ -97,9 +97,10 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
     eq(inventoryProducts.id, req.params.id as string), eq(inventoryProducts.businessId, businessId)
   )).limit(1);
   if (!product) throw new NotFoundError("Inventory product not found");
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!hasSupabaseStorageConfig()) {
     throw new HttpError(503, "service_unavailable", "Product image storage is not configured yet. You can still save the product without a photo.");
   }
+  const storage = requireSupabaseStorageConfig("Inventory product image storage");
   const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
   const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
   if (!match) throw new BadRequestError("Upload a JPEG product photo. Images are resized before upload.");
@@ -108,12 +109,11 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
     throw new BadRequestError("Product photos must be 200 KB or smaller.");
   }
   const objectPath = `${businessId}/${product.id}/${Date.now()}.jpg`;
-  const storageUrl = `${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/inventory-images/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
+  const storageUrl = `${storage.base}/storage/v1/object/inventory-images/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
   const upload = await fetch(storageUrl, {
     method: "POST",
     headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      ...storage.headers,
       "Content-Type": "image/jpeg",
       "x-upsert": "true",
     },
