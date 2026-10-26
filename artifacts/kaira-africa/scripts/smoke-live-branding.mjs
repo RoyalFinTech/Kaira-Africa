@@ -1019,7 +1019,7 @@ try {
       await pinPage.getByRole('button', { name: 'Remove photo' }).waitFor({ state: 'detached', timeout: 10_000 });
       assert.equal(crmPhotoDeleteRequests.length, 1, 'CRM photo removal should call the delete endpoint');
       // The activity customer selector is independently search-driven; search for the newly created fixture before selecting it.
-      await pinPage.getByPlaceholder('Search name, phone, email or company…').fill('Aminata SmokeCustomer');
+      await pinPage.getByPlaceholder('Search name, phone, email or company…').fill('Aminata');
       await pinPage.locator('main.min-w-0.flex-1 select:has(option[value="crm-customer-smoke"])').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.locator('main.min-w-0.flex-1 select:has(option[value="crm-customer-smoke"])').selectOption('crm-customer-smoke');
       await pinPage.getByPlaceholder('Activity title (e.g. Delivery feedback)').fill('Smoke test feedback');
