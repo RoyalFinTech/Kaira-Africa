@@ -72,6 +72,11 @@ describe("money conversion", () => {
   test("avoids floating point drift on tricky values", () => {
     assert.equal(toMinorUnits(125.1, "GMD"), 12510);
   });
+
+  test("shows when a positive decimal rounds to zero minor units", () => {
+    assert.equal(toMinorUnits(0.004, "GMD"), 0);
+    assert.equal(toMinorUnits(0.005, "GMD"), 1);
+  });
 });
 
 describe("password complexity", () => {
