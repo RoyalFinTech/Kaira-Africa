@@ -7,6 +7,7 @@ import { displayName } from "../lib/display-name";
 import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,45 @@ const adjustmentInput = z.object({
 function serialize(p: typeof inventoryProducts.$inferSelect) {
   return { ...p, unitCost: Number(p.unitCostMinor) / 100, salePrice: Number(p.salePriceMinor) / 100,
     createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() };
+}
+
+async function describeInventoryImageUploadFailure(response: Response): Promise<string> {
+  let remoteMessage = "";
+  try {
+    const body: unknown = await response.json();
+    const readMessage = (value: unknown, depth = 0): string => {
+      if (depth > 3 || value == null) return "";
+      if (typeof value === "string") {
+        const text = value.trim();
+        return text && text !== "[object Object]" ? text.slice(0, 240) : "";
+      }
+      if (typeof value !== "object") return "";
+      const record = value as Record<string, unknown>;
+      for (const key of ["message", "error_description", "detail", "error", "code"]) {
+        const text = readMessage(record[key], depth + 1);
+        if (text) return text;
+      }
+      return "";
+    };
+    remoteMessage = readMessage(body);
+  } catch {
+    // Use the status-based message when Storage doesn't return JSON.
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    return "Supabase Storage rejected the API credentials. Confirm SUPABASE_URL matches the Kaira Africa project and that SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is configured on the API service in Render.";
+  }
+  if (response.status === 404) {
+    return "Supabase could not find the private inventory-images bucket or upload path. Confirm the bucket exists in the project configured for the Kaira Africa API.";
+  }
+  if (response.status === 413) {
+    return "Supabase rejected the photo because it exceeds the 200 KB inventory image limit. Choose a smaller photo.";
+  }
+  if (response.status === 400 && /mime|content.?type|image/i.test(remoteMessage)) {
+    return "Supabase rejected the photo format. Choose a JPEG image.";
+  }
+  return "Supabase Storage rejected the inventory photo upload (HTTP " + response.status + ")" +
+    (remoteMessage ? ": " + remoteMessage : ". Check the private inventory-images bucket and API Storage configuration.");
 }
 
 async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
@@ -46,7 +86,10 @@ async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
       },
       body: JSON.stringify({ expiresIn: 86400 }),
     });
-    if (!response.ok) return { ...product, imageUrl: null };
+    if (!response.ok) {
+      logger.warn({ statusCode: response.status }, "Could not create a signed URL for an inventory product image");
+      return { ...product, imageUrl: null };
+    }
     const result = await response.json() as { signedURL?: string; signedUrl?: string };
     const signedUrl = result.signedURL ?? result.signedUrl;
     if (!signedUrl) return { ...product, imageUrl: null };
@@ -120,7 +163,9 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
     body: bytes,
   });
   if (!upload.ok) {
-    throw new HttpError(503, "service_unavailable", "The photo could not be saved to storage. Please try again.");
+    const message = await describeInventoryImageUploadFailure(upload);
+    logger.error({ statusCode: upload.status }, "Supabase Storage rejected an inventory photo upload");
+    throw new HttpError(502, "inventory_image_upload_failed", message);
   }
   const imageUrl = objectPath;
   const [updated] = await db.update(inventoryProducts).set({ imageUrl, updatedAt: new Date() })
