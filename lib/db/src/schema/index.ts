@@ -15,5 +15,3 @@ export * from "./inventory";
 export * from "./ai-insights";
 export * from "./daily-ledger";
 export * from "./investments";
-
-export * from "./savings";

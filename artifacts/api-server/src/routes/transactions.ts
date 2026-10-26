@@ -133,12 +133,8 @@ router.post(
     if (!Number.isFinite(input.amount) || input.amount <= 0) {
       throw new BadRequestError("Amount must be greater than zero.");
     }
-    const amountMinor = toMinorUnits(input.amount, input.currency);
-    if (amountMinor <= 0) {
-      throw new BadRequestError("Amount must be at least 0.01 in the selected currency.");
-    }
     const tx = await createTransaction(businessId, {
-      amountMinor,
+      amountMinor: toMinorUnits(input.amount, input.currency),
       currency: input.currency,
       type: input.type,
       customerId: input.customerId,
