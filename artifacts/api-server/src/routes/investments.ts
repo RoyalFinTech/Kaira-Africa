@@ -84,16 +84,21 @@ router.post("/investment-plans", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const input = createPlanInput.parse(req.body);
   if (input.businessCategory === "Other" && !input.customCategory?.trim()) throw new BadRequestError("Enter the business type when you select Other.");
-  const totalCost = input.initialInvestment + input.additionalCosts;
-  if (input.expectedRevenue < totalCost) throw new BadRequestError("Expected revenue should be at least the total planned cost. Review the assumptions if a loss is expected.");
-  if (input.expectedProfit > input.expectedRevenue - totalCost) throw new BadRequestError("Expected profit cannot exceed expected revenue minus planned costs.");
+  const initialInvestmentMinor = toMinorUnits(input.initialInvestment, input.currency);
+  const additionalCostsMinor = toMinorUnits(input.additionalCosts, input.currency);
+  const expectedRevenueMinor = toMinorUnits(input.expectedRevenue, input.currency);
+  const expectedProfitMinor = toMinorUnits(input.expectedProfit, input.currency);
+  if (expectedRevenueMinor <= 0) throw new BadRequestError("Expected revenue must be at least 0.01 in the selected currency.");
+  const totalCostMinor = initialInvestmentMinor + additionalCostsMinor;
+  if (expectedRevenueMinor < totalCostMinor) throw new BadRequestError("Expected revenue should be at least the total planned cost. Review the assumptions if a loss is expected.");
+  if (expectedProfitMinor > expectedRevenueMinor - totalCostMinor) throw new BadRequestError("Expected profit cannot exceed expected revenue minus planned costs.");
   const [p] = await db.insert(investmentPlans).values({
     businessId, createdBy: req.user!.id, name: input.name, businessCategory: input.businessCategory,
     customCategory: input.customCategory || null, businessModel: input.businessModel, description: input.description || null,
-    currency: input.currency, initialInvestmentMinor: toMinorUnits(input.initialInvestment,input.currency),
-    additionalCostsMinor: toMinorUnits(input.additionalCosts,input.currency),
-    expectedRevenueMinor: toMinorUnits(input.expectedRevenue,input.currency),
-    expectedProfitMinor: toMinorUnits(input.expectedProfit,input.currency), targetDate: input.targetDate || null,
+    currency: input.currency, initialInvestmentMinor,
+    additionalCostsMinor,
+    expectedRevenueMinor,
+    expectedProfitMinor, targetDate: input.targetDate || null,
   }).returning();
   res.status(201).json(serializePlan(p));
 });
