@@ -75,8 +75,10 @@ router.get("/savings/overview", requireUser, async (req,res) => {
 });
 router.post("/savings/goals", requireUser, async(req,res)=>{
   const businessId=requireBusiness(req), input=goalInput.parse(req.body);
+  const targetMinor = toMinorUnits(input.targetAmount,input.currency);
+  if (targetMinor <= 0) throw new BadRequestError("Target amount must be at least 0.01 in the selected currency.");
   const [g]=await db.insert(savingsGoals).values({businessId,createdBy:req.user!.id,name:input.name,purpose:input.purpose||null,
-    currency:input.currency,targetMinor:toMinorUnits(input.targetAmount,input.currency),targetDate:input.targetDate||null,savingFrequency:input.savingFrequency}).returning();
+    currency:input.currency,targetMinor,targetDate:input.targetDate||null,savingFrequency:input.savingFrequency}).returning();
   res.status(201).json({...serializeGoal(g),savedAmount:0,progressPercent:0});
 });
 router.patch("/savings/goals/:id/status", requireUser, async(req,res)=>{
@@ -95,6 +97,7 @@ router.post("/savings/entries", requireUser, async(req,res)=>{
     if(goal.currency!==input.currency) throw new BadRequestError("The entry currency must match the selected goal. Use a separate goal for another currency.");
   }
   const amountMinor = toMinorUnits(input.amount,input.currency);
+  if (amountMinor <= 0) throw new BadRequestError("Amount must be at least 0.01 in the selected currency.");
   let e: typeof savingsEntries.$inferSelect | undefined;
   if(input.entryType==="withdrawal"){
     // Unassigned entries form their own per-currency pool. They do not borrow
