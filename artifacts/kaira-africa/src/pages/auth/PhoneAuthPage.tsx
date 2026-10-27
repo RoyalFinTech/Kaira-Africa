@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { Phone, ChevronRight, Shield, Users, Package, ChartNoAxesCombined, Sparkles, Headset, MapPin, MessageCircle } from 'lucide-react';
+import { Phone, ChevronRight, Users, Package, ChartNoAxesCombined, Sparkles, Headset, MapPin, MessageCircle } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { GambiaFlag } from '@/components/common/GambiaFlag';
 import { Button } from '@/components/ui/button';
@@ -321,15 +321,6 @@ export default function PhoneAuthPage() {
               </p>
             </div>
 
-            {/* Admin separator */}
-            <div className="mt-8 pt-6 border-t border-border">
-              <Link href="/admin">
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer group">
-                  <Shield className="h-4 w-4 text-muted-foreground/60 group-hover:text-primary transition-colors" />
-                  <span>Admin Portal</span>
-                </div>
-              </Link>
-            </div>
           </motion.div>
 
 </div>
