@@ -12,6 +12,7 @@ import {
   ClipboardList,
   BrainCircuit,
   ReceiptText,
+  CreditCard,
   PiggyBank,
   Wallet,
   Settings2,
@@ -52,6 +53,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Investment Planner', href: '/investments', icon: PiggyBank },
       { label: 'Savings Tracker', href: '/savings', icon: Wallet },
       { label: 'Receipt Branding', href: '/receipt-branding', icon: ReceiptText },
+      { label: 'Billing & Plan', href: '/billing', icon: CreditCard },
     ],
   },
   {
