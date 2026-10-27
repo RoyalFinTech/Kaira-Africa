@@ -102,9 +102,9 @@ export default function SettingsPage() {
   return (
     <PageTransition>
       <div className="space-y-6">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-1">Settings</h1>
-          <p className="text-muted-foreground text-sm">Manage your workspace preferences and configuration.</p>
+        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-slate-500/10 p-5 sm:p-6">
+          <div className="absolute -right-6 -top-10 h-36 w-36 rounded-full bg-slate-500/10 blur-2xl" aria-hidden="true" />
+          <div className="relative flex items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><Settings2 className="h-7 w-7" /></div><div><h1 className="font-display mb-1 text-3xl font-bold text-foreground">Settings</h1><p className="text-sm text-muted-foreground">Manage your workspace preferences and configuration.</p></div></div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
