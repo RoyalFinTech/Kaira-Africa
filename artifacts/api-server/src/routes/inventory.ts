@@ -114,13 +114,17 @@ router.get("/inventory/products", requireUser, async (req, res) => {
 router.post("/inventory/products", requireUser, requireRole("owner", "admin", "manager"), async (req, res) => {
   const input = productInput.parse(req.body); const businessId = requireBusiness(req);
   try {
-    const [created] = await db.insert(inventoryProducts).values({
-      businessId, name: input.name, sku: input.sku, category: input.category || null, unit: input.unit,
-      quantity: input.quantity, reorderLevel: input.reorderLevel, unitCostMinor: Math.round(input.unitCost * 100),
-      salePriceMinor: Math.round(input.salePrice * 100), currency: input.currency,
-    }).returning();
-    if (input.quantity) await db.insert(inventoryMovements).values({
-      businessId, productId: created.id, userId: req.user!.id, quantityDelta: input.quantity, type: "initial", reason: "Opening stock",
+    // Keep opening stock and its initial movement history in sync.
+    const created = await db.transaction(async (tx) => {
+      const [product] = await tx.insert(inventoryProducts).values({
+        businessId, name: input.name, sku: input.sku, category: input.category || null, unit: input.unit,
+        quantity: input.quantity, reorderLevel: input.reorderLevel, unitCostMinor: Math.round(input.unitCost * 100),
+        salePriceMinor: Math.round(input.salePrice * 100), currency: input.currency,
+      }).returning();
+      if (input.quantity) await tx.insert(inventoryMovements).values({
+        businessId, productId: product.id, userId: req.user!.id, quantityDelta: input.quantity, type: "initial", reason: "Opening stock",
+      });
+      return product;
     });
     await recordActivity({
       businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
