@@ -194,7 +194,7 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
 
   // Record removal is complete. A storage cleanup failure leaves only a private
   // orphan object, not a customer row pointing at a missing photo.
-  if (previousPath && !/^https?:\\/\\//i.test(previousPath)) {
+  if (previousPath && !/^https?:\/\//i.test(previousPath)) {
     try {
       const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
       const response = await fetch(`${base}/storage/v1/object/customer-photos`, {
