@@ -184,22 +184,29 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
   const businessId = requireBusiness(req);
   const [customer] = await db.select().from(customers).where(and(eq(customers.id, req.params.id as string), eq(customers.businessId, businessId))).limit(1);
   if (!customer) throw new NotFoundError("Customer not found");
-  const path = customer.avatarUrl;
-  if (path && !/^https?:\/\//i.test(path)) {
-    const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
-    let response: Response;
-    try {
-      response = await fetch(`${base}/storage/v1/object/customer-photos`, {
-        method: "DELETE", headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
-        body: JSON.stringify({ prefixes: [path] }),
-      });
-    } catch {
-      throw new HttpError(502, "photo_remove_failed", "The customer photo could not be removed from private storage. Please try again.");
-    }
-    if (!response.ok) throw new HttpError(502, "photo_remove_failed", "The customer photo could not be removed from private storage. Please try again.");
-  }
+
+  // Clear the DB reference first: Postgres and Storage cannot share a transaction.
+  // This avoids leaving a broken avatar path if the DB write fails after object removal.
+  const previousPath = customer.avatarUrl;
   const [updated] = await db.update(customers).set({ avatarUrl: null, updatedAt: new Date() })
     .where(and(eq(customers.id, customer.id), eq(customers.businessId, businessId))).returning();
+  if (!updated) throw new NotFoundError("Customer not found");
+
+  // Record removal is complete. A storage cleanup failure leaves only a private
+  // orphan object, not a customer row pointing at a missing photo.
+  if (previousPath && !/^https?:\\/\\//i.test(previousPath)) {
+    try {
+      const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
+      const response = await fetch(`${base}/storage/v1/object/customer-photos`, {
+        method: "DELETE",
+        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ prefixes: [previousPath] }),
+      });
+      if (!response.ok) console.warn("CRM photo cleanup failed after record removal", { customerId: customer.id, statusCode: response.status });
+    } catch {
+      console.warn("CRM photo cleanup was unreachable after record removal", { customerId: customer.id });
+    }
+  }
   res.json(await serializeCustomer(updated));
 });
 
