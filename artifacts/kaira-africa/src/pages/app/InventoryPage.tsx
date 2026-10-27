@@ -170,11 +170,12 @@ export default function InventoryPage() {
   const productCurrency = (p: InventoryProduct) => (p.currency || "GMD") as Currency;
 
   return <PageTransition><div className="mx-auto max-w-7xl space-y-5 pb-8 sm:space-y-6">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
-        <div className="min-w-0"><div className="flex items-center gap-2"><Package className="h-6 w-6 text-primary" /><h1 className="font-display text-2xl font-bold sm:text-3xl">Inventory & stock book</h1></div><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Keep a clear record of the goods your business owns, what each item costs, what you sell it for, and when stock is running low. Use the back arrow in the top bar to return to your previous page.</p></div>
+    <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-emerald-500/10 p-5 sm:p-6">
+      <div className="pointer-events-none absolute -right-6 -top-10 h-36 w-36 rounded-full bg-emerald-500/10 blur-2xl" aria-hidden="true" />
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><Package className="h-6 w-6" /></div><div className="min-w-0"><h1 className="font-display text-2xl font-bold sm:text-3xl">Inventory & stock book</h1><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Keep a clear record of the goods your business owns, what each item costs, what you sell it for, and when stock is running low.</p></div></div>
+        <Button className="h-11 w-full shrink-0 gap-2 sm:w-auto" onClick={() => { setOpen((value) => !value); setFormError(null); }} title="Open the form to add a product"><Plus className="h-4 w-4" />{open ? "Close form" : "Add product"}</Button>
       </div>
-      <Button className="h-11 w-full shrink-0 gap-2 sm:w-auto" onClick={() => { setOpen((value) => !value); setFormError(null); }} title="Open the form to add a product"><Plus className="h-4 w-4" />{open ? "Close form" : "Add product"}</Button>
     </div>
 
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">

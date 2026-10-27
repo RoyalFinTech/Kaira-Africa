@@ -94,13 +94,9 @@ export default function ActivityPage() {
     <PageTransition>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-1">
-            Activity Log
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Complete audit trail of all user and system actions.
-          </p>
+        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-amber-500/10 p-5 sm:p-6">
+          <div className="absolute -right-6 -top-10 h-36 w-36 rounded-full bg-amber-500/10 blur-2xl" aria-hidden="true" />
+          <div className="relative flex items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><Activity className="h-7 w-7" /></div><div><h1 className="font-display mb-1 text-3xl font-bold text-foreground">Activity Log</h1><p className="text-sm text-muted-foreground">A clear audit trail of user and system actions.</p></div></div>
         </div>
 
         {/* Filters */}

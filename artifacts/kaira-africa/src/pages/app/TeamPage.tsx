@@ -144,17 +144,17 @@ export default function TeamPage() {
   return (
     <PageTransition>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold">Team Members</h1>
-            <p className="text-muted-foreground mt-1">Manage your team and their permissions</p>
-          </div>
+        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-cyan-500/10 p-5 sm:p-6">
+          <div className="absolute -right-6 -top-10 h-36 w-36 rounded-full bg-cyan-500/10 blur-2xl" aria-hidden="true" />
+          <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><Users className="h-7 w-7" /></div><div><h1 className="font-display text-3xl font-bold">Team Members</h1><p className="mt-1 text-muted-foreground">Manage your team and their permissions.</p></div></div>
           {canManageTeam && (
             <Button onClick={() => setInviteOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Invite Member
             </Button>
           )}
+          </div>
         </div>
 
         {canManageTeam && <InviteMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} />}        {/* Stats */}

@@ -29,7 +29,7 @@ export default function AiReportsPage() {
     await qc.invalidateQueries({ queryKey: ["daily-ledger"] });
   };
   return <PageTransition><div className="space-y-6">
-    <div className="flex items-center justify-between"><div><h1 className="font-display text-3xl font-bold flex items-center gap-2"><BrainCircuit className="h-7 w-7 text-primary" />AI Reports & Insights</h1><p className="text-muted-foreground text-sm">Business intelligence from your transactions, daily sales book, expenses, debtors and stock levels.</p></div><Button className="gap-2" onClick={generate}><RefreshCw className="h-4 w-4" />Generate insights</Button></div>
+    <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-violet-500/10 p-5 sm:p-6"><div className="absolute -right-6 -top-10 h-36 w-36 rounded-full bg-violet-500/10 blur-2xl" aria-hidden="true" /><div className="relative flex flex-wrap items-center justify-between gap-4"><div className="flex items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><BrainCircuit className="h-7 w-7" /></div><div><h1 className="font-display text-3xl font-bold">AI Reports & Insights</h1><p className="mt-1 max-w-2xl text-sm text-muted-foreground">Business intelligence from transactions, daily sales, expenses, debtors and stock levels.</p></div></div><Button className="gap-2" onClick={generate}><RefreshCw className="h-4 w-4" />Generate insights</Button></div></div>
     {insights.length > 0 && (
       <div className="rounded-xl border p-4 text-sm text-muted-foreground">
         {insights[0]?.payload?.source === "openai"
