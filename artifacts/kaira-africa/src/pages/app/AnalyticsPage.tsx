@@ -27,22 +27,15 @@ export default function AnalyticsPage() {
   return (
     <PageTransition>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold">Analytics</h1>
-            <p className="text-muted-foreground mt-1">Track your business performance</p>
-          </div>
-          <div className="flex gap-2">
-            {['Week', 'Month', 'Quarter', 'Year'].map((p) => (
-              <Button
-                key={p}
-                variant={period === p.toLowerCase() ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPeriod(p.toLowerCase())}
-              >
-                {p}
-              </Button>
-            ))}
+        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-sky-500/10 p-5 sm:p-6">
+          <div className="pointer-events-none absolute -right-6 -top-10 h-36 w-36 rounded-full bg-sky-500/10 blur-2xl" aria-hidden="true" />
+          <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><TrendingUp className="h-7 w-7" /></div><div><h1 className="font-display text-3xl font-bold">Analytics</h1><p className="mt-1 text-sm text-muted-foreground">Track revenue, customer growth and transaction performance.</p></div></div>
+            <div className="flex flex-wrap gap-2">
+              {['Week', 'Month', 'Quarter', 'Year'].map((p) => (
+                <Button key={p} variant={period === p.toLowerCase() ? 'default' : 'outline'} size="sm" onClick={() => setPeriod(p.toLowerCase())}>{p}</Button>
+              ))}
+            </div>
           </div>
         </div>
 
