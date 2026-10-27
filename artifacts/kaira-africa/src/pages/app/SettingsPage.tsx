@@ -18,10 +18,11 @@ import { useGetMe, useGetMyBusiness, useUpdateBusiness, useLogoutAll, ApiError }
 import { clearToken } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
-type TabKey = 'business' | 'security' | 'appearance' | 'team' | 'billing';
+type TabKey = 'business' | 'branding' | 'security' | 'appearance' | 'team' | 'billing';
 
 const tabs: { key: TabKey; label: string; icon: typeof Settings2 }[] = [
   { key: 'business',      label: 'Business Profile', icon: Building2   },
+  { key: 'branding',      label: 'Branding & Identity', icon: Palette },
   { key: 'security',      label: 'Security',         icon: Shield      },
   { key: 'appearance',    label: 'Appearance',       icon: Palette     },
   { key: 'team',          label: 'Team & Permissions', icon: Users     },
@@ -176,6 +177,38 @@ export default function SettingsPage() {
                 </Card>
               )}
 
+              {/* BRANDING & IDENTITY: these destinations use the existing live profile and receipt-branding flows. */}
+              {activeTab === 'branding' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Branding & Identity</CardTitle>
+                    <p className="text-sm text-muted-foreground">Keep your personal identity and business documents consistent. These controls open the existing pages that save through Kaira's API and private storage.</p>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border p-4">
+                      <div className="mb-2 flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" /><h3 className="font-semibold">Business identity</h3></div>
+                      <p className="mb-4 text-sm text-muted-foreground">Edit the business name, address, contact details, website and description. Changes save through the business profile API.</p>
+                      <Button className="w-full" onClick={() => setActiveTab('business')}>Edit business details</Button>
+                    </div>
+                    <div className="rounded-xl border p-4">
+                      <div className="mb-2 flex items-center gap-2"><Palette className="h-5 w-5 text-primary" /><h3 className="font-semibold">Receipt & print branding</h3></div>
+                      <p className="mb-4 text-sm text-muted-foreground">Set the receipt logo, printed business details, customer visibility and footer note. Logo files use private storage.</p>
+                      <Button className="w-full" onClick={() => setLocation('/receipt-branding')}>Open print branding</Button>
+                    </div>
+                    <div className="rounded-xl border p-4">
+                      <div className="mb-2 flex items-center gap-2"><Users className="h-5 w-5 text-primary" /><h3 className="font-semibold">Personal profile</h3></div>
+                      <p className="mb-4 text-sm text-muted-foreground">Manage your name, profile photo and account details.</p>
+                      <Button variant="outline" className="w-full" onClick={() => setLocation('/profile')}>Open my profile</Button>
+                    </div>
+                    <div className="rounded-xl border p-4">
+                      <div className="mb-2 flex items-center gap-2"><Bell className="h-5 w-5 text-primary" /><h3 className="font-semibold">Notifications</h3></div>
+                      <p className="mb-4 text-sm text-muted-foreground">Review your in-app notifications. Delivery preferences are not exposed here until a notification-preferences API is available.</p>
+                      <Button variant="outline" className="w-full" onClick={() => setLocation('/notifications')}>View notifications</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* SECURITY — note: business users authenticate via
                   phone/OTP only and have no password to change here.
                   Password reset exists only for the separate admin
@@ -287,18 +320,13 @@ export default function SettingsPage() {
                 </Card>
               )}
 
-              {/* BILLING */}
+              {/* BILLING: the live billing page owns current plan status and launch messaging. */}
               {activeTab === 'billing' && (
                 <Card>
-                  <CardHeader><CardTitle>Billing & Subscription</CardTitle></CardHeader>
+                  <CardHeader><CardTitle>Billing & Plan</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="p-4 rounded-xl border border-dashed border-border text-center">
-                      <CreditCard className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-sm font-medium text-foreground">Billing isn't set up yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Plans, invoices, and payment methods will appear here once billing is built.
-                      </p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">View the current early-access plan, included features and future payment-method status. No payment details are collected on this settings screen.</p>
+                    <Button className="w-full sm:w-auto gap-2" onClick={() => setLocation('/billing')}><CreditCard className="h-4 w-4" />Open Billing & Plan</Button>
                   </CardContent>
                 </Card>
               )}
