@@ -174,26 +174,38 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
 });
 
 router.post("/inventory/products/:id/adjust", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
-  const input = adjustmentInput.parse(req.body); const businessId = requireBusiness(req);
-  const [product] = await db.select().from(inventoryProducts).where(and(
-    eq(inventoryProducts.id, req.params.id as string), eq(inventoryProducts.businessId, businessId)
-  )).limit(1);
-  if (!product) throw new NotFoundError("Inventory product not found");
-  const nextQuantity = product.quantity + input.quantityDelta;
-  if (nextQuantity < 0) throw new BadRequestError("Stock cannot fall below zero");
-  const [updated] = await db.update(inventoryProducts).set({ quantity: nextQuantity, updatedAt: new Date() })
-    .where(eq(inventoryProducts.id, product.id)).returning();
-  await db.insert(inventoryMovements).values({
-    businessId, productId: product.id, userId: req.user!.id, quantityDelta: input.quantityDelta,
-    type: input.type, reason: input.reason || null,
+  const input = adjustmentInput.parse(req.body);
+  const businessId = requireBusiness(req);
+
+  // Lock the product row and write the new quantity + movement in one transaction.
+  // This prevents concurrent stock adjustments from overwriting each other and
+  // prevents a movement record from being committed without its matching quantity.
+  const result = await db.transaction(async (tx) => {
+    const [product] = await tx.select().from(inventoryProducts).where(and(
+      eq(inventoryProducts.id, req.params.id as string),
+      eq(inventoryProducts.businessId, businessId),
+    )).limit(1).for("update");
+    if (!product) throw new NotFoundError("Inventory product not found");
+    const nextQuantity = product.quantity + input.quantityDelta;
+    if (nextQuantity < 0) throw new BadRequestError("Stock cannot fall below zero");
+
+    const [updated] = await tx.update(inventoryProducts).set({ quantity: nextQuantity, updatedAt: new Date() })
+      .where(and(eq(inventoryProducts.id, product.id), eq(inventoryProducts.businessId, businessId))).returning();
+    if (!updated) throw new NotFoundError("Inventory product not found");
+    await tx.insert(inventoryMovements).values({
+      businessId, productId: product.id, userId: req.user!.id, quantityDelta: input.quantityDelta,
+      type: input.type, reason: input.reason || null,
+    });
+    return { product, updated };
   });
+
   await recordActivity({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "updated",
-    entityType: "inventory_product", entityId: product.id, entityName: product.name,
-    description: displayName(req.user!) + " adjusted " + product.name + " stock by " + (input.quantityDelta > 0 ? "+" : "") + input.quantityDelta,
+    entityType: "inventory_product", entityId: result.product.id, entityName: result.product.name,
+    description: displayName(req.user!) + " adjusted " + result.product.name + " stock by " + (input.quantityDelta > 0 ? "+" : "") + input.quantityDelta,
     status: "success",
   });
-  res.json(await serializeWithImage(updated));
+  res.json(await serializeWithImage(result.updated));
 });
 
 export default router;
