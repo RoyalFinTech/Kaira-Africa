@@ -376,32 +376,40 @@ export default function DashboardPage() {
         <section aria-label="Business tools" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Link href="/inventory" className="group min-w-0">
             <Card className="h-full overflow-hidden border-emerald-900/10 bg-[#0D3B2A] text-white transition-shadow hover:shadow-lg hover:shadow-emerald-950/15">
-              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-200 p-2">
-                <Package aria-hidden="true" className="h-16 w-16 text-emerald-900" strokeWidth={1.5} />
+              <div className="relative flex h-36 items-center justify-center overflow-hidden bg-emerald-950 p-2">
+                <img src="https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=900&q=80" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-emerald-950/70 via-emerald-900/35 to-emerald-950/70" />
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/30 bg-emerald-950/35 text-white shadow-lg backdrop-blur-sm"><Package aria-hidden="true" className="h-10 w-10" strokeWidth={1.5} /></div>
               </div>
               <CardContent className="p-4"><p className="font-semibold text-white">Inventory</p><p className="mt-1 text-sm leading-5 text-emerald-50/85">Track products, stock levels, costs and low-stock items.</p><span className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-200">Manage stock <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" /></span></CardContent>
             </Card>
           </Link>
           <Link href="/crm" className="group min-w-0">
             <Card className="h-full overflow-hidden border-emerald-900/10 bg-[#0D3B2A] text-white transition-shadow hover:shadow-lg hover:shadow-emerald-950/15">
-              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-200 p-2">
-                <img src="/kaira-crm-premium-card.svg" alt="Customer relationship management workspace" className="h-full w-full object-contain" loading="lazy" />
+              <div className="relative flex h-36 items-center justify-center overflow-hidden bg-emerald-950 p-2">
+                <img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=900&q=80" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-emerald-950/75 via-emerald-900/40 to-emerald-950/70" />
+                <img src="/kaira-crm-premium-card.svg" alt="Customer relationship management workspace" className="relative z-10 h-full w-full object-contain drop-shadow-lg" loading="lazy" />
               </div>
               <CardContent className="p-4"><p className="font-semibold text-white">Customer CRM</p><p className="mt-1 text-sm leading-5 text-emerald-50/85">Manage customer profiles, notes, photos and follow-ups.</p><span className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-200">Open CRM <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" /></span></CardContent>
             </Card>
           </Link>
           <Link href="/investments" className="group min-w-0">
             <Card className="h-full overflow-hidden border-emerald-900/10 bg-[#0D3B2A] text-white transition-shadow hover:shadow-lg hover:shadow-emerald-950/15">
-              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-200 p-2">
-                <img src="/images/investment-business-illustration.svg" alt="Small business investment planning" className="h-full w-full object-contain" loading="lazy" />
+              <div className="relative flex h-36 items-center justify-center overflow-hidden bg-emerald-950 p-2">
+                <img src="https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=900&q=80" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-emerald-950/75 via-emerald-900/40 to-emerald-950/70" />
+                <img src="/images/investment-business-illustration.svg" alt="Small business investment planning" className="relative z-10 h-full w-full object-contain drop-shadow-lg" loading="lazy" />
               </div>
               <CardContent className="p-4"><p className="font-semibold text-white">Investment Planner</p><p className="mt-1 text-sm leading-5 text-emerald-50/85">Plan business costs, expected profit and daily results.</p><span className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-200">Open planner <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" /></span></CardContent>
             </Card>
           </Link>
           <Link href="/savings" className="group min-w-0">
             <Card className="h-full overflow-hidden border-emerald-900/10 bg-[#0D3B2A] text-white transition-shadow hover:shadow-lg hover:shadow-emerald-950/15">
-              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-200 p-2">
-                <img src="/images/savings-wallet-illustration.svg" alt="Savings wallet and savings progress" className="h-full w-full object-contain" loading="lazy" />
+              <div className="relative flex h-36 items-center justify-center overflow-hidden bg-emerald-950 p-2">
+                <img src="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=900&q=80" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-emerald-950/75 via-emerald-900/40 to-emerald-950/70" />
+                <img src="/images/savings-wallet-illustration.svg" alt="Savings wallet and savings progress" className="relative z-10 h-full w-full object-contain drop-shadow-lg" loading="lazy" />
               </div>
               <CardContent className="p-4"><p className="font-semibold text-white">Savings Tracker</p><p className="mt-1 text-sm leading-5 text-emerald-50/85">Track deposits, withdrawals, goals and where money is kept.</p><span className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-200">Track savings <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" /></span></CardContent>
             </Card>
