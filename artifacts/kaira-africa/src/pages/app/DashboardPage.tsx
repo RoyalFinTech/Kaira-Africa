@@ -371,6 +371,34 @@ export default function DashboardPage() {
           </Card>
         </div>
 
+        {/* Feature shortcuts — responsive visual cards for core business tools. */}
+        <section aria-label="Business planning shortcuts" className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Link href="/investments" className="group min-w-0">
+            <Card className="h-full overflow-hidden border-emerald-100 transition-shadow hover:shadow-md">
+              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-emerald-50 to-amber-50 p-2">
+                <img src="/images/investment-business-illustration.svg" alt="Small business investment planning" className="h-full w-full object-contain" loading="lazy" />
+              </div>
+              <CardContent className="p-4"><p className="font-semibold text-slate-900">Investment Planner</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Plan business costs, expected profit and daily results.</p><span className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-700">Open planner <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" /></span></CardContent>
+            </Card>
+          </Link>
+          <Link href="/savings" className="group min-w-0">
+            <Card className="h-full overflow-hidden border-emerald-100 transition-shadow hover:shadow-md">
+              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-emerald-50 to-amber-50 p-2">
+                <img src="/images/savings-wallet-illustration.svg" alt="Savings wallet and savings progress" className="h-full w-full object-contain" loading="lazy" />
+              </div>
+              <CardContent className="p-4"><p className="font-semibold text-slate-900">Savings Tracker</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Track deposits, withdrawals, goals and where money is kept.</p><span className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-700">Track savings <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" /></span></CardContent>
+            </Card>
+          </Link>
+          <Link href="/crm" className="group min-w-0">
+            <Card className="h-full overflow-hidden border-emerald-100 transition-shadow hover:shadow-md">
+              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-emerald-50 to-white p-2">
+                <img src="/kaira-crm-premium-card.svg" alt="Customer relationship management workspace" className="h-full w-full object-contain" loading="lazy" />
+              </div>
+              <CardContent className="p-4"><p className="font-semibold text-slate-900">Customer CRM</p><p className="mt-1 text-sm leading-5 text-muted-foreground">Manage customer profiles, notes, photos and follow-ups.</p><span className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-700">Open CRM <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" /></span></CardContent>
+            </Card>
+          </Link>
+        </section>
+
         {/* Quick Actions */}
         <Card>
           <CardHeader>
