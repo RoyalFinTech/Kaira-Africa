@@ -73,6 +73,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" as Currency });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
+  const [pendingPhotoProductId, setPendingPhotoProductId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -86,7 +87,7 @@ export default function InventoryPage() {
   }, {}), [data]);
   const resetForm = () => {
     setForm({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" });
-    setPhotoFile(null); setPhotoPreview(""); setFormError(null);
+    setPhotoFile(null); setPhotoPreview(""); setPendingPhotoProductId(null); setFormError(null);
     if (fileRef.current) fileRef.current.value = "";
   };
   const choosePhoto = async (file?: File) => {
@@ -99,23 +100,55 @@ export default function InventoryPage() {
       setFormError(cause instanceof Error ? cause.message : "Could not prepare this image.");
     }
   };
+  const retryPhotoUpload = async () => {
+    if (!pendingPhotoProductId) return;
+    if (!photoPreview) {
+      setFormError("Choose a product photo before retrying the upload.");
+      return;
+    }
+    setSaving(true);
+    setFormError(null);
+    setNotice(null);
+    try {
+      await uploadInventoryProductImage(pendingPhotoProductId, photoPreview);
+      resetForm();
+      setOpen(false);
+      await qc.invalidateQueries({ queryKey: ["inventory-products"] });
+      setNotice("Product photo uploaded successfully.");
+    } catch (cause) {
+      setFormError(cause instanceof Error
+        ? `The product is already saved, but its photo upload failed again: ${cause.message}`
+        : "The product is already saved, but its photo upload failed again. Your selected photo is still available to retry.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const add = async () => {
+    if (pendingPhotoProductId) {
+      await retryPhotoUpload();
+      return;
+    }
     setSaving(true); setFormError(null); setNotice(null);
     try {
       const product = await createInventoryProduct(form);
-      let photoUploadMessage: string | null = null;
       if (photoPreview) {
         try {
           await uploadInventoryProductImage(product.id, photoPreview);
         } catch (cause) {
-          photoUploadMessage = cause instanceof Error
+          // Keep the selected photo and the form open. The product already exists,
+          // so the main action switches to a photo-only retry instead of creating a duplicate.
+          setPendingPhotoProductId(product.id);
+          setFormError(cause instanceof Error
             ? `Product saved, but its photo could not be uploaded: ${cause.message}`
-            : "Product saved, but the photo upload failed.";
+            : "Product saved, but the photo upload failed. Your selected photo is kept for retry.");
+          setNotice("Your product details are saved. Retry the photo upload below; do not create the product again.");
+          await qc.invalidateQueries({ queryKey: ["inventory-products"] });
+          return;
         }
       }
       resetForm(); setOpen(false);
       await qc.invalidateQueries({ queryKey: ["inventory-products"] });
-      setNotice(photoUploadMessage ?? "Product saved. Opening stock has been recorded in your inventory.");
+      setNotice("Product saved. Opening stock has been recorded in your inventory.");
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "We couldn't save this product. Check your details and try again.");
     } finally {
@@ -172,11 +205,11 @@ export default function InventoryPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {photoPreview ? <img src={photoPreview} alt="Compressed product preview" className="h-24 w-24 rounded-lg border object-cover" /> : <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-muted text-muted-foreground"><ImagePlus className="h-7 w-7" /></div>}
           <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Product photo (optional)</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Choose a photo from your phone or computer. Kaira automatically resizes it to a maximum of 200 KB (JPEG) to save storage and mobile data. A photo is never required to save a product.</p>{photoFile && <p className="mt-1 text-xs text-primary">Photo prepared for upload: {photoFile.name}</p>}</div>
-          <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="gap-2"><ImagePlus className="h-4 w-4" />Choose photo</Button>{photoPreview && <Button type="button" variant="ghost" onClick={() => { setPhotoFile(null); setPhotoPreview(""); if (fileRef.current) fileRef.current.value = ""; }} aria-label="Remove selected photo"><X className="h-4 w-4" />Remove</Button>}</div>
+          <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="gap-2"><ImagePlus className="h-4 w-4" />Choose photo</Button>{photoPreview && <Button type="button" variant="ghost" onClick={() => { setPhotoFile(null); setPhotoPreview(""); if (fileRef.current) fileRef.current.value = ""; }} disabled={Boolean(pendingPhotoProductId)} aria-label="Remove selected photo"><X className="h-4 w-4" />Remove</Button>}</div>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => void choosePhoto(e.target.files?.[0])} />
         </div>
       </div>
-      <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={() => { resetForm(); setOpen(false); }}>Cancel</Button><Button type="button" disabled={saving || !form.name.trim() || !form.sku.trim() || !form.unit.trim()} onClick={() => void add()} className="gap-2">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}{saving ? "Saving product…" : "Save product"}</Button></div>
+      <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={() => { if (pendingPhotoProductId) setOpen(false); else { resetForm(); setOpen(false); } }}>{pendingPhotoProductId ? "Close for now" : "Cancel"}</Button><Button type="button" disabled={saving || (!pendingPhotoProductId && (!form.name.trim() || !form.sku.trim() || !form.unit.trim())) || (Boolean(pendingPhotoProductId) && !photoPreview)} onClick={() => void add()} className="gap-2">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}{saving ? (pendingPhotoProductId ? "Retrying photo…" : "Saving product…") : pendingPhotoProductId ? "Retry photo upload" : "Save product"}</Button></div>
     </CardContent></Card>}
 
     <Card><CardHeader className="pb-3"><CardTitle className="text-lg">Your stock ledger</CardTitle><p className="text-sm text-muted-foreground">Each row is an item you keep in stock. Use the plus and minus buttons to record one unit received or sold; the app records the movement.</p></CardHeader><CardContent className="p-0 sm:px-6 sm:pb-5">
