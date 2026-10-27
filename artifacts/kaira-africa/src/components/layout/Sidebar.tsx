@@ -81,7 +81,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-[260px] h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
+    <div className="w-[260px] h-screen bg-[#0D3B2A] border-r border-emerald-100/15 flex flex-col">
       {/* Logo */}
       <div className="p-6 pb-4">
         <div className="w-fit rounded-xl bg-white p-2 shadow-sm">
@@ -91,7 +91,7 @@ export function Sidebar() {
 
       {/* User Info */}
       <div className="px-4 pb-4">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/10">
           <ProfileAvatar
             photoUrl={user?.avatarUrl}
             firstName={user?.firstName}
@@ -99,23 +99,23 @@ export function Sidebar() {
             className="h-10 w-10 ring-1 ring-sidebar-border"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
+            <p className="text-sm font-medium text-white truncate">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="text-xs text-sidebar-foreground/70 truncate">
+            <p className="text-xs text-emerald-50/75 truncate">
               {business?.name}
             </p>
           </div>
         </div>
       </div>
 
-      <Separator className="bg-sidebar-border" />
+      <Separator className="bg-emerald-100/20" />
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         {navigation.map((group) => (
           <div key={group.section}>
-            <h3 className="px-3 mb-2 text-xs font-semibold text-sidebar-foreground/60 tracking-wider">
+            <h3 className="px-3 mb-2 text-xs font-semibold text-emerald-100/65 tracking-wider">
               {group.section}
             </h3>
             <div className="space-y-1">
@@ -127,8 +127,8 @@ export function Sidebar() {
                       className={cn(
                         'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                         isActive
-                          ? 'bg-sidebar-primary text-sidebar-primary-foreground border-l-2 border-sidebar-primary'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          ? 'bg-[#E7B32B] text-[#10281D] border-l-2 border-[#F6D875]'
+                          : 'text-emerald-50 hover:bg-white/10 hover:text-white'
                       )}
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -142,7 +142,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <Separator className="bg-sidebar-border" />
+      <Separator className="bg-emerald-100/20" />
 
       {/* Bottom Actions */}
       <div className="p-3 space-y-1">
@@ -151,8 +151,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
               location === "/profile"
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                ? "bg-[#E7B32B] text-[#10281D]"
+                : "text-emerald-50 hover:bg-white/10 hover:text-white"
             )}
           >
             <User className="h-5 w-5 flex-shrink-0" />
@@ -165,7 +165,7 @@ export function Sidebar() {
               'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
               location === '/settings'
                 ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                : 'text-emerald-50 hover:bg-white/10 hover:text-white'
             )}
           >
             <Settings2 className="h-5 w-5 flex-shrink-0" />
@@ -175,7 +175,7 @@ export function Sidebar() {
         <Button
           variant="ghost"
           onClick={handleLogout}
-          className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="w-full justify-start gap-3 text-emerald-50 hover:bg-white/10 hover:text-white"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           <span>Logout</span>
