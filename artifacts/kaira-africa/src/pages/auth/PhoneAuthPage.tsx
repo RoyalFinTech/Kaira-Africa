@@ -54,7 +54,7 @@ export default function PhoneAuthPage() {
     { prefix: '87', name: 'Africell' },
     { prefix: '83', name: 'QCell' },
     { prefix: '86', name: 'Comium' },
-    { prefix: '', name: 'Gamcel (no new prefix)' },
+    { prefix: '', name: 'Gamtel (enter number)' },
   ];
 
   const form = useForm<PhoneForm>({
