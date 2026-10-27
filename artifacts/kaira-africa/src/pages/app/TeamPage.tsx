@@ -154,6 +154,7 @@ export default function TeamPage() {
               Invite Member
             </Button>
           )}
+          </div>
         </div>
 
         {canManageTeam && <InviteMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} />}        {/* Stats */}
