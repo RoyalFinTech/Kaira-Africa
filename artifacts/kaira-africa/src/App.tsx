@@ -338,7 +338,10 @@ function Router() {
         <Route path="/savings">
           {() => <ProtectedRoute component={SavingsPage} />}
         </Route>
-        <Route path="/work-notes">\n          {() => <ProtectedRoute component={WorkNotesPage} />}\n        </Route>\n        <Route path="/calendar">
+        <Route path="/work-notes">
+          {() => <ProtectedRoute component={WorkNotesPage} />}
+        </Route>
+        <Route path="/calendar">
           {() => <ProtectedRoute component={CalendarSchedulePage} />}
         </Route>
         <Route path="/work-management/:section">
