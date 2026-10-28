@@ -40,10 +40,9 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
       assignedTo: workTasks.assignedTo,
       createdBy: workTasks.createdBy,
       businessTimezone: businesses.timezone,
-    }).from(workTasks).innerJoin(businesses, eq(workTasks.businessId, businesses.id)).where(and(
-      lte(workTasks.dueDate, today),
+    }).from(workTasks).innerJoin(businesses, eq(workTasks.businessId, businesses.id)).where(
       notInArray(workTasks.status, ["done", "cancelled"]),
-    ));
+    );
 
     const preferences = await tx.select().from(workTaskReminderPreferences);
     const preferenceByUserAndBusiness = new Map(preferences.map((item) => [`${item.businessId}:${item.userId}`, item]));
