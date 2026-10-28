@@ -24,9 +24,7 @@ CREATE TABLE IF NOT EXISTS work_tasks (
   due_date date,
   completed_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT work_tasks_project_business_fk FOREIGN KEY (project_id,business_id)
-    REFERENCES work_projects(id,business_id) ON DELETE SET NULL
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS work_tasks_business_status_due_idx ON work_tasks(business_id,status,due_date);
 CREATE INDEX IF NOT EXISTS work_tasks_assignee_idx ON work_tasks(business_id,assigned_to);
