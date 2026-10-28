@@ -86,6 +86,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "system",
   "security",
   "report",
+  "task",
 ]);
 
 // ─── Reports ─────────────────────────────────────────────────────────────────

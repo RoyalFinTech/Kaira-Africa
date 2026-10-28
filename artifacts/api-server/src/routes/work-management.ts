@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, workProjects, workTasks, workTaskEvents, workMeetings, teamMembers } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
+import { createNotification } from "../repositories/notifications";
 
 const router: IRouter = Router();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable();
@@ -54,6 +55,9 @@ router.post("/work/tasks",requireUser,async(req,res)=>{
  await verifyAssignee(businessId,input.assignedTo); await verifyProject(businessId,input.projectId);
  const [task]=await db.insert(workTasks).values({businessId,createdBy:req.user!.id,title:input.title,description:input.description||null,projectId:input.projectId||null,assignedTo:input.assignedTo||null,priority:input.priority,dueDate:input.dueDate||null}).returning();
  await db.insert(workTaskEvents).values({businessId,taskId:task.id,actorId:req.user!.id,eventType:"created",details:{title:task.title,assignedTo:task.assignedTo}});
+ if (task.assignedTo && task.assignedTo !== req.user!.id) {
+   await createNotification({recipientUserId:task.assignedTo,title:"New task assigned",message:`You have been assigned: ${task.title}${task.dueDate ? ` (due ${task.dueDate})` : ""}.`,type:"task",actionUrl:"/work-management/tasks"});
+ }
  res.status(201).json(task);
 });
 router.patch("/work/tasks/:id",requireUser,async(req,res)=>{
@@ -64,6 +68,12 @@ router.patch("/work/tasks/:id",requireUser,async(req,res)=>{
  if(!before) throw new NotFoundError("Task not found.");
  const [task]=await db.update(workTasks).set({...input,updatedAt:new Date(),...(input.status==="done"?{completedAt:new Date()}:input.status?{completedAt:null}:{})}).where(and(eq(workTasks.id,id),eq(workTasks.businessId,businessId))).returning();
  await db.insert(workTaskEvents).values({businessId,taskId:id,actorId:req.user!.id,eventType:input.status&&input.status!==before.status?"status_changed":"updated",details:{before:{status:before.status,assignedTo:before.assignedTo},after:input}});
+ if (input.assignedTo !== undefined && input.assignedTo && input.assignedTo !== before.assignedTo && input.assignedTo !== req.user!.id) {
+   await createNotification({recipientUserId:input.assignedTo,title:"Task assigned to you",message:`You have been assigned: ${task.title}${task.dueDate ? ` (due ${task.dueDate})` : ""}.`,type:"task",actionUrl:"/work-management/tasks"});
+ }
+ if (input.status && input.status !== before.status && before.createdBy !== req.user!.id) {
+   await createNotification({recipientUserId:before.createdBy,title:"Task status updated",message:`"${task.title}" is now ${task.status.replace("_"," ")}.`,type:"task",actionUrl:"/work-management/tasks"});
+ }
  res.json(task);
 });
 router.get("/work/meetings",requireUser,async(req,res)=>{
