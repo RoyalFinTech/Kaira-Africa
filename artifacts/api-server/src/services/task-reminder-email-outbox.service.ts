@@ -1,4 +1,4 @@
-import { and, asc, eq, lt, or } from "drizzle-orm";
+import { and, asc, eq, lt, lte, or } from "drizzle-orm";
 import { db, workTaskReminderEmailOutbox } from "@workspace/db";
 import { isEmailDeliveryConfigured, sendTaskReminderEmail } from "./email.service";
 import { logger } from "../lib/logger";
@@ -19,7 +19,7 @@ async function claimBatch(now: Date): Promise<OutboxRow[]> {
         eq(workTaskReminderEmailOutbox.status, "pending"),
         and(eq(workTaskReminderEmailOutbox.status, "sending"), lt(workTaskReminderEmailOutbox.updatedAt, staleBefore)),
       ),
-      lt(workTaskReminderEmailOutbox.attemptCount, MAX_ATTEMPTS),
+      lte(workTaskReminderEmailOutbox.attemptCount, MAX_ATTEMPTS),
       lt(workTaskReminderEmailOutbox.nextAttemptAt, new Date(now.getTime() + 1)),
     )).orderBy(asc(workTaskReminderEmailOutbox.nextAttemptAt), asc(workTaskReminderEmailOutbox.createdAt))
       .limit(BATCH_SIZE).for("update", { skipLocked: true });
@@ -53,6 +53,7 @@ export async function runTaskReminderEmailOutbox(now = new Date()): Promise<numb
         subject: row.subject,
         message: row.message,
         actionUrl: "/work-management/tasks",
+        messageId: "<kaira-reminder-" + row.id + "@kairaafrica.com>",
       });
       if (!delivered) {
         await db.update(workTaskReminderEmailOutbox).set({
