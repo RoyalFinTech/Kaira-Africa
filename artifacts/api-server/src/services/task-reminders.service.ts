@@ -5,6 +5,7 @@ import {
   notifications,
   users,
   workTaskReminderDeliveries,
+  workTaskReminderEmailOutbox,
   workTasks,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
@@ -42,16 +43,17 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
     ));
     const recipientIds = [...new Set(tasks.map(task => task.assignedTo ?? task.createdBy))];
     const recipientRows = recipientIds.length
-      ? await tx.select({ id: users.id, preferences: users.notificationPreferences })
+      ? await tx.select({ id: users.id, email: users.email, preferences: users.notificationPreferences })
           .from(users).where(inArray(users.id, recipientIds))
       : [];
-    const preferencesByUser = new Map(recipientRows.map(user => [user.id, user.preferences]));
+    const recipientByUser = new Map(recipientRows.map(user => [user.id, user]));
 
     let createdCount = 0;
     for (const task of tasks) {
       if (!task.dueDate) continue;
       const recipientUserId = task.assignedTo ?? task.createdBy;
-      if (preferencesByUser.get(recipientUserId)?.taskReminders === false) continue;
+      const recipient = recipientByUser.get(recipientUserId);
+      if (recipient?.preferences?.taskReminders === false) continue;
       let today: string;
       try {
         const parts = new Intl.DateTimeFormat("en-CA", { timeZone: task.businessTimeZone || "Africa/Banjul", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
@@ -69,9 +71,23 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
         reminderKind: kind,
         reminderDate: today,
       }).onConflictDoNothing().returning({ id: workTaskReminderDeliveries.id });
-      if (!delivery) continue;
 
       const isOverdue = kind === "overdue";
+      if (recipient?.preferences?.taskReminderEmail === true && recipient.email) {
+        await tx.insert(workTaskReminderEmailOutbox).values({
+          businessId: task.businessId,
+          taskId: task.id,
+          recipientUserId,
+          recipientEmail: recipient.email,
+          reminderKind: kind,
+          reminderDate: today,
+          subject: isOverdue ? "Kaira Africa: task overdue" : "Kaira Africa: task due today",
+          message: isOverdue
+            ? '"' + task.title + '" was due ' + task.dueDate + '. Review the task and update its status.'
+            : '"' + task.title + '" is due today. Review your next steps.',
+        }).onConflictDoNothing();
+      }
+      if (!delivery) continue;
       await tx.insert(notifications).values({
         recipientUserId,
         title: isOverdue ? "Task overdue" : "Task due today",
