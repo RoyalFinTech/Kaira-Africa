@@ -7,7 +7,7 @@ import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { createNotification } from "../repositories/notifications";
 
 const router: IRouter = Router();
-const date = z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional().nullable();
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable();
 const projectInput = z.object({ name:z.string().trim().min(2).max(120), description:z.string().trim().max(2000).optional(), dueDate:date });
 const taskInput = z.object({ title:z.string().trim().min(2).max(160), description:z.string().trim().max(4000).optional(), projectId:z.string().uuid().optional().nullable(), assignedTo:z.string().uuid().optional().nullable(), priority:z.enum(["low","medium","high","urgent"]).default("medium"), dueDate:date });
 const taskPatch = z.object({ title:z.string().trim().min(2).max(160).optional(), description:z.string().trim().max(4000).nullable().optional(), projectId:z.string().uuid().nullable().optional(), assignedTo:z.string().uuid().nullable().optional(), priority:z.enum(["low","medium","high","urgent"]).optional(), status:z.enum(["todo","in_progress","done","cancelled"]).optional(), dueDate:date });
