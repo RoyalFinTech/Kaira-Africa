@@ -14,7 +14,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "../repositories/notifications";
-import { NotFoundError } from "../lib/http-errors";
+import { BadRequestError, NotFoundError } from "../lib/http-errors";
 
 const router: IRouter = Router();
 
