@@ -38,7 +38,7 @@ const SCHEDULE_TIME_ZONES = [
  {value:"Pacific/Auckland",label:"New Zealand — Auckland"},
 ];
 function localMeetingTimeToUtc(value:string,timeZone:string):string|null {
- const match=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(value);
+ const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
  if(!match) return null;
  const target=[Number(match[1]),Number(match[2]),Number(match[3]),Number(match[4]),Number(match[5])];
  const targetMs=Date.UTC(target[0],target[1]-1,target[2],target[3],target[4]);
@@ -83,6 +83,7 @@ export default function WorkManagementPage(){
  const save=useMutation({mutationFn:async()=>{
   if(tab==="tasks") return apiRequestJson("/work/tasks",{method:"POST",body:JSON.stringify({title,description:description||undefined,priority,dueDate:dueDate||undefined,projectId:projectId||undefined,assignedTo:assignedTo||undefined})});
   if(tab==="projects") return apiRequestJson("/work/projects",{method:"POST",body:JSON.stringify({name:title,description:description||undefined,dueDate:dueDate||undefined})});
+  if(meetingDate && !localMeetingTimeToUtc(meetingDate,activeMeetingTimeZone)) throw new Error("That local time does not exist in the selected time zone because of a daylight-saving clock change. Choose another time.");
   return apiRequestJson("/work/meetings"+(editingMeetingId?"/"+editingMeetingId:""),{method:editingMeetingId?"PATCH":"POST",body:JSON.stringify({title,meetingType,attendees:attendeesText.split(",").map(v=>v.trim()).filter(Boolean),startsAt:meetingDate?localMeetingTimeToUtc(meetingDate,activeMeetingTimeZone):null,agenda:agenda||undefined,minutes:minutes||undefined,decisions:decisions||undefined,status:"held"})});
  },onSuccess:async()=>{setNotice(tab==="tasks"?"Task created.":tab==="projects"?"Project created.":editingMeetingId?"Meeting minutes updated.":"Meeting and minutes saved.");setError("");setTitle("");setDescription("");setPriority("medium");setDueDate("");setProjectId("");setAssignedTo("");setAgenda("");setMinutes("");setDecisions("");setMeetingDate("");setMeetingTimeZone("");setMeetingType("team");setAttendeesText("");setEditingMeetingId(null);setShowForm(false);await Promise.all([qc.invalidateQueries({queryKey:["work-tasks"]}),qc.invalidateQueries({queryKey:["work-projects"]}),qc.invalidateQueries({queryKey:["work-meetings"]})]);},onError:(e)=>setError(e instanceof Error?e.message:"Could not save. Please try again.")});
  const changeStatus=useMutation({mutationFn:({id,status}:{id:string;status:Task["status"]})=>apiRequestJson("/work/tasks/"+id,{method:"PATCH",body:JSON.stringify({status})}),onSuccess:()=>qc.invalidateQueries({queryKey:["work-tasks"]}),onError:e=>setError(e instanceof Error?e.message:"Could not update task.")});
