@@ -39,13 +39,13 @@ interface SendEmailInput {
   text?: string;
 }
 
-async function sendEmail(input: SendEmailInput): Promise<void> {
+async function sendEmail(input: SendEmailInput): Promise<boolean> {
   if (!transporter) {
     logger.info(
       { to: input.to, subject: input.subject },
       `[DEV EMAIL] Would send email (no SMTP configured):\n${input.text ?? input.html}`,
     );
-    return;
+    return false;
   }
 
   await transporter.sendMail({
@@ -55,6 +55,7 @@ async function sendEmail(input: SendEmailInput): Promise<void> {
     html: input.html,
     text: input.text,
   });
+  return true;
 }
 
 export async function sendPasswordResetEmail(input: {
@@ -96,4 +97,28 @@ export async function verifyEmailTransport(): Promise<boolean> {
     logger.error({ err }, "SMTP transport verification failed");
     return false;
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\x27/g, "&#39;");
+}
+
+export function isEmailDeliveryConfigured(): boolean {
+  return transporter !== null;
+}
+
+export async function sendTaskReminderEmail(input: {
+  to: string;
+  subject: string;
+  message: string;
+  actionUrl: string;
+}): Promise<boolean> {
+  const safeMessage = escapeHtml(input.message);
+  const safeUrl = escapeHtml(input.actionUrl);
+  return sendEmail({
+    to: input.to,
+    subject: input.subject,
+    text: input.message + "\nOpen Kaira Africa: " + input.actionUrl,
+    html: "<p>" + safeMessage + "</p><p><a href=\"" + safeUrl + "\">Open Kaira Africa</a></p>",
+  });
 }
