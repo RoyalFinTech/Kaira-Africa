@@ -19,6 +19,7 @@ jobs:
     env:
       # The mockup-sandbox Vite config requires PORT even for a production build.
       PORT: 3000
+      BASE_PATH: /
     timeout-minutes: 20
     steps:
       - name: Check out source
