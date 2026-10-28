@@ -67,7 +67,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Tasks', href: '/work-management/tasks', icon: ClipboardList },
       { label: 'Projects', href: '/work-management/projects', icon: FolderKanban },
       { label: 'Meetings & Minutes', href: '/work-management/meetings', icon: CalendarDays },
-      { label: 'Calendar & Schedule', href: '/calendar', icon: Clock3 },
+      { label: 'Calendar & Schedule', href: '/calendar', icon: Clock3 },\n      { label: 'Notes & Documents', href: '/work-notes', icon: StickyNote },
     ],
   },
   {
