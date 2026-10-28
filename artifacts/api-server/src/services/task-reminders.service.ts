@@ -2,7 +2,7 @@ import { and, lte, notInArray, sql } from "drizzle-orm";
 import {
   db,
   notifications,
-  taskReminderDeliveries,
+  workTaskReminderDeliveries,
   workTasks,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
@@ -49,7 +49,7 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
         recipientUserId,
         reminderKind: kind,
         reminderDate: today,
-      }).onConflictDoNothing().returning({ id: taskReminderDeliveries.id });
+      }).onConflictDoNothing().returning({ id: workTaskReminderDeliveries.id });
       if (!delivery) continue;
 
       const isOverdue = kind === "overdue";
