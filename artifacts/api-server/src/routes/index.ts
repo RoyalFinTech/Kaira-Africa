@@ -19,6 +19,7 @@ import investmentsRouter from "./investments";
 import savingsRouter from "./savings";
 import workManagementRouter from "./work-management";
 import workNotesRouter from "./work-notes";
+import teamChatRouter from "./team-chat";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(investmentsRouter);
 router.use(savingsRouter);
 router.use(workManagementRouter);
 router.use(workNotesRouter);
+router.use(teamChatRouter);
 
 export default router;

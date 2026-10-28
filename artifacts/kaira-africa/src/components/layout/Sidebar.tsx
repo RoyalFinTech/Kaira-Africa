@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Clock3,
   StickyNote,
+  MessageCircle,
   FolderKanban,
   BookOpen,
   BrainCircuit,
@@ -70,6 +71,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Meetings & Minutes', href: '/work-management/meetings', icon: CalendarDays },
       { label: 'Calendar & Schedule', href: '/calendar', icon: Clock3 },
       { label: 'Notes & Documents', href: '/work-notes', icon: StickyNote },
+      { label: 'Team Chat & Announcements', href: '/team-chat', icon: MessageCircle },
     ],
   },
   {
