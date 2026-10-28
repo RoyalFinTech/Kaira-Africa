@@ -38,6 +38,9 @@ export const users = pgTable(
     // Argon2id hash for optional six-digit PIN sign-in. Never return this field from API serializers.
     pinHash: text("pin_hash"),
 
+    // User-controlled in-app notification preferences; email/push channels are separate integrations.
+    notificationPreferences: jsonb("notification_preferences").$type<{ taskReminders?: boolean }>().notNull().default({ taskReminders: true }),
+
     // Business-level permission role. See userRoleEnum — distinct from
     // admin_users.role, which governs the separate 🛡️ admin portal.
     role: userRoleEnum("role").notNull().default("owner"),
