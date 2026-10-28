@@ -52,11 +52,11 @@ router.post("/work/time-entries/start", requireUser, async (req, res) => {
   if (input.taskId) {
     const [task] = await db.select({ id: workTasks.id }).from(workTasks)
       .where(and(eq(workTasks.id, input.taskId), eq(workTasks.businessId, businessId))).limit(1);
-    if (!task) return res.status(404).json({ error: "Task not found in this business workspace" });
+    if (!task) { res.status(404).json({ error: "Task not found in this business workspace" }); return; }
   }
   const [openEntry] = await db.select({ id: workTimeEntries.id }).from(workTimeEntries)
     .where(and(eq(workTimeEntries.businessId, businessId), eq(workTimeEntries.userId, req.user!.id), isNull(workTimeEntries.endedAt))).limit(1);
-  if (openEntry) return res.status(409).json({ error: "You already have an active time entry. Stop it before starting another." });
+  if (openEntry) { res.status(409).json({ error: "You already have an active time entry. Stop it before starting another." }); return; }
   const [entry] = await db.insert(workTimeEntries).values({
     businessId, userId: req.user!.id, taskId: input.taskId ?? null, note: input.note || null,
   }).returning();
@@ -68,10 +68,10 @@ router.post("/work/time-entries/:id/stop", requireUser, async (req, res) => {
   const id = z.string().uuid().parse(req.params.id);
   const [entry] = await db.select().from(workTimeEntries)
     .where(and(eq(workTimeEntries.id, id), eq(workTimeEntries.businessId, businessId), eq(workTimeEntries.userId, req.user!.id), isNull(workTimeEntries.endedAt))).limit(1);
-  if (!entry) return res.status(404).json({ error: "Active time entry not found for your account" });
+  if (!entry) { res.status(404).json({ error: "Active time entry not found for your account" }); return; }
   const [stopped] = await db.update(workTimeEntries).set({ endedAt: new Date() })
     .where(and(eq(workTimeEntries.id, id), eq(workTimeEntries.businessId, businessId), eq(workTimeEntries.userId, req.user!.id), isNull(workTimeEntries.endedAt))).returning();
-  if (!stopped) return res.status(409).json({ error: "Time entry was already stopped" });
+  if (!stopped) { res.status(409).json({ error: "Time entry was already stopped" }); return; }
   res.json(stopped);
 });
 
