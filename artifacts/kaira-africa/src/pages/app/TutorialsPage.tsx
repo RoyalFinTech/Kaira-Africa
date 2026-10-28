@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BookOpen, ChevronDown, CheckCircle2, ClipboardList, UserRoundSearch, Package, Wallet, BarChart3, CircleHelp, Video, Sparkles, Search, FileText } from "lucide-react";
+// FileText is used by the Notes & Documents learning card.
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
