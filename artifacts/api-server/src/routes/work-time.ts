@@ -54,9 +54,21 @@ router.post("/work/time-entries/start", requireUser, async (req, res) => {
       .where(and(eq(workTasks.id, input.taskId), eq(workTasks.businessId, businessId))).limit(1);
     if (!task) { res.status(404).json({ error: "Task not found in this business workspace" }); return; }
   }
-  const [openEntry] = await db.select({ id: workTimeEntries.id }).from(workTimeEntries)
-    .where(and(eq(workTimeEntries.businessId, businessId), eq(workTimeEntries.userId, req.user!.id), isNull(workTimeEntries.endedAt))).limit(1);
-  if (openEntry) { res.status(409).json({ error: "You already have an active time entry. Stop it before starting another." }); return; }
+  // The database enforces one open session per user across all businesses.
+  // Check the same scope here so a cross-business active session returns a
+  // deliberate conflict instead of leaking a raw unique-index error as HTTP 500.
+  const [openEntry] = await db.select({
+    id: workTimeEntries.id,
+    businessId: workTimeEntries.businessId,
+  }).from(workTimeEntries)
+    .where(and(eq(workTimeEntries.userId, req.user!.id), isNull(workTimeEntries.endedAt))).limit(1);
+  if (openEntry) {
+    const message = openEntry.businessId === businessId
+      ? "You already have an active time entry. Stop it before starting another."
+      : "You have an active time entry in another business workspace. Stop that session before starting a new one.";
+    res.status(409).json({ error: message });
+    return;
+  }
   const [entry] = await db.insert(workTimeEntries).values({
     businessId, userId: req.user!.id, taskId: input.taskId ?? null, note: input.note || null,
   }).returning();
