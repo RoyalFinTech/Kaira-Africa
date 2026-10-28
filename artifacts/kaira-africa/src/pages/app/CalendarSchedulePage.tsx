@@ -24,7 +24,7 @@ export default function CalendarSchedulePage() {
   const meetingsQ=useQuery({queryKey:["work-meetings"],queryFn:()=>apiRequestJson<Meeting[]>("/work/meetings")});
   const items=useMemo<ScheduleItem[]>(()=>{
     const rows:ScheduleItem[]=[
-      ...(tasksQ.data??[]).filter(t=>t.dueDate && t.status!=="done" && t.status!=="cancelled").map(t=>({id:t.id,title:t.title,kind:"task" as const,date:new Date(t.dueDate+"T12:00:00Z"),dateOnly:t.dueDate,timezone:timezoneQ.data?.timezone??"Africa/Banjul",status:t.status,detail:"Task due date · "+t.priority+" priority",href:"/work-management/tasks"})),
+      ...(tasksQ.data??[]).filter(t=>t.dueDate && t.status!=="done" && t.status!=="cancelled").map(t=>({id:t.id,title:t.title,kind:"task" as const,date:new Date(t.dueDate+"T12:00:00Z"),dateOnly:t.dueDate ?? undefined,timezone:timezoneQ.data?.timezone??"Africa/Banjul",status:t.status,detail:"Task due date · "+t.priority+" priority",href:"/work-management/tasks"})),
       ...(meetingsQ.data??[]).filter(m=>m.startsAt && m.status!=="cancelled").map(m=>({id:m.id,title:m.title,kind:"meeting" as const,date:new Date(m.startsAt!),timezone:m.timezone??timezoneQ.data?.timezone??"Africa/Banjul",status:m.status,detail:"Meeting · "+m.meetingType,href:"/work-management/meetings"}))
     ].filter(x=>!Number.isNaN(x.date.getTime())).sort((a,b)=>a.date.getTime()-b.date.getTime());
     return range==="upcoming"?rows.filter(x=>x.date.getTime()>=new Date(new Date().setHours(0,0,0,0)).getTime()):rows;
