@@ -16,6 +16,9 @@ concurrency:
 jobs:
   typecheck-and-build:
     runs-on: ubuntu-latest
+    env:
+      # The mockup-sandbox Vite config requires PORT even for a production build.
+      PORT: 3000
     timeout-minutes: 20
     steps:
       - name: Check out source
