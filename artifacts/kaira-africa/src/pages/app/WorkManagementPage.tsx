@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";\nimport { useLocation } from "wouter";
+import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, ClipboardList, FolderKanban, CalendarDays, Plus, Clock3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,16 +12,20 @@ import { apiRequestJson } from "@/lib/api-client";
 
 type Task={id:string;title:string;description:string|null;status:"todo"|"in_progress"|"done"|"cancelled";priority:"low"|"medium"|"high"|"urgent";dueDate:string|null;projectId:string|null;assignedTo:string|null;createdAt:string};
 type Project={id:string;name:string;description:string|null;status:string;dueDate:string|null};
-type Meeting={id:string;title:string;meetingType:string;startsAt:string|null;agenda:string|null;minutes:string|null;decisions:string|null;status:string;attendees:string[]};\ntype Assignee={userId:string;firstName:string;lastName:string;role:string};
+type Meeting={id:string;title:string;meetingType:string;startsAt:string|null;agenda:string|null;minutes:string|null;decisions:string|null;status:string;attendees:string[]};
+type Assignee={userId:string;firstName:string;lastName:string;role:string};
 type Tab="tasks"|"projects"|"meetings";
 const statusLabel=(s:string)=>s==="todo"?"To do":s==="in_progress"?"In progress":s==="done"?"Completed":s==="scheduled"?"Scheduled":s.replace("_"," ");
 export default function WorkManagementPage(){
- const [location,setLocation]=useLocation();\n const initialTab:Tab=location.endsWith("/projects")?"projects":location.endsWith("/meetings")?"meetings":"tasks";\n const qc=useQueryClient(),[tab,setTab]=useState<Tab>(initialTab),[showForm,setShowForm]=useState(false),[notice,setNotice]=useState(""),[error,setError]=useState("");
+ const [location,setLocation]=useLocation();
+ const initialTab:Tab=location.endsWith("/projects")?"projects":location.endsWith("/meetings")?"meetings":"tasks";
+ const qc=useQueryClient(),[tab,setTab]=useState<Tab>(initialTab),[showForm,setShowForm]=useState(false),[notice,setNotice]=useState(""),[error,setError]=useState("");
  const [title,setTitle]=useState(""),[description,setDescription]=useState(""),[priority,setPriority]=useState("medium"),[dueDate,setDueDate]=useState(""),[projectId,setProjectId]=useState(""),[assignedTo,setAssignedTo]=useState("");
  const [meetingDate,setMeetingDate]=useState(""),[agenda,setAgenda]=useState(""),[minutes,setMinutes]=useState(""),[decisions,setDecisions]=useState(""),[editingMeetingId,setEditingMeetingId]=useState<string|null>(null);
  const tasksQ=useQuery({queryKey:["work-tasks"],queryFn:()=>apiRequestJson<Task[]>("/work/tasks")});
  const projectsQ=useQuery({queryKey:["work-projects"],queryFn:()=>apiRequestJson<Project[]>("/work/projects")});
- const meetingsQ=useQuery({queryKey:["work-meetings"],queryFn:()=>apiRequestJson<Meeting[]>("/work/meetings")});\n const assigneesQ=useQuery({queryKey:["work-assignees"],queryFn:()=>apiRequestJson<Assignee[]>("/work/assignees")});
+ const meetingsQ=useQuery({queryKey:["work-meetings"],queryFn:()=>apiRequestJson<Meeting[]>("/work/meetings")});
+ const assigneesQ=useQuery({queryKey:["work-assignees"],queryFn:()=>apiRequestJson<Assignee[]>("/work/assignees")});
  const tasks=tasksQ.data??[],projects=projectsQ.data??[],meetings=meetingsQ.data??[];
  const activeTasks=useMemo(()=>tasks.filter(t=>t.status!=="done"&&t.status!=="cancelled"),[tasks]);
  const save=useMutation({mutationFn:async()=>{
