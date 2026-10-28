@@ -40,7 +40,7 @@ export const users = pgTable(
     pinHash: text("pin_hash"),
 
     // User-controlled in-app notification preferences; email/push channels are separate integrations.
-    notificationPreferences: jsonb("notification_preferences").$type<{ taskReminders?: boolean }>().notNull().default({ taskReminders: true }),
+    notificationPreferences: jsonb("notification_preferences").$type<{ taskReminders?: boolean; taskReminderEmail?: boolean }>().notNull().default({ taskReminders: true }),
 
     // Business-level permission role. See userRoleEnum — distinct from
     // admin_users.role, which governs the separate 🛡️ admin portal.
