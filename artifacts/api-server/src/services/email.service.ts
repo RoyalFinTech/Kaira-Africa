@@ -114,11 +114,13 @@ export async function sendTaskReminderEmail(input: {
   actionUrl: string;
 }): Promise<boolean> {
   const safeMessage = escapeHtml(input.message);
-  const safeUrl = escapeHtml(input.actionUrl);
+  const baseUrl = env.FRONTEND_URL ?? env.WEB_BASE_URL;
+  const absoluteUrl = new URL(input.actionUrl, baseUrl).toString();
+  const safeUrl = escapeHtml(absoluteUrl);
   return sendEmail({
     to: input.to,
     subject: input.subject,
-    text: input.message + "\nOpen Kaira Africa: " + input.actionUrl,
+    text: input.message + "\nOpen Kaira Africa: " + absoluteUrl,
     html: "<p>" + safeMessage + "</p><p><a href=\"" + safeUrl + "\">Open Kaira Africa</a></p>",
   });
 }
