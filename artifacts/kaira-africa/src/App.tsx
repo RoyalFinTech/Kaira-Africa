@@ -49,6 +49,7 @@ const WorkManagementPage = lazy(() => import('@/pages/app/WorkManagementPage'));
 const CalendarSchedulePage = lazy(() => import('@/pages/app/CalendarSchedulePage'));
 const WorkNotesPage = lazy(() => import('@/pages/app/WorkNotesPage'));
 const TeamChatPage = lazy(() => import('@/pages/app/TeamChatPage'));
+const WorkTimePage = lazy(() => import('@/pages/app/WorkTimePage'));
 const TutorialsPage = lazy(() => import('@/pages/app/TutorialsPage'));
 const ReceiptBrandingPage = lazy(() => import('@/pages/app/ReceiptBrandingPage'));
 const BillingPage = lazy(() => import('@/pages/app/BillingPage'));
@@ -338,6 +339,9 @@ function Router() {
         </Route>
         <Route path="/savings">
           {() => <ProtectedRoute component={SavingsPage} />}
+        </Route>
+        <Route path="/work-time">
+          {() => <ProtectedRoute component={WorkTimePage} />}
         </Route>
         <Route path="/team-chat">
           {() => <ProtectedRoute component={TeamChatPage} />}
