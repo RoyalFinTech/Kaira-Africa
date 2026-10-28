@@ -44,6 +44,7 @@ const AiReportsPage      = lazy(() => import('@/pages/app/AiReportsPage'));
 const DailyLedgerPage    = lazy(() => import('@/pages/app/DailyLedgerPage'));
 const InvestmentPlannerPage = lazy(() => import('@/pages/app/InvestmentPlannerPage'));
 const SavingsPage = lazy(() => import('@/pages/app/SavingsPage'));
+const WorkManagementPage = lazy(() => import('@/pages/app/WorkManagementPage'));
 const ReceiptBrandingPage = lazy(() => import('@/pages/app/ReceiptBrandingPage'));
 const BillingPage = lazy(() => import('@/pages/app/BillingPage'));
 const LegalPage          = lazy(() => import('@/pages/LegalPage'));
