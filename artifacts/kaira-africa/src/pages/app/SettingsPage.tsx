@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import {
-  Settings2, Building2, Shield, Bell, Palette, Users, CreditCard,
+  Settings2, Building2, Shield, Bell, Palette, Users, CreditCard, Clock3,
   Save, CheckCircle2, ChevronRight, LogOut
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,9 @@ import { PageTransition } from '@/components/common/PageTransition';
 import { useGetMe, useGetMyBusiness, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import SchedulePreferencesCard from '@/components/common/SchedulePreferencesCard';
 
-type TabKey = 'business' | 'branding' | 'security' | 'appearance' | 'team' | 'billing';
+type TabKey = 'business' | 'branding' | 'security' | 'appearance' | 'team' | 'billing' | 'schedule';
 
 const tabs: { key: TabKey; label: string; icon: typeof Settings2 }[] = [
   { key: 'business',      label: 'Business Profile', icon: Building2   },
@@ -27,6 +28,7 @@ const tabs: { key: TabKey; label: string; icon: typeof Settings2 }[] = [
   { key: 'appearance',    label: 'Appearance',       icon: Palette     },
   { key: 'team',          label: 'Team & Permissions', icon: Users     },
   { key: 'billing',       label: 'Billing',          icon: CreditCard  },
+  { key: 'schedule',      label: 'Schedules & reminders', icon: Clock3 },
 ];
 
 const roleMatrix = [
@@ -177,6 +179,8 @@ export default function SettingsPage() {
                 </Card>
               )}
 
+              {activeTab === 'schedule' && <SchedulePreferencesCard />}
+
               {/* BRANDING & IDENTITY: these destinations use the existing live profile and receipt-branding flows. */}
               {activeTab === 'branding' && (
                 <Card>
@@ -202,8 +206,8 @@ export default function SettingsPage() {
                     </div>
                     <div className="rounded-xl border p-4">
                       <div className="mb-2 flex items-center gap-2"><Bell className="h-5 w-5 text-primary" /><h3 className="font-semibold">Notifications</h3></div>
-                      <p className="mb-4 text-sm text-muted-foreground">Review your in-app notifications. Delivery preferences are not exposed here until a notification-preferences API is available.</p>
-                      <Button variant="outline" className="w-full" onClick={() => setLocation('/notifications')}>View notifications</Button>
+                      <p className="mb-4 text-sm text-muted-foreground">Review your in-app notifications. Configure business time zone and task reminder preferences in Schedules & reminders.</p>
+                      <Button variant="outline" className="w-full" onClick={() => setActiveTab('schedule')}>Configure reminders</Button><Button variant="outline" className="mt-2 w-full" onClick={() => setLocation('/notifications')}>View notifications</Button>
                     </div>
                   </CardContent>
                 </Card>
