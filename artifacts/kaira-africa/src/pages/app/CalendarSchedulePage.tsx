@@ -17,7 +17,9 @@ function readableDate(date:Date, timeZone:string, dateOnly=false) {
 }
 
 export default function CalendarSchedulePage() {
-  const [range,setRange]=useState<"upcoming"|"all">("upcoming");\n  const businessPreferencesQ=useQuery({queryKey:["business-preferences"],queryFn:()=>apiRequestJson<{timeZone:string}>("/businesses/me/preferences")});\n  const businessTimeZone=businessPreferencesQ.data?.timeZone||"Africa/Banjul";
+  const [range,setRange]=useState<"upcoming"|"all">("upcoming");
+  const businessPreferencesQ=useQuery({queryKey:["business-preferences"],queryFn:()=>apiRequestJson<{timeZone:string}>("/businesses/me/preferences")});
+  const businessTimeZone=businessPreferencesQ.data?.timeZone||"Africa/Banjul";
   const tasksQ=useQuery({queryKey:["work-tasks"],queryFn:()=>apiRequestJson<Task[]>("/work/tasks")});
   const meetingsQ=useQuery({queryKey:["work-meetings"],queryFn:()=>apiRequestJson<Meeting[]>("/work/meetings")});
   const items=useMemo<ScheduleItem[]>(()=>{
