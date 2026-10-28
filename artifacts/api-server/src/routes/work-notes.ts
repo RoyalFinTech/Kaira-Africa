@@ -61,7 +61,7 @@ router.delete("/work/notes/:id", requireUser, async (req, res) => {
   const id = z.string().uuid().parse(req.params.id);
   const [note] = await db.delete(workNotes).where(and(eq(workNotes.id, id), eq(workNotes.businessId, businessId))).returning({ id: workNotes.id });
   if (!note) throw new NotFoundError("Note not found.");
-  res.status(204).end();
+  res.json({ deleted: true });
 });
 
 export default router;
