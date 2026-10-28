@@ -183,6 +183,27 @@ router.patch(
   },
 );
 
+
+const BusinessTimezoneInput = z.object({ timezone: z.string().trim().min(1).max(100) }).strict();
+function assertIanaTimezone(timezone: string) {
+  try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date()); }
+  catch { throw new BadRequestError("Choose a valid IANA time zone, such as Africa/Banjul or Europe/London."); }
+}
+router.get("/businesses/me/timezone", requireUser, async (req, res) => {
+  const businessId = requireBusiness(req);
+  const business = await getBusinessById(businessId);
+  if (!business) throw new NotFoundError("Business not found");
+  res.json({ timezone: business.timezone || "Africa/Banjul" });
+});
+router.patch("/businesses/me/timezone", requireUser, requireRole("owner"), async (req, res) => {
+  const businessId = requireBusiness(req);
+  const { timezone } = BusinessTimezoneInput.parse(req.body);
+  assertIanaTimezone(timezone);
+  const updated = await updateBusiness(businessId, { timezone });
+  if (!updated) throw new NotFoundError("Business not found");
+  res.json({ timezone: updated.timezone });
+});
+
 router.get("/businesses/me/receipt-settings", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const [business] = await db.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
