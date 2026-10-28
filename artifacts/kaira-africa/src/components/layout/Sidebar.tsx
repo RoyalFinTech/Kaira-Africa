@@ -14,6 +14,7 @@ import {
   FolderKanban,
   BookOpen,
   BrainCircuit,
+  Sparkles,
   ReceiptText,
   CreditCard,
   PiggyBank,
@@ -68,6 +69,13 @@ const navigation: { section: string; items: NavItem[] }[] = [
     ],
   },
   {
+    section: 'VISUAL ASSISTANT & AI',
+    items: [
+      { label: 'Visual Assistant', href: '/visual-assistant', icon: Sparkles },
+      { label: 'AI Reports & Insights', href: '/ai-reports', icon: BrainCircuit },
+    ],
+  },
+  {
     section: 'LEARNING & SUPPORT',
     items: [
       { label: 'Tutorials & Courses', href: '/tutorials', icon: BookOpen },
@@ -79,7 +87,6 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Analytics', href: '/analytics', icon: TrendingUp },
       { label: 'Reports', href: '/reports', icon: FileText },
       { label: 'Activity', href: '/activity', icon: Activity },
-      { label: 'AI Reports', href: '/ai-reports', icon: BrainCircuit },
     ],
   },
 ];
