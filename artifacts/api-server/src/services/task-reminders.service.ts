@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql } from "drizzle-orm";
+import { eq, notInArray, sql } from "drizzle-orm";
 import {
   db,
   notifications,
