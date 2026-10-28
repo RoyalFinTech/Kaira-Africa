@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, ChevronDown, CheckCircle2, ClipboardList, UserRoundSearch, Package, Wallet, BarChart3, CircleHelp, Video, Sparkles, Search } from "lucide-react";
+import { BookOpen, ChevronDown, CheckCircle2, ClipboardList, UserRoundSearch, Package, Wallet, BarChart3, CircleHelp, Video, Sparkles, Search, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
