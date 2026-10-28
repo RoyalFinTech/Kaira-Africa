@@ -7,6 +7,7 @@ import { env } from "./config/env";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startTaskReminderScheduler } from "./services/task-reminders.service";
+import { startTaskReminderEmailOutboxWorker } from "./services/task-reminder-email-outbox.service";
 
 app.listen(env.PORT, (err) => {
   if (err) {
@@ -16,4 +17,5 @@ app.listen(env.PORT, (err) => {
 
   logger.info({ port: env.PORT, env: env.NODE_ENV }, "Server listening");
   startTaskReminderScheduler();
+  startTaskReminderEmailOutboxWorker();
 });

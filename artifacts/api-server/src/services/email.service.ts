@@ -37,15 +37,16 @@ interface SendEmailInput {
   subject: string;
   html: string;
   text?: string;
+  messageId?: string;
 }
 
-async function sendEmail(input: SendEmailInput): Promise<void> {
+async function sendEmail(input: SendEmailInput): Promise<boolean> {
   if (!transporter) {
     logger.info(
       { to: input.to, subject: input.subject },
       `[DEV EMAIL] Would send email (no SMTP configured):\n${input.text ?? input.html}`,
     );
-    return;
+    return false;
   }
 
   await transporter.sendMail({
@@ -54,7 +55,9 @@ async function sendEmail(input: SendEmailInput): Promise<void> {
     subject: input.subject,
     html: input.html,
     text: input.text,
+    messageId: input.messageId,
   });
+  return true;
 }
 
 export async function sendPasswordResetEmail(input: {
@@ -96,4 +99,32 @@ export async function verifyEmailTransport(): Promise<boolean> {
     logger.error({ err }, "SMTP transport verification failed");
     return false;
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\x27/g, "&#39;");
+}
+
+export function isEmailDeliveryConfigured(): boolean {
+  return transporter !== null;
+}
+
+export async function sendTaskReminderEmail(input: {
+  to: string;
+  subject: string;
+  message: string;
+  actionUrl: string;
+  messageId?: string;
+}): Promise<boolean> {
+  const safeMessage = escapeHtml(input.message);
+  const baseUrl = env.FRONTEND_URL ?? (isProd ? "https://kaira-africa-frontend.onrender.com" : env.WEB_BASE_URL);
+  const absoluteUrl = new URL(input.actionUrl, baseUrl).toString();
+  const safeUrl = escapeHtml(absoluteUrl);
+  return sendEmail({
+    to: input.to,
+    subject: input.subject,
+    text: input.message + "\nOpen Kaira Africa: " + absoluteUrl,
+    html: "<p>" + safeMessage + "</p><p><a href=\"" + safeUrl + "\">Open Kaira Africa</a></p>",
+    messageId: input.messageId,
+  });
 }
