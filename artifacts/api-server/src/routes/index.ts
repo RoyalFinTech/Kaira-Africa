@@ -16,6 +16,7 @@ import adminPlatformRouter from "./admin-platform";
 import dailyLedgerRouter from "./daily-ledger";
 import investmentsRouter from "./investments";
 import savingsRouter from "./savings";
+import workManagementRouter from "./work-management";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(adminPlatformRouter);
 router.use(dailyLedgerRouter);
 router.use(investmentsRouter);
 router.use(savingsRouter);
+router.use(workManagementRouter);
 
 export default router;

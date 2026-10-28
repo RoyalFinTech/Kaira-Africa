@@ -44,6 +44,8 @@ const AiReportsPage      = lazy(() => import('@/pages/app/AiReportsPage'));
 const DailyLedgerPage    = lazy(() => import('@/pages/app/DailyLedgerPage'));
 const InvestmentPlannerPage = lazy(() => import('@/pages/app/InvestmentPlannerPage'));
 const SavingsPage = lazy(() => import('@/pages/app/SavingsPage'));
+const WorkManagementPage = lazy(() => import('@/pages/app/WorkManagementPage'));
+const TutorialsPage = lazy(() => import('@/pages/app/TutorialsPage'));
 const ReceiptBrandingPage = lazy(() => import('@/pages/app/ReceiptBrandingPage'));
 const BillingPage = lazy(() => import('@/pages/app/BillingPage'));
 const LegalPage          = lazy(() => import('@/pages/LegalPage'));
@@ -332,6 +334,15 @@ function Router() {
         </Route>
         <Route path="/savings">
           {() => <ProtectedRoute component={SavingsPage} />}
+        </Route>
+        <Route path="/work-management/:section">
+          {() => <ProtectedRoute component={WorkManagementPage} />}
+        </Route>
+        <Route path="/work-management">
+          {() => <ProtectedRoute component={WorkManagementPage} />}
+        </Route>
+        <Route path="/tutorials">
+          {() => <ProtectedRoute component={TutorialsPage} />}
         </Route>
         <Route path="/receipt-branding">
           {() => <ProtectedRoute component={ReceiptBrandingPage} />}

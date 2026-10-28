@@ -1,0 +1,42 @@
+name: Work Management Build Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/work-management-productivity]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: work-management-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-and-build:
+    runs-on: ubuntu-latest
+    env:
+      # The mockup-sandbox Vite config requires PORT even for a production build.
+      PORT: 3000
+      BASE_PATH: /
+      # Unit tests import the shared DB module but do not connect to this placeholder database.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kaira_test
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck workspace
+        run: pnpm run typecheck
+      - name: Build workspace
+        run: pnpm run build
+      - name: Run API tests
+        run: pnpm --filter @workspace/api-server test

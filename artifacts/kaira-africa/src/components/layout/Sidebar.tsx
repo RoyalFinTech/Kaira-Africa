@@ -10,6 +10,9 @@ import {
   Activity,
   Package,
   ClipboardList,
+  CalendarDays,
+  FolderKanban,
+  BookOpen,
   BrainCircuit,
   ReceiptText,
   CreditCard,
@@ -54,6 +57,20 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Savings Tracker', href: '/savings', icon: Wallet },
       { label: 'Receipt Branding', href: '/receipt-branding', icon: ReceiptText },
       { label: 'Billing & Plan', href: '/billing', icon: CreditCard },
+    ],
+  },
+  {
+    section: 'WORK MANAGEMENT',
+    items: [
+      { label: 'Tasks', href: '/work-management/tasks', icon: ClipboardList },
+      { label: 'Projects', href: '/work-management/projects', icon: FolderKanban },
+      { label: 'Meetings & Minutes', href: '/work-management/meetings', icon: CalendarDays },
+    ],
+  },
+  {
+    section: 'LEARNING & SUPPORT',
+    items: [
+      { label: 'Tutorials & Courses', href: '/tutorials', icon: BookOpen },
     ],
   },
   {
