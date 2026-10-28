@@ -183,6 +183,33 @@ router.patch(
   },
 );
 
+
+const BusinessPreferencesInput = z.object({
+  timeZone: z.string().trim().min(1).max(100).refine((value) => {
+    try { new Intl.DateTimeFormat("en-US", { timeZone: value }).format(new Date()); return true; }
+    catch { return false; }
+  }, "Choose a valid IANA time zone."),
+}).strict();
+
+router.get("/businesses/me/preferences", requireUser, async (req, res) => {
+  const businessId = requireBusiness(req);
+  const [business] = await db.select({ timeZone: businesses.timeZone })
+    .from(businesses).where(eq(businesses.id, businessId)).limit(1);
+  if (!business) throw new NotFoundError("Business not found");
+  res.json({ timeZone: business.timeZone || "Africa/Banjul" });
+});
+
+router.patch("/businesses/me/preferences", requireUser, requireRole("owner"), async (req, res) => {
+  const businessId = requireBusiness(req);
+  const input = BusinessPreferencesInput.parse(req.body);
+  const [updated] = await db.update(businesses)
+    .set({ timeZone: input.timeZone, updatedAt: new Date() })
+    .where(eq(businesses.id, businessId))
+    .returning({ timeZone: businesses.timeZone });
+  if (!updated) throw new NotFoundError("Business not found");
+  res.json({ timeZone: updated.timeZone });
+});
+
 router.get("/businesses/me/receipt-settings", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const [business] = await db.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
