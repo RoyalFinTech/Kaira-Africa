@@ -43,12 +43,13 @@ export default function VisualAssistantPage() {
   }
 
   return <PageTransition><main className="mx-auto w-full max-w-5xl space-y-6 p-1 sm:p-2">
-    <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-5 sm:p-8">
+    <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-5 sm:p-8"><svg aria-hidden="true" viewBox="0 0 230 130" className="pointer-events-none absolute -right-3 -top-2 hidden h-32 w-56 opacity-90 sm:block"><path d="M127 6C168 0 218 20 220 55s-26 64-65 67-86-12-88-48S86 12 127 6Z" fill="#D1FAE5"/><rect x="112" y="26" width="78" height="64" rx="12" fill="#0D3B2A"/><path d="m129 45 10 10-10 10m19 0h24" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="85" cy="32" r="7" fill="#E7B32B"/><circle cx="193" cy="103" r="5" fill="#B45309"/></svg>
       <div className="flex items-start gap-4">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#0D3B2A] text-white"><Sparkles className="h-7 w-7"/></div>
         <div className="min-w-0"><Badge className="mb-2 bg-emerald-100 text-emerald-900">KAIRA • VISUAL ASSISTANT</Badge><h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Your Kaira guide</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Ask for step-by-step help with Kaira Africa and everyday business workflows. This first version is a text assistant; it does not see your screen or analyse uploaded images.</p></div>
       </div>
     </section>
+    <Card className="rounded-2xl border-emerald-100 bg-white shadow-sm"><CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-3 sm:p-5"><div><p className="text-sm font-semibold text-slate-900">1. Say what you want to do</p><p className="mt-1 text-sm leading-6 text-slate-600">Name the Kaira tool and your goal, such as recording today’s sales or checking stock.</p></div><div><p className="text-sm font-semibold text-slate-900">2. Ask for clear steps</p><p className="mt-1 text-sm leading-6 text-slate-600">Request a checklist or ask one follow-up if the answer is unclear.</p></div><div><p className="text-sm font-semibold text-slate-900">3. Verify in Kaira</p><p className="mt-1 text-sm leading-6 text-slate-600">Carry out the steps yourself and confirm the saved record, date and currency.</p></div></CardContent></Card>
     <Card className="rounded-2xl border-emerald-100 shadow-sm">
       <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><BrainCircuit className="h-5 w-5 text-emerald-800"/>Ask the assistant</CardTitle></CardHeader>
       <CardContent className="space-y-4">
