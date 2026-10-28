@@ -12,6 +12,7 @@ import {
   ClipboardList,
   CalendarDays,
   Clock3,
+  StickyNote,
   FolderKanban,
   BookOpen,
   BrainCircuit,
