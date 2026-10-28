@@ -11,6 +11,7 @@ import {
   Package,
   ClipboardList,
   CalendarDays,
+  Clock3,
   FolderKanban,
   BookOpen,
   BrainCircuit,
@@ -66,6 +67,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Tasks', href: '/work-management/tasks', icon: ClipboardList },
       { label: 'Projects', href: '/work-management/projects', icon: FolderKanban },
       { label: 'Meetings & Minutes', href: '/work-management/meetings', icon: CalendarDays },
+      { label: 'Calendar & Schedule', href: '/calendar', icon: Clock3 },
     ],
   },
   {
