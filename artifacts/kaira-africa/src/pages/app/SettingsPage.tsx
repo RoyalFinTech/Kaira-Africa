@@ -81,14 +81,14 @@ const TIME_ZONES = [
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const businessPreferencesQ = useQuery({ queryKey: ['business-preferences'], queryFn: () => apiRequestJson<{timeZone:string}>('/businesses/me/preferences') });
-  const notificationPreferencesQ = useQuery({ queryKey: ['notification-preferences'], queryFn: () => apiRequestJson<{taskReminders:boolean}>('/notifications/preferences') });
+  const notificationPreferencesQ = useQuery({ queryKey: ['notification-preferences'], queryFn: () => apiRequestJson<{taskReminders:boolean;taskReminderEmail:boolean;hasEmail:boolean}>('/notifications/preferences') });
   const timeZoneMutation = useMutation({
     mutationFn: (timeZone: string) => apiRequestJson<{timeZone:string}>('/businesses/me/preferences', { method: 'PATCH', body: JSON.stringify({ timeZone }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['business-preferences'] }); setSaved(true); setSaveError(null); setTimeout(() => setSaved(false), 2500); },
     onError: (error) => setSaveError(error instanceof Error ? error.message : 'Could not save the business time zone.'),
   });
   const remindersMutation = useMutation({
-    mutationFn: (taskReminders: boolean) => apiRequestJson<{taskReminders:boolean}>('/notifications/preferences', { method: 'PATCH', body: JSON.stringify({ taskReminders }) }),
+    mutationFn: (preferences: {taskReminders?:boolean;taskReminderEmail?:boolean}) => apiRequestJson<{taskReminders:boolean;taskReminderEmail:boolean;hasEmail:boolean}>('/notifications/preferences', { method: 'PATCH', body: JSON.stringify(preferences) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['notification-preferences'] }); setSaveError(null); },
     onError: (error) => setSaveError(error instanceof Error ? error.message : 'Could not save notification preferences.'),
   });
@@ -241,10 +241,15 @@ export default function SettingsPage() {
                     <CardHeader><CardTitle>Task reminder preferences</CardTitle><p className="text-sm text-muted-foreground">Choose whether Kaira creates in-app notifications for tasks due today or already overdue. This preference belongs to your user account.</p></CardHeader>
                     <CardContent className="space-y-4">
                       <label className="flex items-start gap-3 rounded-xl border p-4">
-                        <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-800" checked={notificationPreferencesQ.data?.taskReminders ?? true} disabled={notificationPreferencesQ.isLoading || remindersMutation.isPending} onChange={event => remindersMutation.mutate(event.target.checked)} />
+                        <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-800" checked={notificationPreferencesQ.data?.taskReminders ?? true} disabled={notificationPreferencesQ.isLoading || remindersMutation.isPending} onChange={event => remindersMutation.mutate({ taskReminders: event.target.checked })} />
                         <span><span className="block text-sm font-medium">In-app task reminders</span><span className="mt-1 block text-xs text-muted-foreground">Due-today and overdue reminders. Turning this off stops future reminders; existing notifications remain in your inbox.</span></span>
                       </label>
-                      <p className="text-xs text-muted-foreground">Email and browser push are not selectable yet because delivery, subscriptions and retry monitoring are not implemented.</p>
+                      <label className="flex items-start gap-3 rounded-xl border p-4">
+                        <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-800" checked={notificationPreferencesQ.data?.taskReminderEmail ?? false} disabled={notificationPreferencesQ.isLoading || remindersMutation.isPending || !notificationPreferencesQ.data?.hasEmail} onChange={event => remindersMutation.mutate({ taskReminderEmail: event.target.checked })} />
+                        <span><span className="block text-sm font-medium">Email task reminders</span><span className="mt-1 block text-xs text-muted-foreground">Optional email copies for due-today and overdue tasks. Messages are queued and retried when SMTP is available.</span></span>
+                      </label>
+                      {!notificationPreferencesQ.data?.hasEmail && !notificationPreferencesQ.isLoading && <p className="text-xs text-amber-800">Add an email address to your profile before enabling email reminders. <button type="button" className="underline" onClick={() => setLocation('/profile')}>Open profile</button></p>}
+                      <p className="text-xs text-muted-foreground">Browser push notifications are still being developed and are not offered as a working option yet.</p>
                       {remindersMutation.isPending && <p role="status" className="text-sm text-muted-foreground">Saving preference…</p>}
                       {notificationPreferencesQ.error && <p role="alert" className="text-sm text-destructive">Could not load your notification preferences.</p>}
                     </CardContent>
