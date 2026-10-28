@@ -17,3 +17,5 @@ export * from "./daily-ledger";
 export * from "./investments";
 
 export * from "./savings";
+
+export * from "./work-management";
