@@ -18,6 +18,7 @@ import dailyLedgerRouter from "./daily-ledger";
 import investmentsRouter from "./investments";
 import savingsRouter from "./savings";
 import workManagementRouter from "./work-management";
+import workNotesRouter from "./work-notes";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(dailyLedgerRouter);
 router.use(investmentsRouter);
 router.use(savingsRouter);
 router.use(workManagementRouter);
+router.use(workNotesRouter);
 
 export default router;
