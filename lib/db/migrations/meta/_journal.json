@@ -99,6 +99,13 @@
       "when": 1793196000000,
       "tag": "0013_work_management",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793200000000,
+      "tag": "0014_work_notes",
+      "breakpoints": true
     }
   ]
 }

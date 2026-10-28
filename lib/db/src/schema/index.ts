@@ -19,3 +19,4 @@ export * from "./investments";
 export * from "./savings";
 
 export * from "./work-management";
+export * from "./work-notes";

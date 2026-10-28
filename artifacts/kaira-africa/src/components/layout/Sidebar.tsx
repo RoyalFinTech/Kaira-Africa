@@ -12,6 +12,7 @@ import {
   ClipboardList,
   CalendarDays,
   Clock3,
+  StickyNote,
   FolderKanban,
   BookOpen,
   BrainCircuit,
@@ -68,6 +69,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Projects', href: '/work-management/projects', icon: FolderKanban },
       { label: 'Meetings & Minutes', href: '/work-management/meetings', icon: CalendarDays },
       { label: 'Calendar & Schedule', href: '/calendar', icon: Clock3 },
+      { label: 'Notes & Documents', href: '/work-notes', icon: StickyNote },
     ],
   },
   {
