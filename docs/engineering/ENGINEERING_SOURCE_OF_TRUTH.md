@@ -168,3 +168,11 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 - UI guidance changes require CI and responsive/link checks. Dashboard financial KPIs and data calculations remain separately NOT VERIFIED; improved instructions do not imply data correctness.
 
 - Follow-up within the same PR: the Visual Assistant page itself now includes a three-step usage guide (state goal → request clear steps → verify the saved result) and custom inline SVG artwork. This remains a text-only assistant; no image/screen/document/voice capabilities were added.
+
+
+## Continuation record — Notes & Documents (2026-10-28)
+
+- Branch `feat/work-notes-documents` adds a business-scoped written-notes feature: schema/table `work_notes`, migration `0014_work_notes.sql`, authenticated API routes for list/search/create/update/delete, protected `/work-notes` page, and Work Management navigation entry.
+- Notes support categories, pinning, title/content/category search, edit/delete confirmation, and browser print. No uploaded files or attachments are supported in this first version; the UI states that limitation explicitly.
+- The Tutorials & Courses page gains a Notes & Documents course and removes a duplicate `assistant` course ID discovered during review. The course already covers CRM, inventory, ledger, investments/savings, Visual Assistant and Calendar & Schedule.
+- Before merge, CI must validate schema/types/build/API tests and migration application. After merge, verify Render deployment, migration application, authenticated CRUD/search and cross-business isolation. Do not call the feature production-verified before these checks.
