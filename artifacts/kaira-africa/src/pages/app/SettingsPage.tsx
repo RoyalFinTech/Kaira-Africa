@@ -1,9 +1,10 @@
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import {
-  Settings2, Building2, Shield, Bell, Palette, Users, CreditCard,
+  Settings2, Building2, Shield, Bell, Palette, Users, CreditCard, Clock3,
   Save, CheckCircle2, ChevronRight, LogOut
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,10 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { PageTransition } from '@/components/common/PageTransition';
 import { useGetMe, useGetMyBusiness, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
-import { clearToken } from '@/lib/api-client';
+import { apiRequestJson, clearToken } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
-type TabKey = 'business' | 'branding' | 'security' | 'appearance' | 'team' | 'billing';
+type TabKey = 'business' | 'branding' | 'security' | 'appearance' | 'team' | 'billing' | 'preferences';
 
 const tabs: { key: TabKey; label: string; icon: typeof Settings2 }[] = [
   { key: 'business',      label: 'Business Profile', icon: Building2   },
@@ -27,6 +28,7 @@ const tabs: { key: TabKey; label: string; icon: typeof Settings2 }[] = [
   { key: 'appearance',    label: 'Appearance',       icon: Palette     },
   { key: 'team',          label: 'Team & Permissions', icon: Users     },
   { key: 'billing',       label: 'Billing',          icon: CreditCard  },
+  { key: 'preferences',   label: 'Schedule & alerts', icon: Clock3      },
 ];
 
 const roleMatrix = [
@@ -48,7 +50,48 @@ function SaveButton({ saved, pending }: { saved: boolean; pending?: boolean }) {
   );
 }
 
+
+const TIME_ZONES = [
+  { value: 'Africa/Banjul', label: 'The Gambia — Banjul (GMT, UTC+00:00)' },
+  { value: 'Africa/Abidjan', label: 'Côte d’Ivoire — Abidjan (UTC+00:00)' },
+  { value: 'Africa/Accra', label: 'Ghana — Accra (UTC+00:00)' },
+  { value: 'Africa/Lagos', label: 'Nigeria — Lagos (UTC+01:00)' },
+  { value: 'Africa/Dakar', label: 'Senegal — Dakar (UTC+00:00)' },
+  { value: 'Africa/Nairobi', label: 'Kenya — Nairobi (UTC+03:00)' },
+  { value: 'Africa/Johannesburg', label: 'South Africa — Johannesburg (UTC+02:00)' },
+  { value: 'Europe/London', label: 'United Kingdom — London' },
+  { value: 'Europe/Paris', label: 'Central Europe — Paris' },
+  { value: 'Europe/Berlin', label: 'Central Europe — Berlin' },
+  { value: 'Europe/Istanbul', label: 'Türkiye — Istanbul (UTC+03:00)' },
+  { value: 'Asia/Dubai', label: 'UAE — Dubai (UTC+04:00)' },
+  { value: 'Asia/Kolkata', label: 'India — Kolkata (UTC+05:30)' },
+  { value: 'Asia/Singapore', label: 'Singapore (UTC+08:00)' },
+  { value: 'Asia/Tokyo', label: 'Japan — Tokyo (UTC+09:00)' },
+  { value: 'Australia/Sydney', label: 'Australia — Sydney' },
+  { value: 'America/New_York', label: 'United States — New York / Eastern' },
+  { value: 'America/Chicago', label: 'United States — Chicago / Central' },
+  { value: 'America/Denver', label: 'United States — Denver / Mountain' },
+  { value: 'America/Los_Angeles', label: 'United States — Los Angeles / Pacific' },
+  { value: 'America/Toronto', label: 'Canada — Toronto / Eastern' },
+  { value: 'America/Vancouver', label: 'Canada — Vancouver / Pacific' },
+  { value: 'America/Sao_Paulo', label: 'Brazil — São Paulo' },
+  { value: 'Pacific/Auckland', label: 'New Zealand — Auckland' },
+];
+
 export default function SettingsPage() {
+  const queryClient = useQueryClient();
+  const businessPreferencesQ = useQuery({ queryKey: ['business-preferences'], queryFn: () => apiRequestJson<{timeZone:string}>('/businesses/me/preferences') });
+  const notificationPreferencesQ = useQuery({ queryKey: ['notification-preferences'], queryFn: () => apiRequestJson<{taskReminders:boolean}>('/notifications/preferences') });
+  const timeZoneMutation = useMutation({
+    mutationFn: (timeZone: string) => apiRequestJson<{timeZone:string}>('/businesses/me/preferences', { method: 'PATCH', body: JSON.stringify({ timeZone }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['business-preferences'] }); setSaved(true); setSaveError(null); setTimeout(() => setSaved(false), 2500); },
+    onError: (error) => setSaveError(error instanceof Error ? error.message : 'Could not save the business time zone.'),
+  });
+  const remindersMutation = useMutation({
+    mutationFn: (taskReminders: boolean) => apiRequestJson<{taskReminders:boolean}>('/notifications/preferences', { method: 'PATCH', body: JSON.stringify({ taskReminders }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['notification-preferences'] }); setSaveError(null); },
+    onError: (error) => setSaveError(error instanceof Error ? error.message : 'Could not save notification preferences.'),
+  });
   const { data: me } = useGetMe();
   const { data: business } = useGetMyBusiness();
   const [, setLocation] = useLocation();
@@ -175,6 +218,39 @@ export default function SettingsPage() {
                     </form>
                   </CardContent>
                 </Card>
+              )}
+
+
+              {activeTab === 'preferences' && (
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader><CardTitle>Business time zone</CardTitle><p className="text-sm text-muted-foreground">Used to display meeting times and calculate task reminder dates for your whole business. Remote workers can compare schedules using the same business clock.</p></CardHeader>
+                    <CardContent className="space-y-3">
+                      <Label htmlFor="business-time-zone">Time zone for schedules and deadlines</Label>
+                      <select id="business-time-zone" className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={businessPreferencesQ.data?.timeZone ?? 'Africa/Banjul'} disabled={businessPreferencesQ.isLoading || timeZoneMutation.isPending || me?.role !== 'owner'} onChange={event => timeZoneMutation.mutate(event.target.value)}>
+                        {TIME_ZONES.map(zone => <option key={zone.value} value={zone.value}>{zone.label}</option>)}
+                        {businessPreferencesQ.data?.timeZone && !TIME_ZONES.some(zone => zone.value === businessPreferencesQ.data?.timeZone) && <option value={businessPreferencesQ.data.timeZone}>{businessPreferencesQ.data.timeZone}</option>}
+                      </select>
+                      <p className="text-xs text-muted-foreground">Times are stored as exact instants and displayed in this selected IANA time zone. Daylight-saving changes follow the time-zone rules.</p>
+                      {businessPreferencesQ.error && <p role="alert" className="text-sm text-destructive">Could not load your business time zone. Refresh and try again.</p>}
+                      {timeZoneMutation.isPending && <p role="status" className="text-sm text-muted-foreground">Saving time zone…</p>}
+                      {me?.role !== 'owner' && <p className="text-xs text-muted-foreground">Ask your business owner to change the shared business time zone.</p>}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader><CardTitle>Task reminder preferences</CardTitle><p className="text-sm text-muted-foreground">Choose whether Kaira creates in-app notifications for tasks due today or already overdue. This preference belongs to your user account.</p></CardHeader>
+                    <CardContent className="space-y-4">
+                      <label className="flex items-start gap-3 rounded-xl border p-4">
+                        <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-800" checked={notificationPreferencesQ.data?.taskReminders ?? true} disabled={notificationPreferencesQ.isLoading || remindersMutation.isPending} onChange={event => remindersMutation.mutate(event.target.checked)} />
+                        <span><span className="block text-sm font-medium">In-app task reminders</span><span className="mt-1 block text-xs text-muted-foreground">Due-today and overdue reminders. Turning this off stops future reminders; existing notifications remain in your inbox.</span></span>
+                      </label>
+                      <p className="text-xs text-muted-foreground">Email and browser push are not selectable yet because delivery, subscriptions and retry monitoring are not implemented.</p>
+                      {remindersMutation.isPending && <p role="status" className="text-sm text-muted-foreground">Saving preference…</p>}
+                      {notificationPreferencesQ.error && <p role="alert" className="text-sm text-destructive">Could not load your notification preferences.</p>}
+                    </CardContent>
+                  </Card>
+                  {saveError && <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">{saveError}</p>}
+                </div>
               )}
 
               {/* BRANDING & IDENTITY: these destinations use the existing live profile and receipt-branding flows. */}

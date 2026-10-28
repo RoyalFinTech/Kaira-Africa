@@ -5,6 +5,9 @@ import {
   MarkNotificationReadParams,
 } from "@workspace/api-zod";
 import { requireUser } from "../middlewares/auth";
+import { db, users } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { validate } from "../middlewares/validate";
 import {
   listNotifications,
@@ -14,6 +17,28 @@ import {
 import { NotFoundError } from "../lib/http-errors";
 
 const router: IRouter = Router();
+
+
+const NotificationPreferencesInput = z.object({
+  taskReminders: z.boolean(),
+}).strict();
+
+router.get("/notifications/preferences", requireUser, async (req, res) => {
+  const [user] = await db.select({ preferences: users.notificationPreferences })
+    .from(users).where(eq(users.id, req.user!.id)).limit(1);
+  if (!user) throw new NotFoundError("User not found");
+  res.json({ taskReminders: user.preferences?.taskReminders ?? true });
+});
+
+router.patch("/notifications/preferences", requireUser, async (req, res) => {
+  const input = NotificationPreferencesInput.parse(req.body);
+  const [user] = await db.update(users)
+    .set({ notificationPreferences: { taskReminders: input.taskReminders }, updatedAt: new Date() })
+    .where(eq(users.id, req.user!.id))
+    .returning({ preferences: users.notificationPreferences });
+  if (!user) throw new NotFoundError("User not found");
+  res.json({ taskReminders: user.preferences?.taskReminders ?? true });
+});
 
 router.get(
   "/notifications",
