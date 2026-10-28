@@ -12,8 +12,8 @@ type Task = { id:string; title:string; status:string; priority:string; dueDate:s
 type Meeting = { id:string; title:string; meetingType:string; startsAt:string|null; status:string; attendees:string[] };
 type ScheduleItem = { id:string; title:string; kind:"task"|"meeting"; date:Date; status:string; detail:string; href:string };
 
-function readableDate(date:Date) {
-  return date.toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",year:"numeric",hour:date.getHours()||date.getMinutes()? "numeric":undefined,minute:date.getHours()||date.getMinutes()?"2-digit":undefined});
+function readableDate(date:Date, timeZone:string, dateOnly=false) {
+  return new Intl.DateTimeFormat(undefined,{timeZone,weekday:"short",month:"short",day:"numeric",year:"numeric",hour:dateOnly?undefined:"numeric",minute:dateOnly?undefined:"2-digit"}).format(date);
 }
 
 export default function CalendarSchedulePage() {
