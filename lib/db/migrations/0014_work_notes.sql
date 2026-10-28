@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS work_notes (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS work_notes_business_updated_idx ON work_notes(business_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS work_notes_business_updated_idx ON work_notes(business_id, updated_at);
 CREATE INDEX IF NOT EXISTS work_notes_business_category_idx ON work_notes(business_id, category);
 -- The API enforces business scope and is the only supported access path.
 ALTER TABLE work_notes ENABLE ROW LEVEL SECURITY;
