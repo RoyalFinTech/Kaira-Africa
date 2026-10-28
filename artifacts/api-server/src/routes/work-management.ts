@@ -77,7 +77,8 @@ router.post("/work/meetings",requireUser,async(req,res)=>{
 });
 router.patch("/work/meetings/:id",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req),id=z.string().uuid().parse(req.params.id),input=meetingInput.partial().parse(req.body);
- const [meeting]=await db.update(workMeetings).set({...input,...(input.startsAt!==undefined?{startsAt:input.startsAt?new Date(input.startsAt):null}:{}),updatedAt:new Date()}).where(and(eq(workMeetings.id,id),eq(workMeetings.businessId,businessId))).returning();
+ const {startsAt,...meetingFields}=input;
+ const [meeting]=await db.update(workMeetings).set({...meetingFields,...(startsAt!==undefined?{startsAt:startsAt?new Date(startsAt):null}:{}),updatedAt:new Date()}).where(and(eq(workMeetings.id,id),eq(workMeetings.businessId,businessId))).returning();
  if(!meeting) throw new NotFoundError("Meeting not found."); res.json(meeting);
 });
 export default router;
