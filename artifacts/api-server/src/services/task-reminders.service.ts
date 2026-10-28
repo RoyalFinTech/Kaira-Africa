@@ -43,7 +43,7 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
       const kind = reminderKindForDueDate(task.dueDate, today);
       if (!kind) continue;
       const recipientUserId = task.assignedTo ?? task.createdBy;
-      const [delivery] = await tx.insert(taskReminderDeliveries).values({
+      const [delivery] = await tx.insert(workTaskReminderDeliveries).values({
         businessId: task.businessId,
         taskId: task.id,
         recipientUserId,
