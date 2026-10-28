@@ -25,3 +25,5 @@ export * from "./team-chat";
 export * from "./work-time";
 
 export * from "./work-task-reminders";
+
+export * from "./work-task-reminder-preferences";
