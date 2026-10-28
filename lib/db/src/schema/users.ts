@@ -2,6 +2,7 @@ import {
   pgTable,
   uuid,
   text,
+  jsonb,
   timestamp,
   uniqueIndex,
   type AnyPgColumn,
