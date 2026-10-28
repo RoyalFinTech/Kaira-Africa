@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { db, workProjects, workTasks, workTaskEvents, workMeetings, teamMembers } from "@workspace/db";
+import { db, businesses, workProjects, workTasks, workTaskEvents, workMeetings, teamMembers } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { createNotification } from "../repositories/notifications";
