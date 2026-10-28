@@ -1,7 +1,9 @@
-import { and, lte, notInArray, sql } from "drizzle-orm";
+import { and, inArray, lte, notInArray, sql } from "drizzle-orm";
 import {
   db,
+  businesses,
   notifications,
+  users,
   workTaskReminderDeliveries,
   workTasks,
 } from "@workspace/db";
@@ -18,31 +20,48 @@ export function reminderKindForDueDate(dueDate: string, today: string): "due_tod
  * Create in-app due-date reminders only. The unique delivery key and a
  * PostgreSQL advisory lock make repeated runs/restarts safe and prevent
  * duplicate notifications for the same task, recipient, kind and date.
- * All dates currently use UTC (same civil date as The Gambia); configurable
- * per-business time zones and email/web-push delivery are separate follow-up work.
+ * Reminder dates are evaluated in each business's configured IANA time zone.
+ * Delivery is in-app only; email/web-push are separate integrations.
  */
 export async function runTaskDueReminders(now = new Date()): Promise<number> {
-  const today = now.toISOString().slice(0, 10);
+  const utcDate = now.toISOString().slice(0, 10);
+  const upperBound = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('kaira-work-task-reminders', 0))`);
     const tasks = await tx.select({
       id: workTasks.id,
       businessId: workTasks.businessId,
+      businessTimeZone: businesses.timeZone,
       title: workTasks.title,
       dueDate: workTasks.dueDate,
       assignedTo: workTasks.assignedTo,
       createdBy: workTasks.createdBy,
-    }).from(workTasks).where(and(
-      lte(workTasks.dueDate, today),
+    }).from(workTasks).innerJoin(businesses, sql`${businesses.id} = ${workTasks.businessId}`).where(and(
+      lte(workTasks.dueDate, upperBound),
       notInArray(workTasks.status, ["done", "cancelled"]),
     ));
+    const recipientIds = [...new Set(tasks.map(task => task.assignedTo ?? task.createdBy))];
+    const recipientRows = recipientIds.length
+      ? await tx.select({ id: users.id, preferences: users.notificationPreferences })
+          .from(users).where(inArray(users.id, recipientIds))
+      : [];
+    const preferencesByUser = new Map(recipientRows.map(user => [user.id, user.preferences]));
 
     let createdCount = 0;
     for (const task of tasks) {
       if (!task.dueDate) continue;
+      const recipientUserId = task.assignedTo ?? task.createdBy;
+      if (preferencesByUser.get(recipientUserId)?.taskReminders === false) continue;
+      let today: string;
+      try {
+        const parts = new Intl.DateTimeFormat("en-CA", { timeZone: task.businessTimeZone || "Africa/Banjul", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+        const part = (type: string) => parts.find(value => value.type === type)?.value ?? "";
+        today = `${part("year")}-${part("month")}-${part("day")}`;
+      } catch {
+        today = utcDate;
+      }
       const kind = reminderKindForDueDate(task.dueDate, today);
       if (!kind) continue;
-      const recipientUserId = task.assignedTo ?? task.createdBy;
       const [delivery] = await tx.insert(workTaskReminderDeliveries).values({
         businessId: task.businessId,
         taskId: task.id,
