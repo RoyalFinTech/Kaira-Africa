@@ -27,7 +27,7 @@ async function verifyProject(businessId:string, projectId:string|null|undefined)
 router.get("/work/assignees",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req);
  const members=await db.select({userId:teamMembers.userId,firstName:teamMembers.firstName,lastName:teamMembers.lastName,role:teamMembers.role}).from(teamMembers).where(and(eq(teamMembers.businessId,businessId),eq(teamMembers.status,"active")));
- res.json(members.filter(m=>m.userId));
+ res.json(members.flatMap(m=>m.userId ? [{...m,userId:m.userId}] : []));
 });
 router.get("/work/projects",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req);
