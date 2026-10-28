@@ -4,7 +4,10 @@ import {
   ListNotificationsResponse,
   MarkNotificationReadParams,
 } from "@workspace/api-zod";
-import { requireUser } from "../middlewares/auth";
+import { requireUser, requireBusiness } from "../middlewares/auth";
+import { db, workTaskReminderPreferences } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { validate } from "../middlewares/validate";
 import {
   listNotifications,
@@ -14,6 +17,41 @@ import {
 import { NotFoundError } from "../lib/http-errors";
 
 const router: IRouter = Router();
+
+
+const ReminderPreferencesInput = z.object({
+  dueTodayEnabled: z.boolean(),
+  overdueEnabled: z.boolean(),
+}).strict();
+
+router.get("/notifications/preferences", requireUser, async (req, res) => {
+  const businessId = requireBusiness(req);
+  const userId = req.user!.id;
+  const [preferences] = await db.select().from(workTaskReminderPreferences).where(and(
+    eq(workTaskReminderPreferences.businessId, businessId),
+    eq(workTaskReminderPreferences.userId, userId),
+  )).limit(1);
+  res.json({
+    dueTodayEnabled: preferences?.dueTodayEnabled ?? true,
+    overdueEnabled: preferences?.overdueEnabled ?? true,
+  });
+});
+
+router.patch("/notifications/preferences", requireUser, async (req, res) => {
+  const businessId = requireBusiness(req);
+  const userId = req.user!.id;
+  const input = ReminderPreferencesInput.parse(req.body);
+  const [preferences] = await db.insert(workTaskReminderPreferences).values({
+    businessId, userId, ...input, updatedAt: new Date(),
+  }).onConflictDoUpdate({
+    target: [workTaskReminderPreferences.businessId, workTaskReminderPreferences.userId],
+    set: { ...input, updatedAt: new Date() },
+  }).returning();
+  res.json({
+    dueTodayEnabled: preferences.dueTodayEnabled,
+    overdueEnabled: preferences.overdueEnabled,
+  });
+});
 
 router.get(
   "/notifications",
