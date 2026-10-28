@@ -39,6 +39,7 @@ export const businesses = pgTable("businesses", {
   description: text("description"),
   logoUrl: text("logo_url"),
   receiptSettings: jsonb("receipt_settings").$type<ReceiptBrandingSettings>().notNull().default({}),
+  timeZone: text("time_zone").notNull().default("Africa/Banjul"),
   address: text("address"),
 
   // Free text on purpose — matches the existing OpenAPI contract, which
