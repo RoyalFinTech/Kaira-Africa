@@ -24,7 +24,12 @@ async function verifyProject(businessId:string, projectId:string|null|undefined)
   const [project] = await db.select({id:workProjects.id}).from(workProjects).where(and(eq(workProjects.id,projectId),eq(workProjects.businessId,businessId))).limit(1);
   if (!project) throw new BadRequestError("Project not found in this business.");
 }
-router.get("/work/assignees",requireUser,async(req,res)=>{\n const businessId=requireBusiness(req);\n const members=await db.select({userId:teamMembers.userId,firstName:teamMembers.firstName,lastName:teamMembers.lastName,role:teamMembers.role}).from(teamMembers).where(and(eq(teamMembers.businessId,businessId),eq(teamMembers.status,"active")));\n res.json(members.filter(m=>m.userId));\n});\nrouter.get("/work/projects",requireUser,async(req,res)=>{
+router.get("/work/assignees",requireUser,async(req,res)=>{
+ const businessId=requireBusiness(req);
+ const members=await db.select({userId:teamMembers.userId,firstName:teamMembers.firstName,lastName:teamMembers.lastName,role:teamMembers.role}).from(teamMembers).where(and(eq(teamMembers.businessId,businessId),eq(teamMembers.status,"active")));
+ res.json(members.filter(m=>m.userId));
+});
+router.get("/work/projects",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req);
  res.json(await db.select().from(workProjects).where(eq(workProjects.businessId,businessId)).orderBy(desc(workProjects.createdAt)));
 });
