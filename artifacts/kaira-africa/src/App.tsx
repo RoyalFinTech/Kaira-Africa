@@ -328,6 +328,9 @@ function Router() {
         <Route path="/inventory">
           {() => <ProtectedRoute component={InventoryPage} />}
         </Route>
+        <Route path="/visual-assistant">
+          {() => <ProtectedRoute component={VisualAssistantPage} />}
+        </Route>
         <Route path="/ai-reports">
           {() => <ProtectedRoute component={AiReportsPage} />}
         </Route>
