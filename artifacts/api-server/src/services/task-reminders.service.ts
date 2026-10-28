@@ -53,7 +53,6 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
       if (!task.dueDate) continue;
       const recipientUserId = task.assignedTo ?? task.createdBy;
       const recipient = recipientByUser.get(recipientUserId);
-      if (recipient?.preferences?.taskReminders === false) continue;
       let today: string;
       try {
         const parts = new Intl.DateTimeFormat("en-CA", { timeZone: task.businessTimeZone || "Africa/Banjul", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
@@ -64,15 +63,32 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
       }
       const kind = reminderKindForDueDate(task.dueDate, today);
       if (!kind) continue;
-      const [delivery] = await tx.insert(workTaskReminderDeliveries).values({
-        businessId: task.businessId,
-        taskId: task.id,
-        recipientUserId,
-        reminderKind: kind,
-        reminderDate: today,
-      }).onConflictDoNothing().returning({ id: workTaskReminderDeliveries.id });
-
       const isOverdue = kind === "overdue";
+      const message = isOverdue
+        ? '"' + task.title + '" was due ' + task.dueDate + '. Review the task and update its status.'
+        : '"' + task.title + '" is due today. Review your next steps.';
+
+      // In-app and email are independent channels with separate preferences and idempotency keys.
+      if (recipient?.preferences?.taskReminders !== false) {
+        const [delivery] = await tx.insert(workTaskReminderDeliveries).values({
+          businessId: task.businessId,
+          taskId: task.id,
+          recipientUserId,
+          reminderKind: kind,
+          reminderDate: today,
+        }).onConflictDoNothing().returning({ id: workTaskReminderDeliveries.id });
+        if (delivery) {
+          await tx.insert(notifications).values({
+            recipientUserId,
+            title: isOverdue ? "Task overdue" : "Task due today",
+            message,
+            type: "task",
+            actionUrl: "/work-management/tasks",
+          });
+          createdCount += 1;
+        }
+      }
+
       if (recipient?.preferences?.taskReminderEmail === true && recipient.email) {
         await tx.insert(workTaskReminderEmailOutbox).values({
           businessId: task.businessId,
@@ -82,22 +98,9 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
           reminderKind: kind,
           reminderDate: today,
           subject: isOverdue ? "Kaira Africa: task overdue" : "Kaira Africa: task due today",
-          message: isOverdue
-            ? '"' + task.title + '" was due ' + task.dueDate + '. Review the task and update its status.'
-            : '"' + task.title + '" is due today. Review your next steps.',
+          message,
         }).onConflictDoNothing();
       }
-      if (!delivery) continue;
-      await tx.insert(notifications).values({
-        recipientUserId,
-        title: isOverdue ? "Task overdue" : "Task due today",
-        message: isOverdue
-          ? `"${task.title}" was due ${task.dueDate}. Review the task and update its status.`
-          : `"${task.title}" is due today. Review your next steps.`,
-        type: "task",
-        actionUrl: "/work-management/tasks",
-      });
-      createdCount += 1;
     }
     return createdCount;
   });
