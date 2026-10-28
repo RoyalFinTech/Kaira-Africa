@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db, teamMessages } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
@@ -18,10 +18,14 @@ router.get("/team-chat/messages", requireUser, async (req, res) => {
   }).parse(req.query);
   const filters = [eq(teamMessages.businessId, businessId)];
   if (query.messageType) filters.push(eq(teamMessages.messageType, query.messageType));
+  // Apply the cursor in SQL before LIMIT so older pages can reach messages
+  // beyond the newest 100, while preserving the business/type scope.
+  if (query.before) filters.push(lt(teamMessages.createdAt, new Date(query.before)));
   const rows = await db.select().from(teamMessages).where(and(...filters))
     .orderBy(desc(teamMessages.createdAt)).limit(100);
-  const ordered = rows.reverse().filter((row) => !query.before || row.createdAt < new Date(query.before));
-  res.json(ordered);
+  // Return chronological order for the chat UI; the next cursor is the
+  // oldest returned message timestamp.
+  res.json(rows.reverse());
 });
 
 router.post("/team-chat/messages", requireUser, async (req, res) => {
