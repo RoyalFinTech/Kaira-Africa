@@ -114,7 +114,7 @@ export async function sendTaskReminderEmail(input: {
   actionUrl: string;
 }): Promise<boolean> {
   const safeMessage = escapeHtml(input.message);
-  const baseUrl = env.FRONTEND_URL ?? env.WEB_BASE_URL;
+  const baseUrl = env.FRONTEND_URL ?? (isProd ? "https://kaira-africa-frontend.onrender.com" : env.WEB_BASE_URL);
   const absoluteUrl = new URL(input.actionUrl, baseUrl).toString();
   const safeUrl = escapeHtml(absoluteUrl);
   return sendEmail({
