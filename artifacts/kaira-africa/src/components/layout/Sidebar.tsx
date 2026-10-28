@@ -73,9 +73,9 @@ const navigation: { section: string; items: NavItem[] }[] = [
     ],
   },
   {
-    section: 'VISUAL ASSISTANT & AI',
+    section: 'FREELANCER & AI TOOLS',
     items: [
-      { label: 'Visual Assistant', href: '/visual-assistant', icon: Sparkles },
+      { label: 'Freelancer & Remote Work', href: '/visual-assistant', icon: Sparkles },
       { label: 'AI Reports & Insights', href: '/ai-reports', icon: BrainCircuit },
     ],
   },
