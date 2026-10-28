@@ -166,3 +166,5 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 - Branch `feat/tutorials-dashboard-guidance` adds searchable written lessons for Visual Assistant safe use and Calendar & Schedule, improves course cards with custom inline SVG illustrations, and adds a dashboard Record → Review → Plan guide plus Visual Assistant and Tutorials links.
 - The Visual Assistant tutorial explicitly states current text-only limits, session-only history, no database persistence, and cautions against entering credentials or confidential customer information. Do not describe image, screen, OCR, file or voice analysis as available until implemented and verified.
 - UI guidance changes require CI and responsive/link checks. Dashboard financial KPIs and data calculations remain separately NOT VERIFIED; improved instructions do not imply data correctness.
+
+- Follow-up within the same PR: the Visual Assistant page itself now includes a three-step usage guide (state goal → request clear steps → verify the saved result) and custom inline SVG artwork. This remains a text-only assistant; no image/screen/document/voice capabilities were added.
