@@ -60,6 +60,20 @@ const navigation: { section: string; items: NavItem[] }[] = [
     ],
   },
   {
+    section: 'WORK MANAGEMENT',
+    items: [
+      { label: 'Tasks', href: '/work-management/tasks', icon: ClipboardList },
+      { label: 'Projects', href: '/work-management/projects', icon: FolderKanban },
+      { label: 'Meetings & Minutes', href: '/work-management/meetings', icon: CalendarDays },
+    ],
+  },
+  {
+    section: 'LEARNING & SUPPORT',
+    items: [
+      { label: 'Tutorials & Courses', href: '/tutorials', icon: BookOpen },
+    ],
+  },
+  {
     section: 'INSIGHTS',
     items: [
       { label: 'Analytics', href: '/analytics', icon: TrendingUp },
