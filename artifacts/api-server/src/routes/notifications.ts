@@ -20,24 +20,39 @@ const router: IRouter = Router();
 
 
 const NotificationPreferencesInput = z.object({
-  taskReminders: z.boolean(),
-}).strict();
+  taskReminders: z.boolean().optional(),
+  taskReminderEmail: z.boolean().optional(),
+}).strict().refine(value => value.taskReminders !== undefined || value.taskReminderEmail !== undefined, "Choose at least one preference to update.");
 
 router.get("/notifications/preferences", requireUser, async (req, res) => {
-  const [user] = await db.select({ preferences: users.notificationPreferences })
+  const [user] = await db.select({ preferences: users.notificationPreferences, email: users.email })
     .from(users).where(eq(users.id, req.user!.id)).limit(1);
   if (!user) throw new NotFoundError("User not found");
-  res.json({ taskReminders: user.preferences?.taskReminders ?? true });
+  res.json({
+    taskReminders: user.preferences?.taskReminders ?? true,
+    taskReminderEmail: user.preferences?.taskReminderEmail ?? false,
+    hasEmail: Boolean(user.email),
+  });
 });
 
 router.patch("/notifications/preferences", requireUser, async (req, res) => {
   const input = NotificationPreferencesInput.parse(req.body);
+  const [current] = await db.select({ preferences: users.notificationPreferences, email: users.email })
+    .from(users).where(eq(users.id, req.user!.id)).limit(1);
+  if (!current) throw new NotFoundError("User not found");
+  if (input.taskReminderEmail === true && !current.email) {
+    throw new BadRequestError("Add an email address to your profile before enabling email reminders.");
+  }
   const [user] = await db.update(users)
-    .set({ notificationPreferences: { taskReminders: input.taskReminders }, updatedAt: new Date() })
+    .set({ notificationPreferences: { ...(current.preferences ?? {}), ...input }, updatedAt: new Date() })
     .where(eq(users.id, req.user!.id))
-    .returning({ preferences: users.notificationPreferences });
+    .returning({ preferences: users.notificationPreferences, email: users.email });
   if (!user) throw new NotFoundError("User not found");
-  res.json({ taskReminders: user.preferences?.taskReminders ?? true });
+  res.json({
+    taskReminders: user.preferences?.taskReminders ?? true,
+    taskReminderEmail: user.preferences?.taskReminderEmail ?? false,
+    hasEmail: Boolean(user.email),
+  });
 });
 
 router.get(
