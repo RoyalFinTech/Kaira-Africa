@@ -11,23 +11,23 @@ import { apiRequestJson } from "@/lib/api-client";
 
 type Task={id:string;title:string;description:string|null;status:"todo"|"in_progress"|"done"|"cancelled";priority:"low"|"medium"|"high"|"urgent";dueDate:string|null;projectId:string|null;assignedTo:string|null;createdAt:string};
 type Project={id:string;name:string;description:string|null;status:string;dueDate:string|null};
-type Meeting={id:string;title:string;meetingType:string;startsAt:string|null;agenda:string|null;minutes:string|null;decisions:string|null;status:string;attendees:string[]};
+type Meeting={id:string;title:string;meetingType:string;startsAt:string|null;agenda:string|null;minutes:string|null;decisions:string|null;status:string;attendees:string[]};\ntype Assignee={userId:string;firstName:string;lastName:string;role:string};
 type Tab="tasks"|"projects"|"meetings";
 const statusLabel=(s:string)=>s==="todo"?"To do":s==="in_progress"?"In progress":s==="done"?"Completed":s==="scheduled"?"Scheduled":s.replace("_"," ");
 export default function WorkManagementPage(){
  const [location,setLocation]=useLocation();\n const initialTab:Tab=location.endsWith("/projects")?"projects":location.endsWith("/meetings")?"meetings":"tasks";\n const qc=useQueryClient(),[tab,setTab]=useState<Tab>(initialTab),[showForm,setShowForm]=useState(false),[notice,setNotice]=useState(""),[error,setError]=useState("");
- const [title,setTitle]=useState(""),[description,setDescription]=useState(""),[priority,setPriority]=useState("medium"),[dueDate,setDueDate]=useState(""),[projectId,setProjectId]=useState("");
+ const [title,setTitle]=useState(""),[description,setDescription]=useState(""),[priority,setPriority]=useState("medium"),[dueDate,setDueDate]=useState(""),[projectId,setProjectId]=useState(""),[assignedTo,setAssignedTo]=useState("");
  const [meetingDate,setMeetingDate]=useState(""),[agenda,setAgenda]=useState(""),[minutes,setMinutes]=useState(""),[decisions,setDecisions]=useState("");
  const tasksQ=useQuery({queryKey:["work-tasks"],queryFn:()=>apiRequestJson<Task[]>("/work/tasks")});
  const projectsQ=useQuery({queryKey:["work-projects"],queryFn:()=>apiRequestJson<Project[]>("/work/projects")});
- const meetingsQ=useQuery({queryKey:["work-meetings"],queryFn:()=>apiRequestJson<Meeting[]>("/work/meetings")});
+ const meetingsQ=useQuery({queryKey:["work-meetings"],queryFn:()=>apiRequestJson<Meeting[]>("/work/meetings")});\n const assigneesQ=useQuery({queryKey:["work-assignees"],queryFn:()=>apiRequestJson<Assignee[]>("/work/assignees")});
  const tasks=tasksQ.data??[],projects=projectsQ.data??[],meetings=meetingsQ.data??[];
  const activeTasks=useMemo(()=>tasks.filter(t=>t.status!=="done"&&t.status!=="cancelled"),[tasks]);
  const save=useMutation({mutationFn:async()=>{
-  if(tab==="tasks") return apiRequestJson("/work/tasks",{method:"POST",body:JSON.stringify({title,description:description||undefined,priority,dueDate:dueDate||undefined,projectId:projectId||undefined})});
+  if(tab==="tasks") return apiRequestJson("/work/tasks",{method:"POST",body:JSON.stringify({title,description:description||undefined,priority,dueDate:dueDate||undefined,projectId:projectId||undefined,assignedTo:assignedTo||undefined})});
   if(tab==="projects") return apiRequestJson("/work/projects",{method:"POST",body:JSON.stringify({name:title,description:description||undefined,dueDate:dueDate||undefined})});
   return apiRequestJson("/work/meetings",{method:"POST",body:JSON.stringify({title,startsAt:meetingDate?new Date(meetingDate).toISOString():null,agenda:agenda||undefined,minutes:minutes||undefined,decisions:decisions||undefined,status:"scheduled"})});
- },onSuccess:async()=>{setNotice(tab==="tasks"?"Task created.":tab==="projects"?"Project created.":"Meeting and minutes saved.");setError("");setTitle("");setDescription("");setPriority("medium");setDueDate("");setProjectId("");setAgenda("");setMinutes("");setDecisions("");setMeetingDate("");setShowForm(false);await Promise.all([qc.invalidateQueries({queryKey:["work-tasks"]}),qc.invalidateQueries({queryKey:["work-projects"]}),qc.invalidateQueries({queryKey:["work-meetings"]})]);},onError:(e)=>setError(e instanceof Error?e.message:"Could not save. Please try again.")});
+ },onSuccess:async()=>{setNotice(tab==="tasks"?"Task created.":tab==="projects"?"Project created.":"Meeting and minutes saved.");setError("");setTitle("");setDescription("");setPriority("medium");setDueDate("");setProjectId("");setAssignedTo("");setAgenda("");setMinutes("");setDecisions("");setMeetingDate("");setShowForm(false);await Promise.all([qc.invalidateQueries({queryKey:["work-tasks"]}),qc.invalidateQueries({queryKey:["work-projects"]}),qc.invalidateQueries({queryKey:["work-meetings"]})]);},onError:(e)=>setError(e instanceof Error?e.message:"Could not save. Please try again.")});
  const changeStatus=useMutation({mutationFn:({id,status}:{id:string;status:Task["status"]})=>apiRequestJson("/work/tasks/"+id,{method:"PATCH",body:JSON.stringify({status})}),onSuccess:()=>qc.invalidateQueries({queryKey:["work-tasks"]}),onError:e=>setError(e instanceof Error?e.message:"Could not update task.")});
  const tabItems:[Tab,string,typeof ClipboardList][]=[["tasks","Tasks",ClipboardList],["projects","Projects",FolderKanban],["meetings","Meetings & minutes",CalendarDays]];
  const loading=tasksQ.isLoading||projectsQ.isLoading||meetingsQ.isLoading;
