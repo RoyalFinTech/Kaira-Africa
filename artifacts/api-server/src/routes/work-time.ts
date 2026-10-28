@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db, workTimeEntries, workTasks, users } from "@workspace/db";
-import { requireBusiness, requireRole, requireUser } from "../middlewares/auth";
+import { requireBusiness, requireUser } from "../middlewares/auth";
 
 const router: IRouter = Router();
 const startInput = z.object({
