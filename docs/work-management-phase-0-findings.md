@@ -18,7 +18,7 @@ Baseline main commit: `80d447b6837fe5453cbec84c1e0c3de02c750919`
 - Repository Drizzle journal includes tags `0000` through `0012_savings_tracker`.
 - Supabase's migration listing returned six entries with names that do not align one-to-one with the repository journal.
 - Live Supabase tables include investment and savings tables, so the short migration listing does not mean those features are absent.
-- Read-only inspection confirms the database has `drizzle.__drizzle_migrations`, but the actual recorded rows and their relation to repository journal entries still need comparison.
+- Read-only inspection confirms `drizzle.__drizzle_migrations` contains 13 rows, with `created_at` timestamps matching the 13 repository journal entries. This suggests the shorter Supabase migration-list output is a separate tracking/listing discrepancy rather than evidence that the Drizzle migration table only contains six entries. SQL hashes have not yet been recomputed against each repository migration file, so migration integrity is not fully reconciled.
 - Do not run/replay migrations, use `drizzle-kit push`, or apply feature DDL to production until this comparison is complete and reviewed.
 
 ## Security review observations
