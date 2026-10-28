@@ -10,6 +10,8 @@ import {
   Activity,
   Package,
   ClipboardList,
+  CalendarDays,
+  FolderKanban,
   BrainCircuit,
   ReceiptText,
   CreditCard,
