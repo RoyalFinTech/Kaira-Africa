@@ -17,6 +17,10 @@ type TeamMessage = {
 export default function TeamChatPage() {
   const [content, setContent] = useState("");
   const [messageType, setMessageType] = useState<"message" | "announcement">("message");
+  const [olderMessages, setOlderMessages] = useState<TeamMessage[]>([]);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(true);
+  const [olderMessagesError, setOlderMessagesError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const messagesQuery = useQuery({
     queryKey: ["team-chat-messages"],
@@ -33,7 +37,26 @@ export default function TeamChatPage() {
       await queryClient.invalidateQueries({ queryKey: ["team-chat-messages"] });
     },
   });
-  const messages = messagesQuery.data ?? [];
+  const latestMessages = messagesQuery.data ?? [];
+  const messages = [...olderMessages, ...latestMessages].filter((message, index, all) =>
+    all.findIndex((candidate) => candidate.id === message.id) === index
+  );
+  const canLoadOlder = hasMoreOlder && (olderMessages.length > 0 || latestMessages.length >= 100);
+  const loadOlderMessages = async () => {
+    const oldest = messages[0];
+    if (!oldest || isLoadingOlder || !canLoadOlder) return;
+    setIsLoadingOlder(true);
+    setOlderMessagesError(null);
+    try {
+      const batch = await apiRequestJson<TeamMessage[]>(`/team-chat/messages?before=${encodeURIComponent(oldest.createdAt)}`);
+      setOlderMessages((previous) => [...batch, ...previous]);
+      setHasMoreOlder(batch.length === 100);
+    } catch {
+      setOlderMessagesError("Older messages could not be loaded. Please try again.");
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -50,7 +73,7 @@ export default function TeamChatPage() {
         {messagesQuery.isLoading ? <p className="py-8 text-center text-sm text-slate-500">Loading messages…</p>
           : messagesQuery.isError ? <div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">Could not load team messages. Please try again.</div>
           : messages.length === 0 ? <p className="rounded-xl bg-slate-50 p-8 text-center text-sm text-slate-500">No messages yet. Start the conversation with a work update or announcement.</p>
-          : <div className="max-h-[480px] space-y-3 overflow-y-auto py-2">{messages.map((message) => (
+          : <div className="max-h-[480px] space-y-3 overflow-y-auto py-2">{canLoadOlder && <div className="flex flex-col items-center gap-2 py-2"><Button type="button" variant="outline" size="sm" onClick={loadOlderMessages} disabled={isLoadingOlder}>{isLoadingOlder ? "Loading older messages…" : "Load older messages"}</Button>{olderMessagesError && <p role="alert" className="text-xs text-red-700">{olderMessagesError}</p>}</div>}{messages.map((message) => (
             <article key={message.id} className={`rounded-xl border p-4 ${message.messageType === "announcement" ? "border-amber-200 bg-amber-50/70" : "border-slate-100 bg-slate-50"}`}>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">{message.messageType === "announcement" ? <Megaphone className="h-4 w-4 text-amber-700" /> : <MessageCircle className="h-4 w-4 text-emerald-800" />}{message.messageType === "announcement" ? "Announcement" : "Team message"}</span>
