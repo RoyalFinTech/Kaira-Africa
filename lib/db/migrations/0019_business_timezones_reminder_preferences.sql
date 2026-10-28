@@ -1,6 +1,9 @@
 ALTER TABLE businesses
   ADD COLUMN IF NOT EXISTS timezone text NOT NULL DEFAULT 'Africa/Banjul';
 
+ALTER TABLE work_meetings
+  ADD COLUMN IF NOT EXISTS timezone text NOT NULL DEFAULT 'Africa/Banjul';
+
 CREATE TABLE IF NOT EXISTS work_task_reminder_preferences (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id uuid NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
