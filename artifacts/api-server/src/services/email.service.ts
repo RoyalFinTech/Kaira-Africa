@@ -37,6 +37,7 @@ interface SendEmailInput {
   subject: string;
   html: string;
   text?: string;
+  messageId?: string;
 }
 
 async function sendEmail(input: SendEmailInput): Promise<boolean> {
@@ -54,6 +55,7 @@ async function sendEmail(input: SendEmailInput): Promise<boolean> {
     subject: input.subject,
     html: input.html,
     text: input.text,
+    messageId: input.messageId,
   });
   return true;
 }
@@ -112,6 +114,7 @@ export async function sendTaskReminderEmail(input: {
   subject: string;
   message: string;
   actionUrl: string;
+  messageId?: string;
 }): Promise<boolean> {
   const safeMessage = escapeHtml(input.message);
   const baseUrl = env.FRONTEND_URL ?? (isProd ? "https://kaira-africa-frontend.onrender.com" : env.WEB_BASE_URL);
@@ -122,5 +125,6 @@ export async function sendTaskReminderEmail(input: {
     subject: input.subject,
     text: input.message + "\nOpen Kaira Africa: " + absoluteUrl,
     html: "<p>" + safeMessage + "</p><p><a href=\"" + safeUrl + "\">Open Kaira Africa</a></p>",
+    messageId: input.messageId,
   });
 }
