@@ -335,6 +335,15 @@ function Router() {
         <Route path="/savings">
           {() => <ProtectedRoute component={SavingsPage} />}
         </Route>
+        <Route path="/work-management/:section">
+          {() => <ProtectedRoute component={WorkManagementPage} />}
+        </Route>
+        <Route path="/work-management">
+          {() => <ProtectedRoute component={WorkManagementPage} />}
+        </Route>
+        <Route path="/tutorials">
+          {() => <ProtectedRoute component={TutorialsPage} />}
+        </Route>
         <Route path="/receipt-branding">
           {() => <ProtectedRoute component={ReceiptBrandingPage} />}
         </Route>
