@@ -14,6 +14,8 @@ import {
   FileText,
   ClipboardList,
   Package,
+  BookOpen,
+  Sparkles,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,6 +96,38 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
+        </section>
+
+        {/* Practical first steps: a real guide to the main tools, not just shortcuts. */}
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+          <Card className="relative overflow-hidden rounded-2xl border-emerald-100 shadow-sm">
+            <CardContent className="relative p-5 sm:p-6">
+              <svg aria-hidden="true" viewBox="0 0 180 120" className="pointer-events-none absolute right-2 top-2 h-24 w-36 opacity-90 sm:h-28 sm:w-44">
+                <path d="M88 7C126 0 171 22 171 57s-28 57-64 56S24 97 30 62 51 13 88 7Z" fill="#D1FAE5"/>
+                <path d="M76 27h55a8 8 0 0 1 8 8v40a8 8 0 0 1-8 8H76a8 8 0 0 1-8-8V35a8 8 0 0 1 8-8Z" fill="#0D3B2A"/>
+                <path d="m83 45 8 8-8 8m15 0h21" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <circle cx="42" cy="28" r="6" fill="#E7B32B"/><circle cx="148" cy="98" r="5" fill="#B45309"/>
+              </svg>
+              <Badge className="mb-2 bg-emerald-100 text-emerald-900">A SIMPLE WAY TO START</Badge>
+              <h2 className="max-w-md text-xl font-bold text-slate-900 sm:text-2xl">Build a clear daily routine</h2>
+              <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">You do not need to fill every tool at once. Start with accurate records, review them, then plan your next action.</p>
+              <ol className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <li className="rounded-xl border border-slate-100 bg-slate-50 p-3"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white">1</span><p className="mt-2 text-sm font-semibold text-slate-900">Record</p><p className="mt-1 text-xs leading-5 text-slate-600">Enter real sales, expenses or stock changes.</p></li>
+                <li className="rounded-xl border border-slate-100 bg-slate-50 p-3"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white">2</span><p className="mt-2 text-sm font-semibold text-slate-900">Review</p><p className="mt-1 text-xs leading-5 text-slate-600">Check dates, currency and saved totals.</p></li>
+                <li className="rounded-xl border border-slate-100 bg-slate-50 p-3"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-white">3</span><p className="mt-2 text-sm font-semibold text-slate-900">Plan</p><p className="mt-1 text-xs leading-5 text-slate-600">Use tasks or savings goals for next steps.</p></li>
+              </ol>
+              <Link href="/tutorials"><Button variant="outline" className="mt-4 gap-2"><BookOpen className="h-4 w-4"/>Open tutorials <ArrowRight className="h-4 w-4"/></Button></Link>
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl border-amber-200 bg-gradient-to-br from-amber-50 via-white to-emerald-50 shadow-sm">
+            <CardContent className="flex h-full flex-col items-start p-5 sm:p-6">
+              <span className="rounded-xl bg-emerald-900 p-3 text-white"><Sparkles className="h-5 w-5"/></span>
+              <h2 className="mt-3 text-lg font-bold text-slate-900">Need help using Kaira?</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Ask the Visual Assistant for written step-by-step guidance, such as how to record a sale or organise tasks. This version is text-only and cannot view your screen or analyse images.</p>
+              <p className="mt-3 text-xs leading-5 text-slate-600">Never enter passwords, PINs, one-time codes or confidential customer details. Verify important figures against your saved records.</p>
+              <div className="mt-auto flex flex-wrap gap-2 pt-4"><Link href="/visual-assistant"><Button className="gap-2 bg-[#0D3B2A] hover:bg-emerald-900"><Sparkles className="h-4 w-4"/>Ask assistant</Button></Link><Link href="/tutorials"><Button variant="outline">Learn the tools</Button></Link></div>
+            </CardContent>
+          </Card>
         </section>
 
         {/* KPI Cards */}
