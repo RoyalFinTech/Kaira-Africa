@@ -20,6 +20,7 @@ import savingsRouter from "./savings";
 import workManagementRouter from "./work-management";
 import workNotesRouter from "./work-notes";
 import teamChatRouter from "./team-chat";
+import workTimeRouter from "./work-time";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(savingsRouter);
 router.use(workManagementRouter);
 router.use(workNotesRouter);
 router.use(teamChatRouter);
+router.use(workTimeRouter);
 
 export default router;

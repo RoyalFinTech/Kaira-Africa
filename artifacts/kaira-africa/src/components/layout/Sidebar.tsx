@@ -72,6 +72,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Calendar & Schedule', href: '/calendar', icon: Clock3 },
       { label: 'Notes & Documents', href: '/work-notes', icon: StickyNote },
       { label: 'Team Chat & Announcements', href: '/team-chat', icon: MessageCircle },
+      { label: 'My Work Time', href: '/work-time', icon: Clock3 },
     ],
   },
   {
