@@ -26,7 +26,7 @@ This is the implementation-level companion to [ENGINEERING_SOURCE_OF_TRUTH.md](.
 | Work Management — Tasks | `/work-management/:section`, WorkManagementPage | `work-management.ts`; `work_tasks`, `work_task_events` | IMPLEMENTED IN CODE; PRODUCTION E2E NOT VERIFIED | Signed-in create/edit/status/refresh/authorization tests |
 | Work Management — Projects | WorkManagementPage section | `work_projects` | IMPLEMENTED IN CODE; PRODUCTION E2E NOT VERIFIED | Create/edit/group tasks/refresh/authorization tests |
 | Work Management — Meetings & Minutes | WorkManagementPage section | `work_meetings` | IMPLEMENTED IN CODE; PRODUCTION E2E NOT VERIFIED | Save agenda/attendees/notes/decisions and verify refresh persistence |
-| Work Management — Calendar & Schedule | No dedicated destination found in checked routes | Not yet audited | NOT IMPLEMENTED / NOT VERIFIED | Implement persistent calendar and event integration |
+| Work Management — Calendar & Schedule | `/calendar`, CalendarSchedulePage | Reads business-scoped `/work/tasks` and `/work/meetings`; combines dated tasks and meetings | IMPLEMENTED IN CODE; INTEGRATION TEST NOT VERIFIED | Run CI and signed-in tests; standalone events, recurring events, reminders and external calendar sync remain NOT IMPLEMENTED |
 | Work Management — Notes & Documents | No dedicated destination found in checked routes | Not yet audited | NOT IMPLEMENTED / NOT VERIFIED | Implement CRUD/search/categories and safe document storage if file support is included |
 | Work Management — Reminders | Notification page exists; task reminders not established | Delivery mechanism not verified | NOT IMPLEMENTED / NOT VERIFIED | Define schedule semantics and implement persistent reminders/delivery |
 | Work Management — Time Tracking | No dedicated destination found in checked routes | Not yet audited | NOT IMPLEMENTED / NOT VERIFIED | Implement timer/manual entries, task links and reports |
@@ -48,7 +48,7 @@ This is the implementation-level companion to [ENGINEERING_SOURCE_OF_TRUTH.md](.
 | Work-management tables exist | Previous read-only Supabase query found `work_meetings`, `work_projects`, `work_task_events`, `work_tasks` | VERIFIED AT THAT TIME; RECHECK AFTER CHANGES |
 | RLS enabled / no direct SELECT grants for anon/authenticated on those tables | Previous read-only Supabase check | VERIFIED AT THAT TIME; re-audit all operation grants/policies and API scoping |
 | Authenticated production CRUD smoke test | No evidence available in this audit | NOT RUN / NOT VERIFIED |
-| Visual Assistant real workflow | No implementation evidence available | NOT IMPLEMENTED / NOT VERIFIED |
+| Visual Assistant real workflow | PR #89 merged as `ac4b6f5527343456bdb3d962d8847e2281321fff`; CI passed for PR head | IMPLEMENTED IN CODE; production workflow NOT VERIFIED |
 
 ## Update policy
 
