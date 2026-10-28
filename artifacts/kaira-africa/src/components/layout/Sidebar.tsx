@@ -11,7 +11,7 @@ import {
   Package,
   ClipboardList,
   CalendarDays,
-  FolderKanban,
+  FolderKanban,\n  BookOpen,
   BrainCircuit,
   ReceiptText,
   CreditCard,
