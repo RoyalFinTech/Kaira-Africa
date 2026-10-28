@@ -82,12 +82,16 @@ router.get("/work/meetings",requireUser,async(req,res)=>{
 });
 router.post("/work/meetings",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req),input=meetingInput.parse(req.body);
- const [meeting]=await db.insert(workMeetings).values({businessId,createdBy:req.user!.id,title:input.title,meetingType:input.meetingType,startsAt:input.startsAt?new Date(input.startsAt):null,attendees:input.attendees,agenda:input.agenda||null,minutes:input.minutes||null,decisions:input.decisions||null,status:input.status||"scheduled"}).returning();
+ const [business]=await db.select({timezone:businesses.timezone}).from(businesses).where(eq(businesses.id,businessId)).limit(1);
+ const timezone=input.timezone ?? business?.timezone ?? "Africa/Banjul";
+ try { new Intl.DateTimeFormat("en-US",{timeZone:timezone}).format(new Date()); } catch { throw new BadRequestError("Choose a valid IANA time zone."); }
+ const [meeting]=await db.insert(workMeetings).values({businessId,createdBy:req.user!.id,title:input.title,meetingType:input.meetingType,startsAt:input.startsAt?new Date(input.startsAt):null,timezone,attendees:input.attendees,agenda:input.agenda||null,minutes:input.minutes||null,decisions:input.decisions||null,status:input.status||"scheduled"}).returning();
  res.status(201).json(meeting);
 });
 router.patch("/work/meetings/:id",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req),id=z.string().uuid().parse(req.params.id),input=meetingInput.partial().parse(req.body);
  const {startsAt,...meetingFields}=input;
+ if (meetingFields.timezone) { try { new Intl.DateTimeFormat("en-US",{timeZone:meetingFields.timezone}).format(new Date()); } catch { throw new BadRequestError("Choose a valid IANA time zone."); } }
  const [meeting]=await db.update(workMeetings).set({...meetingFields,...(startsAt!==undefined?{startsAt:startsAt?new Date(startsAt):null}:{}),updatedAt:new Date()}).where(and(eq(workMeetings.id,id),eq(workMeetings.businessId,businessId))).returning();
  if(!meeting) throw new NotFoundError("Meeting not found."); res.json(meeting);
 });
