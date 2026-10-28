@@ -32,6 +32,7 @@ export const businesses = pgTable("businesses", {
   industry: text("industry").notNull(),
   country: text("country").notNull().default("The Gambia"),
   city: text("city").notNull(),
+  timezone: text("timezone").notNull().default("Africa/Banjul"),
 
   phone: text("phone"),
   email: text("email"),
