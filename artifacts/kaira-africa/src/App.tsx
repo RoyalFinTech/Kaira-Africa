@@ -338,6 +338,9 @@ function Router() {
         <Route path="/daily-ledger">
           {() => <ProtectedRoute component={DailyLedgerPage} />}
         </Route>
+        <Route path="/calculator">
+          {() => <ProtectedRoute component={SmartCalculatorPage} />}
+        </Route>
         <Route path="/investments">
           {() => <ProtectedRoute component={InvestmentPlannerPage} />}
         </Route>
