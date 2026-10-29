@@ -43,6 +43,7 @@ const InventoryPage      = lazy(() => import('@/pages/app/InventoryPage'));
 const AiReportsPage      = lazy(() => import('@/pages/app/AiReportsPage'));
 const VisualAssistantPage = lazy(() => import('@/pages/app/VisualAssistantPage'));
 const DailyLedgerPage    = lazy(() => import('@/pages/app/DailyLedgerPage'));
+const SmartCalculatorPage = lazy(() => import('@/pages/app/SmartCalculatorPage'));
 const InvestmentPlannerPage = lazy(() => import('@/pages/app/InvestmentPlannerPage'));
 const SavingsPage = lazy(() => import('@/pages/app/SavingsPage'));
 const WorkManagementPage = lazy(() => import('@/pages/app/WorkManagementPage'));
@@ -336,6 +337,9 @@ function Router() {
         </Route>
         <Route path="/daily-ledger">
           {() => <ProtectedRoute component={DailyLedgerPage} />}
+        </Route>
+        <Route path="/calculator">
+          {() => <ProtectedRoute component={SmartCalculatorPage} />}
         </Route>
         <Route path="/investments">
           {() => <ProtectedRoute component={InvestmentPlannerPage} />}

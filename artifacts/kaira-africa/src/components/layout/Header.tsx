@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Bell, Search, Menu } from 'lucide-react';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
+import { KairaLogo } from '@/components/common/KairaLogo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -17,9 +18,10 @@ import { Link, useLocation } from 'wouter';
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  onDesktopMenuToggle?: () => void;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
   const [location, setLocation] = useLocation();
   const { data: user } = useGetMe();
   const { data: notifications } = useListNotifications({ unreadOnly: true });
@@ -82,17 +84,36 @@ export function Header({ onMenuClick }: HeaderProps) {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
+        <button
+          type="button"
+          aria-label="Open Kaira Africa menu"
+          title="Open Kaira Africa menu"
+          onClick={onMenuClick}
+          className="flex items-center rounded-lg p-1.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+        >
+          <KairaLogo width={112} height={36} />
+        </button>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Open navigation menu"
-          title="Open navigation menu"
+          aria-label="Toggle navigation menu"
+          title="Toggle navigation menu"
           className="lg:hidden"
           onClick={onMenuClick}
         >
           <Menu className="h-5 w-5" />
         </Button>
-        {/* Back navigation plus mobile menu; route title belongs to each page. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Collapse or expand sidebar"
+          title="Collapse or expand sidebar"
+          className="hidden lg:inline-flex"
+          onClick={onDesktopMenuToggle}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        {/* Route title belongs to each page. */}
       </div>
 
       {/* Right: Search, Notifications, Avatar */}
