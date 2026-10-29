@@ -45,11 +45,11 @@ export const INVENTORY_CATEGORIES = [
   "Second-hand goods",
   "General merchandise",
   "Other",
-] as const;
+];
 
 export const INVENTORY_UNITS = [
   "piece", "pack", "box", "carton", "bag", "bottle", "can", "cup",
   "plate", "portion", "sachet", "bundle", "pair", "dozen", "kg", "g",
   "litre", "ml", "metre", "roll", "sack", "crate", "tray", "service",
   "hour", "day", "Other",
-] as const;
+];
