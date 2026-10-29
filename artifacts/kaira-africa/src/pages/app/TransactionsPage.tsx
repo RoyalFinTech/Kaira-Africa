@@ -36,11 +36,11 @@ import { formatDate, formatMoneyInput, parseMoneyInput } from "@/lib/utils";
 
 const TRANSACTION_TYPES = ["payment", "refund", "transfer", "withdrawal", "deposit"] as const;
 const CURRENCIES: { code: TransactionCurrency; label: string }[] = [
-  { code: "GMD", label: "GMD — Gambian dalasi" },
-  { code: "NGN", label: "NGN — Nigerian naira" },
-  { code: "USD", label: "USD — US dollar" },
-  { code: "EUR", label: "EUR — Euro" },
-  { code: "GBP", label: "GBP — British pound" },
+  { code: "GMD", label: "🇬🇲 GMD — Gambian dalasi (D)" },
+  { code: "NGN", label: "🇳🇬 NGN — Nigerian naira (₦)" },
+  { code: "USD", label: "🇺🇸 USD — US dollar ($)" },
+  { code: "EUR", label: "🇪🇺 EUR — Euro (€)" },
+  { code: "GBP", label: "🇬🇧 GBP — British pound (£)" },
 ];
 const PAYMENT_METHODS: { value: TransactionPaymentMethod; label: string }[] = [
   { value: "manual_entry", label: "Manual entry / bookkeeping" },
