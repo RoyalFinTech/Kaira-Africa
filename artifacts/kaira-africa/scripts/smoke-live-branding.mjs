@@ -1190,19 +1190,19 @@ try {
 
       await pinPage.getByPlaceholder('e.g. 25 kg bag of rice').fill('Rice 25 kg bag');
       await pinPage.getByPlaceholder('e.g. RICE-25KG').fill('RICE-SMOKE-25KG');
-      await pinPage.getByPlaceholder('e.g. Food, clothing, supplies').fill('Food');
-      await pinPage.getByPlaceholder('piece, bag, bottle, box').fill('bag');
+      await pinPage.getByLabel('Category (optional)').selectOption('Food and groceries');
+      await pinPage.getByLabel('Unit name').selectOption('bag');
       const inventoryNumbers = pinPage.locator('input[type="number"]');
       await inventoryNumbers.nth(0).fill('12');
       await inventoryNumbers.nth(1).fill('3');
-      await pinPage.locator('select').selectOption('NGN');
+      await pinPage.getByLabel('Currency for this item').selectOption('NGN');
       await inventoryNumbers.nth(2).fill('7.5');
       await inventoryNumbers.nth(3).fill('10');
 
       // Small synthetic image: browser compression and API handling are tested,
       // while the intercepted route ensures no real product/photo is created.
       const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
-      await pinPage.locator('input[type="file"]').setInputFiles({
+      await pinPage.locator('input[type="file"]:not([capture])').setInputFiles({
         name: 'rice-product.png',
         mimeType: 'image/png',
         buffer: onePixelPng,
@@ -1213,6 +1213,8 @@ try {
       assert.equal(inventoryCreateRequests.length, 1, 'Inventory form should make one intercepted product-create request');
       assert.equal(inventoryCreateRequests[0].name, 'Rice 25 kg bag', 'Inventory form should submit the product name');
       assert.equal(inventoryCreateRequests[0].sku, 'RICE-SMOKE-25KG', 'Inventory form should submit the item code');
+      assert.equal(inventoryCreateRequests[0].category, 'Food and groceries', 'Inventory form should submit the selected shared business category');
+      assert.equal(inventoryCreateRequests[0].unit, 'bag', 'Inventory form should submit the selected unit');
       assert.equal(inventoryCreateRequests[0].currency, 'NGN', 'Inventory form should submit the selected currency');
       assert.equal(inventoryImageRequests.length, 1, 'Optional product photo should upload once after product creation');
       assert.equal(inventoryImageRequests[0].jpegDataUrl, true, 'Product photo should be converted to JPEG before upload');
