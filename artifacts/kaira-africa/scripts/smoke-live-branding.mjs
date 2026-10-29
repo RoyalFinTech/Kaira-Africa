@@ -1074,6 +1074,9 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Transaction currency ${code} should display its flag`);
       }
       await pinPage.keyboard.press('Escape');
+      const selectedTransactionFlag = pinPage.getByLabel('Transaction currency').locator('..').getByText('🇬🇲', { exact: true });
+      assert.equal(await selectedTransactionFlag.count(), 1, 'Selected transaction currency should render one flag node');
+      assert.ok(await selectedTransactionFlag.isVisible(), 'Selected transaction currency flag should remain visible after closing the dropdown');
       await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Transaction amount').fill('1250000');
