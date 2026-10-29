@@ -12,6 +12,7 @@ import { PageTransition } from "@/components/common/PageTransition";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerEntry, type DailyLedgerResponse, type DailyLedgerType, type DailyLedgerCurrency } from "@/lib/platform-api";
 import { formatCurrency } from "@/lib/utils";
+import { INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
 
 const TYPE_LABELS: Record<DailyLedgerType, string> = {
   sale: "Sale / sales received",
@@ -22,9 +23,9 @@ const TYPE_LABELS: Record<DailyLedgerType, string> = {
 };
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 const LEDGER_CATEGORIES: Record<DailyLedgerType, string[]> = {
-  sale: ["Retail sales", "Wholesale sales", "Product sales", "Service income", "Online sales", "Other"],
+  sale: ["Retail sales", "Wholesale sales", "Product sales", "Service income", "Online sales", ...INVENTORY_CATEGORIES],
   expense: ["Stock purchase", "Transport", "Rent", "Utilities", "Staff salaries", "Marketing", "Internet & data", "Repairs & maintenance", "Office supplies", "Bank charges", "Other"],
-  debt: ["Retail credit sale", "Wholesale credit sale", "Service on credit", "Other"],
+  debt: ["Retail credit sale", "Wholesale credit sale", "Service on credit", ...INVENTORY_CATEGORIES],
   debt_payment: ["Customer repayment", "Part payment", "Final repayment", "Other"],
   other_income: ["Commission", "Interest", "Refund", "Other"],
 };
@@ -308,7 +309,10 @@ export default function DailyLedgerPage() {
                         const id = e.target.value;
                         setProductId(id);
                         const product = inventoryProducts.find((p) => p.id === id);
-                        if (product) setAmount((product.salePrice * Number(quantity || 0)).toFixed(2));
+                        if (product) {
+                          setAmount(formatMoneyInput((product.salePrice * Number(quantity || 0)).toFixed(2)));
+                          if (product.category) setCategory(product.category);
+                        }
                       }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                         <option value="">Manual sale (no stock adjustment)</option>
                         {inventoryProducts.filter((p) => p.active && p.currency === currency && p.quantity > 0 && p.salePrice > 0).map((product) => (
