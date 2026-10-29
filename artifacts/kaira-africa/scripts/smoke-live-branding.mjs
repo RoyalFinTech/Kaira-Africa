@@ -1047,13 +1047,15 @@ try {
     }
 
     if (routePath === '/savings') {
-      const currencySelectors = pinPage.getByLabel('Currency');
-      assert.equal(await currencySelectors.count(), 2, 'Savings goal and entry forms should each provide a currency selector');
-      for (let i = 0; i < 2; i += 1) {
-        const selector = currencySelectors.nth(i);
-        assert.match(await selector.locator('option[value="GMD"]').textContent(), /🇬🇲 GMD/, 'Savings GMD option should display the Gambian flag');
-        assert.match(await selector.locator('option[value="NGN"]').textContent(), /🇳🇬 NGN/, 'Savings NGN option should display the Nigerian flag');
-        assert.match(await selector.locator('option[value="USD"]').textContent(), /🇺🇸 USD/, 'Savings USD option should display the US flag');
+      for (const label of ['Savings goal currency', 'Savings entry currency']) {
+        const selector = pinPage.getByLabel(label);
+        assert.equal(await selector.count(), 1, `${label} should be available exactly once`);
+        await selector.click();
+        for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+          assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `${label} should show the ${code} flag option`);
+        }
+        await pinPage.keyboard.press('Escape');
+        assert.match(await selector.locator('..').textContent(), /🇬🇲|🇳🇬|🇺🇸/, `${label} should show a visible selected currency flag`);
       }
     }
 
@@ -1099,11 +1101,14 @@ try {
       const printedLedgerRows = await pinPage.locator('#daily-ledger-print tbody tr').count();
       assert.equal(printedLedgerRows, 101, 'Daily ledger print should include all records across pages in the selected date range');
 
-      // Verify flag labels remain visible in the ledger currency selector.
+      // Verify the flag stays visible beside the selected ledger currency and all choices are flagged.
       const ledgerCurrency = pinPage.getByLabel('Ledger currency');
-      assert.match(await ledgerCurrency.locator('option[value="GMD"]').textContent(), /🇬🇲 GMD/, 'Ledger selector should label GMD with the Gambian flag');
-      assert.match(await ledgerCurrency.locator('option[value="NGN"]').textContent(), /🇳🇬 NGN/, 'Ledger selector should label NGN with the Nigerian flag');
-      assert.match(await ledgerCurrency.locator('option[value="USD"]').textContent(), /🇺🇸 USD/, 'Ledger selector should label USD with the US flag');
+      await ledgerCurrency.click();
+      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+        assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `Ledger selector should show the ${code} flag option`);
+      }
+      await pinPage.keyboard.press('Escape');
+      assert.match(await ledgerCurrency.locator('..').textContent(), /🇬🇲/, 'Selected GMD flag should remain visible on the ledger form');
       // Verify comma-formatted amounts are submitted as their true numeric value.
       await pinPage.getByLabel('Amount in GMD').fill('100000');
       assert.equal(await pinPage.getByLabel('Amount in GMD').inputValue(), '100,000', 'Ledger amount should format thousands with commas while typing');
@@ -1233,10 +1238,13 @@ try {
       const inventoryNumbers = pinPage.locator('input[type="number"]');
       await inventoryNumbers.nth(0).fill('12');
       await inventoryNumbers.nth(1).fill('3');
-      await pinPage.getByLabel('Currency for this item').selectOption('NGN');
+      const inventoryCurrency = pinPage.getByLabel('Currency for this item');
+      await inventoryCurrency.click();
       for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
-        assert.match(await pinPage.getByLabel('Currency for this item').locator(`option[value="${code}"]`).textContent(), new RegExp(flag + ' ' + code), `Inventory currency ${code} should display its flag`);
+        assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `Inventory currency should show the ${code} flag option`);
       }
+      await pinPage.getByRole('option', { name: /🇳🇬 NGN/ }).click();
+      assert.match(await inventoryCurrency.locator('..').textContent(), /🇳🇬/, 'Selected NGN flag should remain visible in inventory');
       await pinPage.getByLabel('Buying cost per unit').fill('7500000');
       assert.equal(await pinPage.getByLabel('Buying cost per unit').inputValue(), '7,500,000', 'Inventory buying cost should format millions with commas');
       await pinPage.getByLabel('Selling price per unit').fill('10000000');
