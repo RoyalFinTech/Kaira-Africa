@@ -37,8 +37,23 @@ export function extractSignedInventoryImageUrl(payload: unknown, baseUrl: string
 }
 
 export function normalizeSignedInventoryImageUrl(baseUrl: string, signedUrl: string): string {
-  if (/^https?:\/\//i.test(signedUrl)) return signedUrl;
-  const base = baseUrl.replace(/\/$/, "");
-  if (signedUrl.startsWith("/storage/v1/")) return base + signedUrl;
-  return `${base}/storage/v1${signedUrl.startsWith("/") ? "" : "/"}${signedUrl}`;
+  const base = new URL(baseUrl);
+  if (base.protocol !== "https:" && base.protocol !== "http:") {
+    throw new Error("Supabase Storage returned an invalid signed URL.");
+  }
+  const candidate = /^https?:\\/\\//i.test(signedUrl)
+    ? new URL(signedUrl)
+    : new URL(
+      signedUrl.startsWith("/storage/v1/")
+        ? signedUrl
+        : `/storage/v1${signedUrl.startsWith("/") ? "" : "/"}${signedUrl}`,
+      base.origin,
+    );
+  if (
+    candidate.origin !== base.origin
+    || !candidate.pathname.startsWith("/storage/v1/object/sign/")
+  ) {
+    throw new Error("Supabase Storage returned an invalid signed URL.");
+  }
+  return candidate.toString();
 }
