@@ -8,7 +8,7 @@ import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { logger } from "../lib/logger";
-import { inventoryImageObjectPath, isInventoryImagePathForProduct, normalizeSignedInventoryImageUrl } from "../lib/inventory-image";
+import { inventoryImageObjectPath, isInventoryImagePathForProduct, extractSignedInventoryImageUrl } from "../lib/inventory-image";
 
 const router: IRouter = Router();
 
@@ -80,12 +80,11 @@ async function requestSignedInventoryImageUrl(storage: ReturnType<typeof require
     const message = await describeInventoryStorageFailure(response, "signing");
     throw new HttpError(502, "inventory_image_signing_failed", message);
   }
-  const result = await response.json() as { signedURL?: string; signedUrl?: string };
-  const signedUrl = result.signedURL ?? result.signedUrl;
-  if (!signedUrl) {
-    throw new HttpError(502, "inventory_image_signing_failed", "Supabase accepted the photo but did not return a private preview link. Try the upload again.");
+  try {
+    return extractSignedInventoryImageUrl(await response.json(), storage.base);
+  } catch {
+    throw new HttpError(502, "inventory_image_signing_failed", "Supabase accepted the photo but did not return a valid private preview link. Try the upload again.");
   }
-  return normalizeSignedInventoryImageUrl(storage.base, signedUrl);
 }
 
 async function removeInventoryImageObject(storage: ReturnType<typeof requireSupabaseStorageConfig>, objectPath: string, businessId: string, productId: string): Promise<void> {
