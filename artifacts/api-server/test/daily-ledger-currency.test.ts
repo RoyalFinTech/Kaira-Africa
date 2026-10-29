@@ -18,3 +18,11 @@ test("ledger money conversion stays exact in every supported currency", () => {
     assert.equal(fromMinorUnits(minor, currency), 125.5);
   }
 });
+
+test("ledger preserves large whole amounts such as 100000 without truncation", () => {
+  for (const currency of ["GMD", "NGN", "USD"]) {
+    const minor = toMinorUnits(100000, currency);
+    assert.equal(minor, 10000000);
+    assert.equal(fromMinorUnits(minor, currency), 100000);
+  }
+});
