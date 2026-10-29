@@ -405,6 +405,7 @@ export default function DailyLedgerPage() {
             {printError && <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert">{printError}</div>}
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
             {ledgerQuery.isLoading ? <div className="h-52 animate-pulse rounded-xl bg-muted" /> : !response?.entries.length ? <div className="py-12 text-center text-sm text-muted-foreground">No daily records in this period. Start by adding your first sale or expense above.</div> : (
+              <>
               <div className="space-y-3 sm:hidden">
                 {response.entries.map((entry) => (
                   <article key={entry.id} className="rounded-xl border p-3">
@@ -441,6 +442,7 @@ export default function DailyLedgerPage() {
                   </tr>)}</tbody>
                 </table>
               </div>
+              </>
             )}
             {!ledgerQuery.isLoading && response && (
               <PaginationControls
