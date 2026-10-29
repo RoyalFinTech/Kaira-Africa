@@ -130,6 +130,8 @@ export default function SmartCalculatorPage() {
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)) return;
       if (/^[0-9.]$/.test(event.key)) { event.preventDefault(); append(event.key); }
       else if (['+', '-', '*', '/', '%', '^', '(', ')'].includes(event.key)) { event.preventDefault(); append(event.key); }
       else if (event.key === 'Enter' || event.key === '=') { event.preventDefault(); calculate(); }
@@ -191,7 +193,7 @@ export default function SmartCalculatorPage() {
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
                 {keys.map(key => (
-                  <Button key={key.label} type="button" variant={key.kind === 'equals' ? 'default' : key.kind === 'operator' ? 'secondary' : 'outline'} onClick={() => key.label === '=' ? calculate() : append(key.label)} className={`h-14 rounded-xl text-lg font-semibold sm:h-16 ${key.kind === 'equals' ? 'bg-[#E7B32B] text-[#10281D] hover:bg-[#F0C64D]' : key.kind === 'operator' ? 'border-primary/20' : ''}`}>
+                  <Button key={key.label} type="button" variant={key.kind === 'equals' ? 'default' : key.kind === 'operator' ? 'secondary' : 'outline'} onClick={() => key.label === '=' ? calculate() : key.label === '%' && result !== null ? (setExpression(String(Number((result / 100).toPrecision(11)))), setJustCalculated(true), setCalcError('')) : append(key.label)} className={`h-14 rounded-xl text-lg font-semibold sm:h-16 ${key.kind === 'equals' ? 'bg-[#E7B32B] text-[#10281D] hover:bg-[#F0C64D]' : key.kind === 'operator' ? 'border-primary/20' : ''}`}>
                     {key.label}
                   </Button>
                 ))}
