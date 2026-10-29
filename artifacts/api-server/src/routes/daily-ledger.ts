@@ -8,6 +8,7 @@ import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
 import { allocateDebtPayment } from "../lib/debt-allocation";
+import { dailyLedgerCurrencySchema } from "../lib/daily-ledger-currency";
 
 const router: IRouter = Router();
 const entryTypes = ["sale", "expense", "debt", "debt_payment", "other_income"] as const;
@@ -18,7 +19,7 @@ const createEntryInput = z.object({
   description: z.string().trim().min(2).max(200),
   category: z.string().trim().max(80).optional(),
   amount: z.number().finite().positive().max(1_000_000_000),
-  currency: z.enum(["GMD", "NGN", "USD"]).default("GMD"),
+  currency: dailyLedgerCurrencySchema.default("GMD"),
   customerName: z.string().trim().max(160).optional(),
   productId: z.string().uuid().optional(),
   quantity: z.number().int().positive().max(100000).optional(),
