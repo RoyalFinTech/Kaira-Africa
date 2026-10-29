@@ -18,6 +18,7 @@ import { PageTransition } from '@/components/common/PageTransition';
 import { useGetMe, useGetMyBusiness, useUpdateBusiness, useLogoutAll, ApiError } from '@workspace/api-client-react';
 import { apiRequestJson, clearToken } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { TimeZoneSelect } from '@/components/common/TimeZoneSelect';
 
 type TabKey = 'business' | 'branding' | 'security' | 'appearance' | 'team' | 'billing' | 'preferences';
 
@@ -50,33 +51,6 @@ function SaveButton({ saved, pending }: { saved: boolean; pending?: boolean }) {
   );
 }
 
-
-const TIME_ZONES = [
-  { value: 'Africa/Banjul', label: 'The Gambia — Banjul (GMT, UTC+00:00)' },
-  { value: 'Africa/Abidjan', label: 'Côte d’Ivoire — Abidjan (UTC+00:00)' },
-  { value: 'Africa/Accra', label: 'Ghana — Accra (UTC+00:00)' },
-  { value: 'Africa/Lagos', label: 'Nigeria — Lagos (UTC+01:00)' },
-  { value: 'Africa/Dakar', label: 'Senegal — Dakar (UTC+00:00)' },
-  { value: 'Africa/Nairobi', label: 'Kenya — Nairobi (UTC+03:00)' },
-  { value: 'Africa/Johannesburg', label: 'South Africa — Johannesburg (UTC+02:00)' },
-  { value: 'Europe/London', label: 'United Kingdom — London' },
-  { value: 'Europe/Paris', label: 'Central Europe — Paris' },
-  { value: 'Europe/Berlin', label: 'Central Europe — Berlin' },
-  { value: 'Europe/Istanbul', label: 'Türkiye — Istanbul (UTC+03:00)' },
-  { value: 'Asia/Dubai', label: 'UAE — Dubai (UTC+04:00)' },
-  { value: 'Asia/Kolkata', label: 'India — Kolkata (UTC+05:30)' },
-  { value: 'Asia/Singapore', label: 'Singapore (UTC+08:00)' },
-  { value: 'Asia/Tokyo', label: 'Japan — Tokyo (UTC+09:00)' },
-  { value: 'Australia/Sydney', label: 'Australia — Sydney' },
-  { value: 'America/New_York', label: 'United States — New York / Eastern' },
-  { value: 'America/Chicago', label: 'United States — Chicago / Central' },
-  { value: 'America/Denver', label: 'United States — Denver / Mountain' },
-  { value: 'America/Los_Angeles', label: 'United States — Los Angeles / Pacific' },
-  { value: 'America/Toronto', label: 'Canada — Toronto / Eastern' },
-  { value: 'America/Vancouver', label: 'Canada — Vancouver / Pacific' },
-  { value: 'America/Sao_Paulo', label: 'Brazil — São Paulo' },
-  { value: 'Pacific/Auckland', label: 'New Zealand — Auckland' },
-];
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -227,10 +201,7 @@ export default function SettingsPage() {
                     <CardHeader><CardTitle>Business time zone</CardTitle><p className="text-sm text-muted-foreground">Used to display meeting times and calculate task reminder dates for your whole business. Remote workers can compare schedules using the same business clock.</p></CardHeader>
                     <CardContent className="space-y-3">
                       <Label htmlFor="business-time-zone">Time zone for schedules and deadlines</Label>
-                      <select id="business-time-zone" className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={businessPreferencesQ.data?.timeZone ?? 'Africa/Banjul'} disabled={businessPreferencesQ.isLoading || timeZoneMutation.isPending || me?.role !== 'owner'} onChange={event => timeZoneMutation.mutate(event.target.value)}>
-                        {TIME_ZONES.map(zone => <option key={zone.value} value={zone.value}>{zone.label}</option>)}
-                        {businessPreferencesQ.data?.timeZone && !TIME_ZONES.some(zone => zone.value === businessPreferencesQ.data?.timeZone) && <option value={businessPreferencesQ.data.timeZone}>{businessPreferencesQ.data.timeZone}</option>}
-                      </select>
+                      <TimeZoneSelect id="business-time-zone" value={businessPreferencesQ.data?.timeZone ?? 'Africa/Banjul'} disabled={businessPreferencesQ.isLoading || timeZoneMutation.isPending || me?.role !== 'owner'} onChange={timeZone => timeZoneMutation.mutate(timeZone)} />
                       <p className="text-xs text-muted-foreground">Times are stored as exact instants and displayed in this selected IANA time zone. Daylight-saving changes follow the time-zone rules.</p>
                       {businessPreferencesQ.error && <p role="alert" className="text-sm text-destructive">Could not load your business time zone. Refresh and try again.</p>}
                       {timeZoneMutation.isPending && <p role="status" className="text-sm text-muted-foreground">Saving time zone…</p>}
