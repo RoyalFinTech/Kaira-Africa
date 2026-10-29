@@ -24,10 +24,10 @@ const TYPE_LABELS: Record<DailyLedgerType, string> = {
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
 const LEDGER_CATEGORIES: Record<DailyLedgerType, string[]> = {
   sale: ["Retail sales", "Wholesale sales", "Product sales", "Service income", "Online sales", ...INVENTORY_CATEGORIES],
-  expense: ["Stock purchase", "Transport", "Rent", "Utilities", "Staff salaries", "Marketing", "Internet & data", "Repairs & maintenance", "Office supplies", "Bank charges", "Other"],
+  expense: ["Stock purchase", "Transport", "Rent", "Utilities", "Staff salaries", "Marketing", "Internet and data", "Repairs and maintenance", "Office supplies", "Bank charges", ...INVENTORY_CATEGORIES],
   debt: ["Retail credit sale", "Wholesale credit sale", "Service on credit", ...INVENTORY_CATEGORIES],
-  debt_payment: ["Customer repayment", "Part payment", "Final repayment", "Other"],
-  other_income: ["Commission", "Interest", "Refund", "Other"],
+  debt_payment: ["Customer repayment", "Part payment", "Final repayment", ...INVENTORY_CATEGORIES],
+  other_income: ["Commission", "Interest", "Refund", ...INVENTORY_CATEGORIES],
 };
 function formatMoneyInput(value: string): string {
   const cleaned = value.replace(/[^0-9.]/g, "");

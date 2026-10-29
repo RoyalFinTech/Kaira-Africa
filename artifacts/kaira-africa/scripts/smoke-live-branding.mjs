@@ -296,6 +296,7 @@ try {
   const pinLoginRequests = [];
   const pinSetRequests = [];
   const inventoryCreateRequests = [];
+  const dailyLedgerCreateRequests = [];
   const inventoryImageRequests = [];
   const inventoryAdjustmentRequests = [];
   const inventoryFixtureProducts = [];
@@ -544,6 +545,7 @@ try {
     }
     if (pathname.endsWith('/api/daily-ledger') && method === 'POST') {
       const input = JSON.parse(request.postData() || '{}');
+      dailyLedgerCreateRequests.push(input);
       await route.fulfill({ status: 201, headers: corsHeaders, body: JSON.stringify({ ...dailyEntryFixture, ...input, id: 'ledger-created-smoke' }) });
       return;
     }
@@ -1076,6 +1078,17 @@ try {
       await assertPrintDocumentReady(pinPage, 'daily-ledger-print');
       const printedLedgerRows = await pinPage.locator('#daily-ledger-print tbody tr').count();
       assert.equal(printedLedgerRows, 101, 'Daily ledger print should include all records across pages in the selected date range');
+
+      // Verify comma-formatted amounts are submitted as their true numeric value.
+      await pinPage.getByLabel('Amount in GMD').fill('100000');
+      assert.equal(await pinPage.getByLabel('Amount in GMD').inputValue(), '100,000', 'Ledger amount should format thousands with commas while typing');
+      await pinPage.getByLabel('Search or enter sales and expense category').fill('Pancakes and local pancakes');
+      await pinPage.getByPlaceholder('e.g. Daily shop sales').fill('Daily pancake sales');
+      await pinPage.getByRole('button', { name: 'Save daily record' }).click();
+      await pinPage.getByRole('status').filter({ hasText: 'Daily record saved to your business ledger.' }).waitFor({ state: 'visible', timeout: 10_000 });
+      assert.equal(dailyLedgerCreateRequests.length, 1, 'Saving a daily sale should make exactly one create request');
+      assert.equal(dailyLedgerCreateRequests[0].amount, 100000, 'Comma-formatted 100,000 should reach the API as numeric 100000, not 100');
+      assert.equal(dailyLedgerCreateRequests[0].category, 'Pancakes and local pancakes', 'Daily ledger should submit the custom-selected market category');
     }
 
     if (routePath === '/receipt-branding') {
