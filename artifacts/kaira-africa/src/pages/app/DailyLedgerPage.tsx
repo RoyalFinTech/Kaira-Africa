@@ -371,7 +371,7 @@ export default function DailyLedgerPage() {
           </CardContent></Card>
           <Card><CardHeader><CardTitle className="text-base">Sales, expenses and debt mix</CardTitle></CardHeader><CardContent>
             {pieData.length === 0 ? <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">Record sales, expenses or debts to see the chart.</div> : (
-              <ResponsiveContainer width="100%" height={260}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" outerRadius={85} label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}>{pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value) => formatCurrency(Number(value), "GMD")} /></PieChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" outerRadius={85} label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}>{pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value) => formatCurrency(Number(value), activeCurrency)} /></PieChart></ResponsiveContainer>
             )}
           </CardContent></Card>
         </div>
@@ -409,7 +409,7 @@ export default function DailyLedgerPage() {
             )}
           </CardContent>
         </Card>
-        <PrintableBusinessDocument id="daily-ledger-print" title="Daily Ledger Report" documentNumber={(printSnapshot?.startDate ?? startDate) + " to " + (printSnapshot?.endDate ?? endDate)} issuedAt={new Date().toLocaleString()}>
+        <PrintableBusinessDocument id="daily-ledger-print" title={`Daily Ledger Report · ${printSnapshot?.response.currency ?? activeCurrency}`} documentNumber={(printSnapshot?.startDate ?? startDate) + " to " + (printSnapshot?.endDate ?? endDate)} issuedAt={new Date().toLocaleString()}>
           <p><strong>Reporting period:</strong> {printSnapshot?.startDate ?? startDate} through {printSnapshot?.endDate ?? endDate}</p>
           <p><strong>Entries included:</strong> {printSnapshot?.entries.length ?? response?.entries.length ?? 0} of {printSnapshot?.response.pagination.total ?? response?.pagination.total ?? 0} records in the period.</p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
