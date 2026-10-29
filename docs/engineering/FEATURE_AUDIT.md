@@ -10,7 +10,7 @@ This is the implementation-level companion to [ENGINEERING_SOURCE_OF_TRUTH.md](.
 |---|---|---|---|---|
 | Dashboard / Overview | `/dashboard`, DashboardPage; adds practical Record → Review → Plan guidance, tutorials and Visual Assistant entry points with custom inline SVG artwork | Existing dashboard hooks and daily-ledger query; end-to-end data accuracy remains unaudited | UI GUIDANCE IMPLEMENTED IN CODE; DASHBOARD DATA NOT VERIFIED | Validate responsive layout, all links, KPI calculations, currency and empty/error states against production data |
 | Team & permissions | `/team`, Settings tabs | Authorization requires audit | NOT VERIFIED | Test roles and tenant isolation |
-| Customers / CRM | `/customers`, `/customers/:id`, `/crm` | Existing APIs/schema require audit | NOT VERIFIED | CRUD, optional fields, search, notes, photo upload, export/print |
+| Customers / CRM | `/customers`, `/customers/:id`, `/crm` | `crm.ts` scopes customer list/update/photo operations by `businessId`; PR in progress adds signed-preview-before-success for uploaded private photos and scoped cleanup helper tests | IMPLEMENTED IN CODE; AUTHENTICATED CRUD/TENANT E2E NOT VERIFIED | Test CRUD, optional profile fields, profileData search, interactions/notes, photo upload/replace/reload/remove, signed-link failure/retry, role access and cross-business denial; verify export/print |
 | Transactions | `/transactions` | Existing API client/hooks | NOT VERIFIED | CRUD/status/payment safety, currency and reports |
 | Analytics | `/analytics` | Analytics hooks/routes | NOT VERIFIED | Validate calculations, date filters and tenant isolation |
 | Standard reports | `/reports` | Export paths require audit | NOT VERIFIED | Verify export/print, filters and source consistency |
@@ -79,3 +79,8 @@ Agreed connected scope to preserve across phases: (1) in-app task notifications,
 ## Historical QA audit reconciliation (2026-10-29)
 
 PR #58 was merged as `9d5a66062a0884ebee4f9b98e7f9468b78f77c99`, preserving `docs/qa/2026-10-24-full-project-audit.md` as a dated historical snapshot. Its actionable findings remain open unless explicitly covered by newer evidence: browser interaction/E2E coverage; execution of the safe production verification script; authenticated CRM CRUD/photo and tenant-isolation tests; OpenAPI-generated contract discipline; storage negative tests; Redis degradation monitoring; and the manual regression matrix. PR #113 adds unit-level inventory image path/signed-URL tests, but does not replace the still-required authenticated production upload/replace/reload checks. Do not treat the historical report's old main SHA or deployment status as current.
+
+
+## CRM photo reliability follow-up (2026-10-29)
+
+The open branch `fix/crm-photo-signed-preview-reliability` addresses a second photo-success reporting risk found during the route review: the CRM photo endpoint could persist the new private object path and then return a null avatar if signing failed during serialization. The branch now requires a signed preview before replacing the database path, cleans up the newly uploaded object if signing fails, preserves the existing customer photo on that failure, returns the already-verified URL for the successful upload response, and adds helper tests for signed URL parsing and exact business/customer path ownership. This is code-level protection only; it does not prove authenticated CRM upload/replace/reload or tenant-isolation behavior.
