@@ -1281,6 +1281,18 @@ try {
       await pinPage.getByText('13 bag', { exact: true }).last().waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(inventoryAdjustmentRequests.length, 1, 'Stock receive button should send one intercepted stock-movement request');
       assert.equal(inventoryAdjustmentRequests[0].quantityDelta, 1, 'Stock receive button should add one unit');
+
+      // Confirm the uploaded inventory photo is also shown when that product is selected for a sale.
+      await pinPage.goto(baseUrl + '/daily-ledger?inventory-photo-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+      await pinPage.getByLabel('Ledger currency').waitFor({ state: 'visible', timeout: 10_000 });
+      const saleCurrency = pinPage.getByLabel('Ledger currency');
+      await saleCurrency.click();
+      await pinPage.getByRole('option', { name: /🇳🇬 NGN/ }).click();
+      const inventoryProductSelect = pinPage.getByLabel('Inventory product (optional)');
+      await inventoryProductSelect.selectOption('product_visual_smoke');
+      const salesProductPhoto = pinPage.getByRole('img', { name: 'Rice 25 kg bag' }).last();
+      await salesProductPhoto.waitFor({ state: 'visible', timeout: 10_000 });
+      assert.ok(await salesProductPhoto.evaluate((img) => img.naturalWidth > 0), 'Selected inventory product photo should render in the daily sales form');
       console.log('INVENTORY STOCK BOOK, CURRENCY, COMPRESSED PHOTO AND MOVEMENT VERIFIED:', JSON.stringify({
         createCount: inventoryCreateRequests.length,
         photoCount: inventoryImageRequests.length,
