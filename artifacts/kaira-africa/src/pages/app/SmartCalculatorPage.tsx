@@ -100,6 +100,7 @@ export default function SmartCalculatorPage() {
       if (value === 'AC') return '0';
       if (value === 'BACK') return current.length <= 1 ? '0' : current.slice(0, -1);
       if (value === '±') return current.startsWith('-') ? current.slice(1) : current === '0' ? '-0' : '-' + current;
+      if (current === '0' && value === '(') return '(';
       if (value === '( )') {
         const opens = (current.match(/\(/g) || []).length;
         const closes = (current.match(/\)/g) || []).length;
@@ -133,14 +134,15 @@ export default function SmartCalculatorPage() {
       const target = event.target as HTMLElement | null;
       if (target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)) return;
       if (/^[0-9.]$/.test(event.key)) { event.preventDefault(); append(event.key); }
-      else if (['+', '-', '*', '/', '%', '^', '(', ')'].includes(event.key)) { event.preventDefault(); append(event.key); }
+      else if (event.key === '%') { event.preventDefault(); if (result !== null) { setExpression(String(Number((result / 100).toPrecision(11)))); setJustCalculated(true); } else append('%'); }
+      else if (['+', '-', '*', '/', '^', '(', ')'].includes(event.key)) { event.preventDefault(); append(event.key); }
       else if (event.key === 'Enter' || event.key === '=') { event.preventDefault(); calculate(); }
       else if (event.key === 'Backspace') { event.preventDefault(); append('BACK'); }
       else if (event.key === 'Escape') { event.preventDefault(); append('AC'); }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [append, calculate]);
+  }, [append, calculate, result]);
 
   const addResultToHistory = (label: string, value: number) => {
     if (!Number.isFinite(value)) return;
@@ -188,7 +190,10 @@ export default function SmartCalculatorPage() {
               <div className="rounded-2xl bg-[#0D3B2A] p-4 text-right text-white sm:p-6">
                 <div className="mb-2 flex items-center justify-between text-xs text-emerald-100/75"><span>REAL-TIME CALCULATION</span><span>Keyboard supported</span></div>
                 <div className="min-h-7 overflow-x-auto whitespace-nowrap text-sm text-emerald-100/80">{expression || '0'}</div>
-                <div aria-live="polite" className="mt-2 min-h-12 overflow-x-auto whitespace-nowrap text-3xl font-semibold tracking-tight sm:text-5xl">{result === null ? '—' : formatNumber(result)}</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <div aria-live="polite" className="min-h-12 min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-3xl font-semibold tracking-tight sm:text-5xl">{result === null ? '—' : formatNumber(result)}</div>
+                  <Button variant="ghost" size="icon" aria-label="Copy calculator result" title="Copy result" disabled={result === null} onClick={copyResult} className="shrink-0 text-emerald-50 hover:bg-white/10 hover:text-white"><Copy className="h-4 w-4" /></Button>
+                </div>
                 {calcError && <p role="alert" className="mt-2 text-sm text-amber-200">{calcError}</p>}
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
