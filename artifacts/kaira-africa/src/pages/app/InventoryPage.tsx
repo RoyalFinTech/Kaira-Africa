@@ -14,9 +14,9 @@ import { formatMoneyInput, parseMoneyInput } from "@/lib/utils";
 const MAX_IMAGE_BYTES = 200 * 1024;
 type Currency = "GMD" | "NGN" | "USD";
 const CURRENCIES: { value: Currency; label: string }[] = [
-  { value: "GMD", label: "GMD — Gambian dalasi (D)" },
-  { value: "NGN", label: "NGN — Nigerian naira (₦)" },
-  { value: "USD", label: "USD — US dollar ($)" },
+  { value: "GMD", label: "🇬🇲 GMD — Gambian dalasi (D)" },
+  { value: "NGN", label: "🇳🇬 NGN — Nigerian naira (₦)" },
+  { value: "USD", label: "🇺🇸 USD — US dollar ($)" },
 ];
 const money = (amount: number, currency: Currency) => new Intl.NumberFormat("en", {
   style: "currency", currency, maximumFractionDigits: 2,
