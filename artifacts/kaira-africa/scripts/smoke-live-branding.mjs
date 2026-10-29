@@ -745,7 +745,7 @@ try {
         await route.fulfill({ status: 404, headers: corsHeaders, body: JSON.stringify({ message: 'Fixture product not found' }) });
         return;
       }
-      const updated = { ...product, imageUrl: null };
+      const updated = { ...product, imageUrl: dataUrl };
       inventoryFixtureProducts.splice(inventoryFixtureProducts.indexOf(product), 1, updated);
       await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify(updated) });
       return;
@@ -1226,6 +1226,7 @@ try {
 
     if (routePath === '/inventory') {
       await pinPage.getByRole('heading', { name: 'Inventory & stock book' }).waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByRole('button', { name: 'Print / Save PDF' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByText(/SKU means.*Stock Keeping Unit/i).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Go back' }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('button', { name: 'Add product' }).click();
@@ -1270,9 +1271,13 @@ try {
       assert.equal(inventoryCreateRequests[0].unitCost, 7500000, 'Formatted inventory buying cost must reach the API as numeric 7500000');
       assert.equal(inventoryCreateRequests[0].salePrice, 10000000, 'Formatted inventory selling price must reach the API as numeric 10000000');
       assert.equal(inventoryImageRequests.length, 1, 'Optional product photo should upload once after product creation');
+       const printedInventoryPhoto = pinPage.locator('.inventory-print-area table img[alt="Rice 25 kg bag"]');
+       await printedInventoryPhoto.waitFor({ state: 'visible', timeout: 10_000 });
+       assert.ok(await printedInventoryPhoto.evaluate((img) => img.naturalWidth > 0), 'Successfully uploaded product photo should render in the inventory table');
       assert.equal(inventoryImageRequests[0].jpegDataUrl, true, 'Product photo should be converted to JPEG before upload');
       assert.ok(inventoryImageRequests[0].imageBytes > 0 && inventoryImageRequests[0].imageBytes <= 200 * 1024, 'Compressed JPEG upload must be 200 KB or smaller after base64 decoding');
-      await pinPage.getByRole('button', { name: 'Receive one bag of Rice 25 kg bag' }).click();
+      assert.equal(await pinPage.getByRole('button', { name: 'Print / Save PDF' }).count(), 1, 'Inventory should expose a print/save PDF action');
+       await pinPage.getByRole('button', { name: 'Receive one bag of Rice 25 kg bag' }).click();
       await pinPage.getByText('13 bag', { exact: true }).last().waitFor({ state: 'visible', timeout: 10_000 });
       assert.equal(inventoryAdjustmentRequests.length, 1, 'Stock receive button should send one intercepted stock-movement request');
       assert.equal(inventoryAdjustmentRequests[0].quantityDelta, 1, 'Stock receive button should add one unit');
