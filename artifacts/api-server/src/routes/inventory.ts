@@ -106,6 +106,7 @@ async function removeInventoryImageObject(storage: ReturnType<typeof requireSupa
 async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
   const product = serialize(p);
   if (!p.imageUrl || /^https?:\/\//i.test(p.imageUrl)) return product;
+  if (!isInventoryImagePathForProduct(p.imageUrl, p.businessId, p.id)) return { ...product, imageUrl: null };
   if (!hasSupabaseStorageConfig()) return { ...product, imageUrl: null };
   const storage = requireSupabaseStorageConfig("Inventory product image storage");
   try {
