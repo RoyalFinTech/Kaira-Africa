@@ -202,7 +202,7 @@ export default function SettingsPage() {
                     <CardContent className="space-y-3">
                       <Label htmlFor="business-time-zone">Time zone for schedules and deadlines</Label>
                       <TimeZoneSelect id="business-time-zone" value={businessPreferencesQ.data?.timeZone ?? 'Africa/Banjul'} disabled={businessPreferencesQ.isLoading || timeZoneMutation.isPending || me?.role !== 'owner'} onChange={timeZone => timeZoneMutation.mutate(timeZone)} />
-                      <p className="text-xs text-muted-foreground">Times are stored as exact instants and displayed in this selected IANA time zone. Daylight-saving changes follow the time-zone rules.</p>
+                      <p className="text-xs text-muted-foreground">Meeting times are stored as exact instants; date-only task deadlines follow this business calendar. Scheduled meetings use the selected IANA time zone and its daylight-saving rules.</p>
                       {businessPreferencesQ.error && <p role="alert" className="text-sm text-destructive">Could not load your business time zone. Refresh and try again.</p>}
                       {timeZoneMutation.isPending && <p role="status" className="text-sm text-muted-foreground">Saving time zone…</p>}
                       {me?.role !== 'owner' && <p className="text-xs text-muted-foreground">Ask your business owner to change the shared business time zone.</p>}
