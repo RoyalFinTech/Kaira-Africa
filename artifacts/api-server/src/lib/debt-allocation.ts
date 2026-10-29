@@ -17,11 +17,20 @@ export interface DebtAllocationResult {
 /** Allocates an exact positive payment against ordered (oldest first) debt records. */
 export function allocateDebtPayment(paymentMinor: number, debts: DebtAllocationInput[]): DebtAllocationResult | null {
   if (!Number.isSafeInteger(paymentMinor) || paymentMinor <= 0) return null;
+  if (debts.some((debt) =>
+    typeof debt.id !== "string" || !debt.id.trim() ||
+    !Number.isSafeInteger(debt.amountMinor) || debt.amountMinor < 0 ||
+    (debt.balanceMinor !== null && (!Number.isSafeInteger(debt.balanceMinor) || debt.balanceMinor < 0))
+  )) return null;
   const open = debts.map((debt) => ({
     id: debt.id,
-    balanceMinor: Math.max(0, Number(debt.balanceMinor ?? debt.amountMinor)),
+    balanceMinor: debt.balanceMinor ?? debt.amountMinor,
   })).filter((debt) => debt.balanceMinor > 0);
-  const totalDueMinor = open.reduce((sum, debt) => sum + debt.balanceMinor, 0);
+  let totalDueMinor = 0;
+  for (const debt of open) {
+    totalDueMinor += debt.balanceMinor;
+    if (!Number.isSafeInteger(totalDueMinor)) return null;
+  }
   if (totalDueMinor <= 0 || paymentMinor > totalDueMinor) return null;
   let remainingMinor = paymentMinor;
   const allocations: DebtAllocation[] = [];
