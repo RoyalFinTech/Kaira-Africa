@@ -1049,6 +1049,8 @@ try {
       await pinPage.getByLabel('Transaction currency').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByLabel('Transaction amount').fill('1250000');
+      assert.equal(await pinPage.getByLabel('Transaction amount').inputValue(), '1,250,000', 'Transaction amounts should format millions with commas');
       await pinPage.getByRole('button', { name: 'Cancel' }).last().click();
       await pinPage.getByRole('button', { name: 'Details' }).first().click();
       const transactionPrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
