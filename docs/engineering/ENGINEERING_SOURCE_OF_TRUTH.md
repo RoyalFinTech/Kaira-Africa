@@ -241,3 +241,9 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 - Branch `feat/smart-calculator-and-navigation-fix` adds a protected `/calculator` page named Smart Calculator. It has standard safe arithmetic (parser, no `eval`), live result preview, keyboard support, session-only history, and business calculations for gross profit, margin, markup, discounts and percentage tax/charges. It does not write into ledger or business data. Automated validation is pending.
 - The same branch repairs navigation: route changes close the mobile drawer; hamburger and mobile logo toggle it; desktop hamburger toggles a collapsible sidebar; selecting a desktop destination returns it to compact mode; expanded state uses the full Kaira Africa logo and labels, collapsed state shows a compact logo and icon-only links. Check route changes, Escape/outside close, keyboard/focus and 320px mobile layouts before release.
 - No production business records or Storage objects were modified.
+
+## Continuation record — currency-specific daily sales (2026-10-29)
+
+- Branch `feat/daily-ledger-currency-support` implements the next slice for the audited currency mismatch: daily ledger supports GMD/NGN/USD with GMD default, a currency selector scopes entries and summaries, trends/categories, print/CSV and linked inventory product options to one currency, and the API validates currency values and enforces same-currency debt payment allocation.
+- Linked product sales preserve the existing transaction that decrements stock, writes an inventory movement and inserts the ledger entry. Product/ledger currency mismatch is rejected server-side. Automated CI and manual authenticated workflows are still required before merge/release.
+- No production business records or Storage objects were modified.
