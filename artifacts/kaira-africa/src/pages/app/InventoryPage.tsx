@@ -144,7 +144,9 @@ export default function InventoryPage() {
     if (!normalizedUnit || normalizedUnit.length > 30) { setFormError("Choose or enter a unit name up to 30 characters."); return; }
     if (!Number.isSafeInteger(form.quantity) || form.quantity < 0) { setFormError("Opening quantity must be a whole number of zero or more."); return; }
     if (!Number.isSafeInteger(form.reorderLevel) || form.reorderLevel < 0) { setFormError("The low-stock alert level must be a whole number of zero or more."); return; }
-    if (![form.unitCost, form.salePrice].every((value) => Number.isFinite(value) && value >= 0 && Number.isSafeInteger(Math.round(value * 100)))) {
+    const validPrice = (value: number) => Number.isFinite(value) && value >= 0 &&
+      Number.isSafeInteger(Math.round(value * 100)) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
+    if (![form.unitCost, form.salePrice].every(validPrice)) {
       setFormError("Buying cost and selling price must be valid non-negative amounts with no more than two decimal places.");
       return;
     }
