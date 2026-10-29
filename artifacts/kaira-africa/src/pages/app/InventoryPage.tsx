@@ -73,6 +73,7 @@ export default function InventoryPage() {
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: ["inventory-products"], queryFn: getInventoryProducts });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" as Currency });
+  const [customCategory, setCustomCategory] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [pendingPhotoProductId, setPendingPhotoProductId] = useState<string | null>(null);
@@ -90,6 +91,7 @@ export default function InventoryPage() {
   }, {}), [data]);
   const resetForm = () => {
     setForm({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" });
+    setCustomCategory("");
     setPhotoFile(null); setPhotoPreview(""); setPendingPhotoProductId(null); setFormError(null);
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -133,7 +135,7 @@ export default function InventoryPage() {
     }
     setSaving(true); setFormError(null); setNotice(null);
     try {
-      const product = await createInventoryProduct(form);
+      const product = await createInventoryProduct({ ...form, category: form.category === "Other" ? customCategory.trim() : form.category });
       if (photoPreview) {
         try {
           await uploadInventoryProductImage(product.id, photoPreview);
@@ -197,7 +199,7 @@ export default function InventoryPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="space-y-1.5 text-sm font-medium">Product name <span className="text-destructive">*</span><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. 25 kg bag of rice" autoComplete="off" maxLength={160} required /><span className="block text-xs font-normal text-muted-foreground">Use the name your staff and customers recognise.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Item code (SKU) <span className="text-destructive">*</span><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase().replace(/[^A-Z0-9._-]/g, "").slice(0,80) })} placeholder="e.g. RICE-25KG" autoComplete="off" maxLength={80} required /><span className="block text-xs font-normal text-muted-foreground">Your own short, unique code. No two items in this business can share a code.</span></label>
-        <label className="space-y-1.5 text-sm font-medium">Category (optional)<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={INVENTORY_CATEGORIES.includes(form.category) ? form.category : (form.category ? "Other" : "")} onChange={(e) => setForm({ ...form, category: e.target.value === "Other" ? "" : e.target.value })}><option value="">Choose a category</option>{INVENTORY_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select>{(!form.category || !INVENTORY_CATEGORIES.includes(form.category)) && <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Type a custom category (optional)" maxLength={80} aria-label="Custom inventory category" />}<span className="block text-xs font-normal text-muted-foreground">Choose a category or enter your own when you select Other.</span></label>
+        <label className="space-y-1.5 text-sm font-medium">Category (optional)<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.category === "Other" ? "Other" : form.category} onChange={(e) => { setForm({ ...form, category: e.target.value }); if (e.target.value !== "Other") setCustomCategory(""); }}><option value="">Choose a category</option>{INVENTORY_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select>{form.category === "Other" && <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Type a custom category (optional)" maxLength={80} aria-label="Custom inventory category" /> }<span className="block text-xs font-normal text-muted-foreground">Choose a category or enter your own when you select Other.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Unit name<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={INVENTORY_UNITS.includes(form.unit) ? form.unit : "Other"} onChange={(e) => setForm({ ...form, unit: e.target.value === "Other" ? "" : e.target.value })} required><option value="" disabled>Choose a unit</option>{INVENTORY_UNITS.map((unit) => <option key={unit} value={unit}>{unit === "Other" ? "Other (type your own)" : unit}</option>)}</select>{(!form.unit || !INVENTORY_UNITS.includes(form.unit)) && <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="Enter unit name" maxLength={30} required aria-label="Custom unit name" />}<span className="block text-xs font-normal text-muted-foreground">Choose a common unit or enter a custom one.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Opening quantity<Input type="number" min={0} step={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">How many you have right now.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Alert me when stock reaches<Input type="number" min={0} step={1} value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">We flag the item when stock is at or below this number.</span></label>
