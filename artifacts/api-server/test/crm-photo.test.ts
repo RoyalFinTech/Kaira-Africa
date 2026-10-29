@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   extractSignedCustomerPhotoUrl,
+  parseCustomerPhotoDataUrl,
   isCustomerPhotoPathForCustomer,
   normalizeSignedCustomerPhotoUrl,
 } from "../src/lib/crm-photo";
@@ -36,4 +37,24 @@ test("missing signed URL payload is rejected", () => {
     extractSignedCustomerPhotoUrl({ signedUrl: "/object/sign/customer-photos/b/c/photo.jpg?token=x" }, "https://project.supabase.co"),
     "https://project.supabase.co/storage/v1/object/sign/customer-photos/b/c/photo.jpg?token=x",
   );
+});
+
+test("validates customer photo MIME, image signatures, canonical base64 and exact 2 MB boundary", () => {
+  const jpeg = Buffer.alloc(4, 0);
+  jpeg.set([0xff, 0xd8, 0xff]);
+  const parsed = parseCustomerPhotoDataUrl("data:image/jpeg;base64," + jpeg.toString("base64"));
+  assert.equal(parsed.mime, "image/jpeg");
+  assert.equal(parsed.extension, "jpg");
+  assert.deepEqual([...parsed.bytes.subarray(0, 3)], [255, 216, 255]);
+
+  const exactLimit = Buffer.alloc(2 * 1024 * 1024);
+  exactLimit.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.equal(parseCustomerPhotoDataUrl("data:image/png;base64," + exactLimit.toString("base64")).bytes.length, 2 * 1024 * 1024);
+  const tooLarge = Buffer.alloc(2 * 1024 * 1024 + 1);
+  tooLarge.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.throws(() => parseCustomerPhotoDataUrl("data:image/png;base64," + tooLarge.toString("base64")), /2 MB/);
+  assert.throws(() => parseCustomerPhotoDataUrl("data:image/gif;base64,/w=="), /JPEG, PNG or WebP/);
+  assert.throws(() => parseCustomerPhotoDataUrl("data:image/jpeg;base64,A"), /valid JPEG, PNG or WebP/);
+  assert.throws(() => parseCustomerPhotoDataUrl("data:image/jpeg;base64,/w=="), /valid JPEG, PNG or WebP/);
+  assert.throws(() => parseCustomerPhotoDataUrl("data:image/jpeg;base64,/9j="), /valid JPEG, PNG or WebP/);
 });

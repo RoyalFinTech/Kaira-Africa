@@ -1,4 +1,16 @@
 /** Stable private Storage object paths and signed URL normalization for inventory photos. */
+
+export function parseInventoryPhotoDataUrl(dataUrl: string): Buffer {
+  const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
+  if (!match) throw new Error("Upload a JPEG product photo. Images are resized before upload.");
+  const bytes = Buffer.from(match[1], "base64");
+  const isCanonicalBase64 = bytes.toString("base64") === match[1];
+  const hasJpegSignature = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (!bytes.length || bytes.length > 204800 || !isCanonicalBase64 || !hasJpegSignature) {
+    throw new Error("Product photos must be valid JPEG images 200 KB or smaller.");
+  }
+  return bytes;
+}
 export function inventoryImageObjectPath(businessId: string, productId: string): string {
   return `${businessId}/${productId}/product.jpg`;
 }

@@ -8,7 +8,7 @@ import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { logger } from "../lib/logger";
-import { inventoryImageObjectPath, isInventoryImagePathForProduct, extractSignedInventoryImageUrl } from "../lib/inventory-image";
+import { inventoryImageObjectPath, isInventoryImagePathForProduct, extractSignedInventoryImageUrl, parseInventoryPhotoDataUrl } from "../lib/inventory-image";
 
 const router: IRouter = Router();
 
@@ -160,12 +160,9 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
   }
   const storage = requireSupabaseStorageConfig("Inventory product image storage");
   const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
-  const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
-  if (!match) throw new BadRequestError("Upload a JPEG product photo. Images are resized before upload.");
-  const bytes = Buffer.from(match[1], "base64");
-  if (!bytes.length || bytes.length > 204800) {
-    throw new BadRequestError("Product photos must be 200 KB or smaller.");
-  }
+  let bytes: Buffer;
+  try { bytes = parseInventoryPhotoDataUrl(dataUrl); }
+  catch (error) { throw new BadRequestError(error instanceof Error ? error.message : "Choose a valid JPEG product photo."); }
   const objectPath = inventoryImageObjectPath(businessId, product.id);
   const storageUrl = `${storage.base}/storage/v1/object/inventory-images/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
   const upload = await fetch(storageUrl, {
