@@ -41,9 +41,10 @@ const interactionInput = z.object({
   nextActionAt: z.string().datetime().optional(),
 });
 
-async function signCustomerPhoto(path: string | null) {
+async function signCustomerPhoto(path: string | null, businessId: string, customerId: string) {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path; // legacy external URLs remain readable
+  if (!isCustomerPhotoPathForCustomer(path, businessId, customerId)) return null;
   try {
     const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
     const objectPath = path.split("/").map(encodeURIComponent).join("/");
@@ -71,7 +72,7 @@ async function removeUploadedCustomerPhoto(businessId: string, customerId: strin
   }
 }
 async function serializeCustomer(row: typeof customers.$inferSelect) {
-  return { ...row, avatarUrl: await signCustomerPhoto(row.avatarUrl), profileData: row.profileData ?? {} };
+  return { ...row, avatarUrl: await signCustomerPhoto(row.avatarUrl, row.businessId, row.id), profileData: row.profileData ?? {} };
 }
 async function uploadCustomerPhoto(businessId: string, customerId: string, dataUrl: string) {
   let parsed: ReturnType<typeof parseCustomerPhotoDataUrl>;
@@ -152,7 +153,7 @@ router.post("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin
   const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
   const previousPath = customer.avatarUrl;
   const path = await uploadCustomerPhoto(businessId, customer.id, dataUrl);
-  const signedPreviewUrl = await signCustomerPhoto(path);
+  const signedPreviewUrl = await signCustomerPhoto(path, businessId, customer.id);
   if (!signedPreviewUrl) {
     await removeUploadedCustomerPhoto(businessId, customer.id, path);
     throw new HttpError(502, "photo_preview_failed", "The photo was uploaded but its private preview could not be created. Your existing customer photo was kept; please retry.");
