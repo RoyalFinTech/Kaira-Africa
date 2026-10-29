@@ -5,7 +5,12 @@ DO $$
 DECLARE
   revoke_roles text[] := ARRAY[]::text[];
   role_list text;
+  table_privileges text := 'TRUNCATE, REFERENCES, TRIGGER';
 BEGIN
+  -- MAINTAIN was introduced in PostgreSQL 17; revoke it when supported.
+  IF current_setting('server_version_num')::integer >= 170000 THEN
+    table_privileges := table_privileges || ', MAINTAIN';
+  END IF;
   IF to_regrole('anon') IS NOT NULL THEN
     revoke_roles := array_append(revoke_roles, 'anon');
   END IF;
@@ -19,12 +24,12 @@ BEGIN
       FROM unnest(revoke_roles) AS roles(role_name);
 
     EXECUTE format(
-      'REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM %s',
-      role_list
+      'REVOKE %s ON ALL TABLES IN SCHEMA public FROM %s',
+      table_privileges, role_list
     );
     EXECUTE format(
-      'ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM %s',
-      role_list
+      'ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE %s ON TABLES FROM %s',
+      table_privileges, role_list
     );
   END IF;
 
