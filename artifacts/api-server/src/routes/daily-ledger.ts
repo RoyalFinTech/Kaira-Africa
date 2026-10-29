@@ -64,7 +64,7 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
   const query = z.object({
     startDate: z.string().regex(datePattern).optional(),
     endDate: z.string().regex(datePattern).optional(),
-    currency: z.enum(["GMD", "NGN", "USD"]).default("GMD"),
+    currency: dailyLedgerCurrencySchema.default("GMD"),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(50),
   }).parse(req.query);
