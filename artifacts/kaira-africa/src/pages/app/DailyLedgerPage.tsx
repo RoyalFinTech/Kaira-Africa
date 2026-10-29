@@ -255,7 +255,7 @@ export default function DailyLedgerPage() {
           </div>
           <label className="w-full space-y-1.5 text-sm font-medium sm:w-44">Ledger currency
             <select value={currency} onChange={(e) => { const next = e.target.value as DailyLedgerCurrency; setCurrency(next); setEntryPage(1); setProductId(""); setAmount(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="GMD">GMD · Dalasi</option><option value="NGN">NGN · Naira</option><option value="USD">USD · US Dollar</option>
+              <option value="GMD">🇬🇲 GMD · Gambian dalasi (D)</option><option value="NGN">🇳🇬 NGN · Nigerian naira (₦)</option><option value="USD">🇺🇸 USD · US dollar ($)</option>
             </select>
             <span className="block text-xs font-normal text-muted-foreground">The form, summaries, charts and exports use this currency only.</span>
           </label>
