@@ -202,13 +202,23 @@ export default function DailyLedgerPage() {
         paymentMethod: paymentMethod as "cash" | "bank_transfer" | "mobile_money" | "card" | "credit" | "other",
         remarks: remarks.trim() || undefined,
       });
+      // The POST has committed. A list refresh failure must never tell the user
+      // the record failed or encourage a duplicate sale.
+      const successMessage = entryType === "sale" && productId
+        ? "Sale recorded and inventory stock updated together."
+        : entryType === "debt_payment"
+          ? "Debt payment saved and applied to this customer’s oldest outstanding debt."
+          : "Daily record saved to your business ledger.";
       setEntryPage(1);
-      await Promise.all([
+      resetForm();
+      setNotice(successMessage);
+      const refreshResults = await Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ["daily-ledger"] }),
         queryClient.invalidateQueries({ queryKey: ["inventory-products"] }),
       ]);
-      setNotice(entryType === "sale" && productId ? "Sale recorded and inventory stock updated together." : entryType === "debt_payment" ? "Debt payment saved and applied to this customer’s oldest outstanding debt." : "Daily record saved to your business ledger.");
-      resetForm();
+      if (refreshResults.some((result) => result.status === "rejected")) {
+        setFormError("Your record was saved successfully, but the page could not refresh the latest figures. Reload the ledger to see the updated totals. Do not submit the same record again.");
+      }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not save this record. Please try again.");
     } finally {
