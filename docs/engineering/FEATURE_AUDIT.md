@@ -2,7 +2,9 @@
 
 This is the implementation-level companion to [ENGINEERING_SOURCE_OF_TRUTH.md](./ENGINEERING_SOURCE_OF_TRUTH.md). Keep one row per feature area, and split rows further when the implementation has distinct API/data paths. Status must be evidence-based.
 
-**Audit baseline:** main commit `c633d541952cc6a4f9df6a70f17f2a081c07006e`, with frontend and API Render deployments live on that commit as of 2026-10-28. Status remains evidence-based; a live deployment is not equivalent to signed-in end-to-end verification.
+**Audit baseline (verified 2026-10-29):** main commit `27551478dfd260418bb43996dcc4829c8331addc`; Render frontend deployment `dep-dbh4aj29lscs73832ssg` and API deployment `dep-dbh4aiq9lscs73832sj0` both report this commit as live. Status remains evidence-based; a live deployment is not equivalent to signed-in end-to-end verification.
+
+**Migration tracking note (verified 2026-10-29):** the application's Drizzle journal contains migrations `0018_work_task_reminders`, `0019_business_timezones_notification_preferences`, `0020_task_reminder_email_outbox`, and `0021_work_meeting_time_zone`; live `drizzle.__drizzle_migrations` records IDs through 22, and the corresponding reminder/time-zone tables and columns exist. Supabase's separate `supabase_migrations.schema_migrations` listing currently stops at `0017_work_time_tracking`; do not use that separate listing alone to infer the application's Drizzle migration state. Investigate the split migration-tracking conventions before introducing future schema changes.
 
 | Area | UI evidence found | API/data evidence | Current status | Next action |
 |---|---|---|---|---|
