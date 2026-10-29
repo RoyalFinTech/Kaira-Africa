@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, lte } from "drizzle-orm";
 import { db, activityLogs, type ActivityLog } from "@workspace/db";
+import { logger } from "../lib/logger";
 
 export interface ListActivityFilters {
   userId?: string;
@@ -62,4 +63,26 @@ export async function recordActivity(entry: {
     .values({ status: "info", ...entry })
     .returning();
   return row;
+}
+
+
+/**
+ * Activity history is a secondary side effect, not the primary business write.
+ * If it fails after a product, sale, or customer has already been committed,
+ * do not return an error that could make the user retry and create duplicates.
+ */
+export async function recordActivitySafely(
+  entry: Parameters<typeof recordActivity>[0],
+  writer: typeof recordActivity = recordActivity,
+): Promise<void> {
+  try {
+    await writer(entry);
+  } catch (error) {
+    logger.warn({
+      businessId: entry.businessId,
+      entityType: entry.entityType,
+      action: entry.action,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    }, "Activity history write failed after primary business operation");
+  }
 }

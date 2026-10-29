@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, ArrowDown, ArrowUp, AlertTriangle, ImagePlus, Package, Boxes, CircleHelp, X, LoaderCircle } from "lucide-react";
+import { Plus, ArrowDown, ArrowUp, AlertTriangle, ImagePlus, Package, Boxes, CircleHelp, X, LoaderCircle, Camera, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/PageTransition";
 import { getInventoryProducts, createInventoryProduct, adjustInventory, uploadInventoryProductImage } from "@/lib/platform-api";
 import type { InventoryProduct } from "@/lib/platform-api";
+import { INVENTORY_CATEGORIES, INVENTORY_UNITS } from "@/lib/inventory-categories";
 
 const MAX_IMAGE_BYTES = 200 * 1024;
 type Currency = "GMD" | "NGN" | "USD";
@@ -71,6 +72,7 @@ export default function InventoryPage() {
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: ["inventory-products"], queryFn: getInventoryProducts });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" as Currency });
+  const [customCategory, setCustomCategory] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [pendingPhotoProductId, setPendingPhotoProductId] = useState<string | null>(null);
@@ -79,6 +81,7 @@ export default function InventoryPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const low = data.filter((p) => p.quantity <= p.reorderLevel).length;
   const currencyTotals = useMemo(() => data.reduce<Record<string, number>>((totals, product) => {
     const currency = (product.currency || "GMD") as Currency;
@@ -87,8 +90,10 @@ export default function InventoryPage() {
   }, {}), [data]);
   const resetForm = () => {
     setForm({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" });
+    setCustomCategory("");
     setPhotoFile(null); setPhotoPreview(""); setPendingPhotoProductId(null); setFormError(null);
     if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
   };
   const choosePhoto = async (file?: File) => {
     setFormError(null); setPhotoFile(null); setPhotoPreview("");
@@ -128,9 +133,33 @@ export default function InventoryPage() {
       await retryPhotoUpload();
       return;
     }
+    const normalizedSku = form.sku.trim();
+    const normalizedUnit = form.unit.trim();
+    const categoryToSave = form.category === "Other" ? customCategory.trim() : form.category.trim();
+    if (!form.name.trim()) { setFormError("Enter a product name."); return; }
+    if (!/^[A-Za-z0-9._-]{1,80}$/.test(normalizedSku)) {
+      setFormError("Enter a unique item code using letters, numbers, dots, hyphens or underscores only.");
+      return;
+    }
+    if (!normalizedUnit || normalizedUnit.length > 30) { setFormError("Choose or enter a unit name up to 30 characters."); return; }
+    if (!Number.isSafeInteger(form.quantity) || form.quantity < 0) { setFormError("Opening quantity must be a whole number of zero or more."); return; }
+    if (!Number.isSafeInteger(form.reorderLevel) || form.reorderLevel < 0) { setFormError("The low-stock alert level must be a whole number of zero or more."); return; }
+    const validPrice = (value: number) => Number.isFinite(value) && value >= 0 &&
+      Number.isSafeInteger(Math.round(value * 100)) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
+    if (![form.unitCost, form.salePrice].every(validPrice)) {
+      setFormError("Buying cost and selling price must be valid non-negative amounts with no more than two decimal places.");
+      return;
+    }
+    if (categoryToSave.length > 80) { setFormError("Category must be 80 characters or fewer."); return; }
     setSaving(true); setFormError(null); setNotice(null);
     try {
-      const product = await createInventoryProduct(form);
+      const product = await createInventoryProduct({
+        ...form,
+        name: form.name.trim(),
+        sku: normalizedSku,
+        unit: normalizedUnit,
+        category: categoryToSave || undefined,
+      });
       if (photoPreview) {
         try {
           await uploadInventoryProductImage(product.id, photoPreview);
@@ -194,8 +223,8 @@ export default function InventoryPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="space-y-1.5 text-sm font-medium">Product name <span className="text-destructive">*</span><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. 25 kg bag of rice" autoComplete="off" maxLength={160} required /><span className="block text-xs font-normal text-muted-foreground">Use the name your staff and customers recognise.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Item code (SKU) <span className="text-destructive">*</span><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase().replace(/[^A-Z0-9._-]/g, "").slice(0,80) })} placeholder="e.g. RICE-25KG" autoComplete="off" maxLength={80} required /><span className="block text-xs font-normal text-muted-foreground">Your own short, unique code. No two items in this business can share a code.</span></label>
-        <label className="space-y-1.5 text-sm font-medium">Category (optional)<Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Food, clothing, supplies" maxLength={80} /><span className="block text-xs font-normal text-muted-foreground">Helps group similar items.</span></label>
-        <label className="space-y-1.5 text-sm font-medium">Unit name<Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="piece, bag, bottle, box" maxLength={30} required /><span className="block text-xs font-normal text-muted-foreground">What you count: pieces, bags, litres, boxes, etc.</span></label>
+        <label className="space-y-1.5 text-sm font-medium">Category (optional)<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.category === "Other" ? "Other" : form.category} onChange={(e) => { setForm({ ...form, category: e.target.value }); if (e.target.value !== "Other") setCustomCategory(""); }}><option value="">Choose a category</option>{INVENTORY_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select>{form.category === "Other" && <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Type a custom category (optional)" maxLength={80} aria-label="Custom inventory category" /> }<span className="block text-xs font-normal text-muted-foreground">Choose a category or enter your own when you select Other.</span></label>
+        <label className="space-y-1.5 text-sm font-medium">Unit name<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={INVENTORY_UNITS.includes(form.unit) ? form.unit : "Other"} onChange={(e) => setForm({ ...form, unit: e.target.value === "Other" ? "" : e.target.value })} required><option value="" disabled>Choose a unit</option>{INVENTORY_UNITS.map((unit) => <option key={unit} value={unit}>{unit === "Other" ? "Other (type your own)" : unit}</option>)}</select>{(!form.unit || !INVENTORY_UNITS.includes(form.unit)) && <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="Enter unit name" maxLength={30} required aria-label="Custom unit name" />}<span className="block text-xs font-normal text-muted-foreground">Choose a common unit or enter a custom one.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Opening quantity<Input type="number" min={0} step={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">How many you have right now.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Alert me when stock reaches<Input type="number" min={0} step={1} value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">We flag the item when stock is at or below this number.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Currency for this item<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value as Currency })}>{CURRENCIES.map((currency) => <option key={currency.value} value={currency.value}>{currency.label}</option>)}</select><span className="block text-xs font-normal text-muted-foreground">Prices and stock value use this currency; totals are kept separate.</span></label>
@@ -206,8 +235,9 @@ export default function InventoryPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {photoPreview ? <img src={photoPreview} alt="Compressed product preview" className="h-24 w-24 rounded-lg border object-cover" /> : <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-muted text-muted-foreground"><ImagePlus className="h-7 w-7" /></div>}
           <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Product photo (optional)</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Choose a photo from your phone or computer. Kaira automatically resizes it to a maximum of 200 KB (JPEG) to save storage and mobile data. A photo is never required to save a product.</p>{photoFile && <p className="mt-1 text-xs text-primary">Photo prepared for upload: {photoFile.name}</p>}</div>
-          <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="gap-2"><ImagePlus className="h-4 w-4" />Choose photo</Button>{photoPreview && <Button type="button" variant="ghost" onClick={() => { setPhotoFile(null); setPhotoPreview(""); if (fileRef.current) fileRef.current.value = ""; }} disabled={Boolean(pendingPhotoProductId)} aria-label="Remove selected photo"><X className="h-4 w-4" />Remove</Button>}</div>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => void choosePhoto(e.target.files?.[0])} />
+          <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => cameraRef.current?.click()} className="gap-2"><Camera className="h-4 w-4" />Take photo</Button><Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" />Upload from device</Button>{photoPreview && <Button type="button" variant="ghost" onClick={() => { setPhotoFile(null); setPhotoPreview(""); if (fileRef.current) fileRef.current.value = ""; if (cameraRef.current) cameraRef.current.value = ""; }} disabled={Boolean(pendingPhotoProductId)} aria-label="Remove selected photo"><X className="h-4 w-4" />Remove</Button>}</div>
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { void choosePhoto(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+          <input ref={fileRef} type="file" accept="image/*" className="sr-only" onChange={(e) => { void choosePhoto(e.target.files?.[0]); e.currentTarget.value = ""; }} />
         </div>
       </div>
       <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={() => { if (pendingPhotoProductId) setOpen(false); else { resetForm(); setOpen(false); } }}>{pendingPhotoProductId ? "Close for now" : "Cancel"}</Button><Button type="button" disabled={saving || (!pendingPhotoProductId && (!form.name.trim() || !form.sku.trim() || !form.unit.trim())) || (Boolean(pendingPhotoProductId) && !photoPreview)} onClick={() => void add()} className="gap-2">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}{saving ? (pendingPhotoProductId ? "Retrying photo…" : "Saving product…") : pendingPhotoProductId ? "Retry photo upload" : "Save product"}</Button></div>

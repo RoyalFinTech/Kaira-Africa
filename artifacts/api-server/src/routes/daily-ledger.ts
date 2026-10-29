@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, dailyLedgerEntries, inventoryProducts, inventoryMovements } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
-import { recordActivity } from "../repositories/activity-logs";
+import { recordActivitySafely } from "../repositories/activity-logs";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
 import { allocateDebtPayment } from "../lib/debt-allocation";
@@ -263,7 +263,7 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
     return created;
   });
 
-  await recordActivity({
+  await recordActivitySafely({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
     entityType: "daily_ledger_entry", entityId: entry.id, entityName: entry.description,
     description: displayName(req.user!) + " recorded a daily " + entry.entryType.replace("_", " ") + " of " +
@@ -313,7 +313,7 @@ router.patch("/daily-ledger/:id/status", requireUser, requireRole("owner", "admi
     }).where(and(eq(dailyLedgerEntries.id, existing.id), eq(dailyLedgerEntries.businessId, businessId))).returning();
     return row;
   });
-  await recordActivity({
+  await recordActivitySafely({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "updated",
     entityType: "daily_ledger_entry", entityId: updated.id, entityName: updated.description,
     description: "Debtor record marked " + input.status + ": " + updated.description,
