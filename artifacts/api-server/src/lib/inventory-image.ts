@@ -51,7 +51,9 @@ export function normalizeSignedInventoryImageUrl(baseUrl: string, signedUrl: str
     );
   if (
     candidate.origin !== base.origin
-    || !candidate.pathname.startsWith("/storage/v1/object/sign/")
+    || candidate.username !== ""
+    || candidate.password !== ""
+    || !candidate.pathname.startsWith("/storage/v1/object/sign/inventory-images/")
   ) {
     throw new Error("Supabase Storage returned an invalid signed URL.");
   }
