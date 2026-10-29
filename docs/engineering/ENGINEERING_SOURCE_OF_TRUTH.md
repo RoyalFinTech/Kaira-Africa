@@ -193,3 +193,10 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 - Current follow-up branch `fix/savings-ledger-guidance-and-tests` extracts savings-pool balance arithmetic into a testable helper, adds unit tests for minor-unit balances and withdrawal bounds, and explains in the Savings Tracker form that goal balances and unassigned per-currency balances cannot be combined. The API retains per-pool transaction advisory locks for concurrent withdrawal safety.
 - Investment Planner and Savings Tracker routes/pages are present in `main`, but authenticated production workflows, cross-business isolation, currency/date edge cases, CSV/print/PDF behavior and mobile/desktop end-to-end checks remain outstanding. Do not claim either feature is production-verified until those checks are recorded.
 - No production savings entries, investment records, schema changes or manual deploy triggers were performed during this continuation.
+
+
+## Continuation record — Supabase least-privilege review (2026-10-29)
+
+- Read-only Supabase advisors flagged the public `SECURITY DEFINER` event-trigger function `public.rls_auto_enable()` as executable by `anon` and `authenticated`. They also reported RLS enabled without policies on 32 public tables; a read-only grant inspection found no generic-role SELECT/INSERT/UPDATE/DELETE grants on the application tables, but did find unnecessary TRUNCATE/REFERENCES/TRIGGER grants (and PostgreSQL 17 MAINTAIN where supported).
+- PR #112 adds a guarded Drizzle migration that revokes those generic-role table privileges from existing public tables and future table defaults created by `postgres`, and revokes EXECUTE on `rls_auto_enable()` from PUBLIC/anon/authenticated without disabling the event trigger. The migration skips roles/function absent from fresh non-Supabase test databases.
+- This is a least-privilege hardening change, not a redesign of RLS. Do not add broad policies simply to silence the advisor; authenticated API routes currently enforce business scope. After deployment, rerun Supabase advisors and read-only privilege checks before calling the hardening verified.
