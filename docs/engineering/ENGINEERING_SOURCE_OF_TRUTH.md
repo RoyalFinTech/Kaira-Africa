@@ -197,9 +197,9 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 
 ## Continuation record — Supabase least-privilege review (2026-10-29)
 
-- Read-only Supabase advisors flagged the public `SECURITY DEFINER` event-trigger function `public.rls_auto_enable()` as executable by `anon` and `authenticated`. They also reported RLS enabled without policies on 32 public tables; a read-only grant inspection found no generic-role SELECT/INSERT/UPDATE/DELETE grants on the application tables, but did find unnecessary TRUNCATE/REFERENCES/TRIGGER grants (and PostgreSQL 17 MAINTAIN where supported).
-- PR #112 adds a guarded Drizzle migration that revokes those generic-role table privileges from existing public tables and future table defaults created by `postgres`, and revokes EXECUTE on `rls_auto_enable()` from PUBLIC/anon/authenticated without disabling the event trigger. The migration skips roles/function absent from fresh non-Supabase test databases.
-- This is a least-privilege hardening change, not a redesign of RLS. Do not add broad policies simply to silence the advisor; authenticated API routes currently enforce business scope. After deployment, rerun Supabase advisors and read-only privilege checks before calling the hardening verified.
+- PR #112 merged as `e5372e6c23120929d7df20c1f6c66649e0675020`; Render frontend deployment `dep-dbhiqli9lscs739otr40` and API deployment `dep-dbhiqli9lscs739otqrg` both report this SHA as live. Drizzle migration ID 23 is recorded in production.
+- Post-deploy read-only checks confirm `anon` and `authenticated` can no longer EXECUTE `public.rls_auto_enable()` (`postgres` can still execute it), and no matching TRUNCATE/REFERENCES/TRIGGER/MAINTAIN table grants remain for those generic roles in `public`.
+- The Supabase security advisor now reports the informational RLS-enabled-without-policy finding on 32 tables only; the two SECURITY DEFINER execution warnings are gone. This is a least-privilege hardening change, not a redesign of RLS. Do not add broad policies solely to silence the informational finding; authenticated API routes enforce business scope.
 
 
 ## Continuation record — inventory photo upload reliability (2026-10-29)
