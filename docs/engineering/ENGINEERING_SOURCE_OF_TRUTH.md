@@ -249,3 +249,10 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 - PR #118 passed PR-head frontend typecheck/build, backend typechecks, API/smoke tests, fresh-database migration validation, server health and production Docker image build. Post-merge main Docker and deployed-browser smoke checks were still in progress at the time of this update; check their final result before closing release QA.
 - Smart Calculator route `/calculator` is now in the app and sidebar. Standard mode uses a safe expression parser without `eval`, live preview, keyboard input, copy result and session-only history. Business mode computes gross profit, margin, markup, discounts and tax/charge totals. It does not write to business records.
 - Navigation now closes the mobile drawer after route changes and toggles it from the hamburger/logo. Desktop navigation collapses to a compact logo/icon sidebar after destination selection and can be expanded from the header hamburger or logo. Responsive visual interaction still needs a real signed-in device/browser check.
+
+
+## Continuation record — currency-specific daily sales (2026-10-29)
+
+- Branch `feat/daily-ledger-currency-support-release` implements the next slice for the audited currency mismatch: daily ledger supports GMD/NGN/USD with GMD default, a currency selector scopes entries and summaries, trends/categories, print/CSV and linked inventory product options to one currency, and the API validates currency values and enforces same-currency debt payment allocation.
+- Linked product sales preserve the existing transaction that decrements stock, writes an inventory movement and inserts the ledger entry. Product/ledger currency mismatch is rejected server-side. Automated CI and manual authenticated workflows are still required before merge/release.
+- No production business records or Storage objects were modified.

@@ -183,6 +183,7 @@ export const getAdminInventory = (page = 1, pageSize = 50) =>
   request<AdminInventoryResponse>("/api/admin/platform/inventory?" + new URLSearchParams({ page: String(page), pageSize: String(pageSize) }).toString());
 
 
+export type DailyLedgerCurrency = "GMD" | "NGN" | "USD";
 export type DailyLedgerType = "sale" | "expense" | "debt" | "debt_payment" | "other_income";
 export interface DailyLedgerEntry {
   id: string;
@@ -207,6 +208,7 @@ export interface DailyLedgerEntry {
 export interface DailyLedgerResponse {
   startDate: string;
   endDate: string;
+  currency: DailyLedgerCurrency;
   entries: DailyLedgerEntry[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
   summary: {
@@ -221,16 +223,16 @@ export interface DailyLedgerResponse {
   dailyTrend: { date: string; sales: number; expenses: number }[];
   expensesByCategory: { label: string; value: number }[];
 }
-export const getDailyLedger = (startDate: string, endDate: string, page = 1, pageSize = 50) =>
+export const getDailyLedger = (startDate: string, endDate: string, page = 1, pageSize = 50, currency: DailyLedgerCurrency = "GMD") =>
   request<DailyLedgerResponse>("/api/daily-ledger?" + new URLSearchParams({
-    startDate, endDate, page: String(page), pageSize: String(pageSize),
+    startDate, endDate, page: String(page), pageSize: String(pageSize), currency,
   }).toString());
 export const createDailyLedgerEntry = (input: {
   entryType: DailyLedgerType;
   description: string;
   category?: string;
   amount: number;
-  currency?: "GMD";
+  currency?: DailyLedgerCurrency;
   customerName?: string;
   productId?: string;
   quantity?: number;
