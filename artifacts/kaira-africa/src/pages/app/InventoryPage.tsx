@@ -8,10 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/PageTransition";
 import { getInventoryProducts, createInventoryProduct, adjustInventory, uploadInventoryProductImage } from "@/lib/platform-api";
 import type { InventoryProduct } from "@/lib/platform-api";
+import { INVENTORY_CATEGORIES, INVENTORY_UNITS } from "@/lib/inventory-categories";
 
 const MAX_IMAGE_BYTES = 200 * 1024;
-const INVENTORY_CATEGORIES = ["Food & groceries", "Beverages", "Clothing & fashion", "Electronics", "Technology", "Marketing materials", "Office supplies", "Raw materials", "Health & beauty", "Household goods", "Agriculture", "Construction", "Automotive", "Digital products", "Tools & equipment", "Other"];
-const INVENTORY_UNITS = ["piece", "pack", "box", "carton", "bag", "bottle", "can", "pair", "dozen", "kg", "g", "litre", "ml", "metre", "roll", "service", "hour", "Other"];
 type Currency = "GMD" | "NGN" | "USD";
 const CURRENCIES: { value: Currency; label: string }[] = [
   { value: "GMD", label: "GMD — Gambian dalasi (D)" },
