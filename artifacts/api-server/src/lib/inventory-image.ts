@@ -41,7 +41,7 @@ export function normalizeSignedInventoryImageUrl(baseUrl: string, signedUrl: str
   if (base.protocol !== "https:" && base.protocol !== "http:") {
     throw new Error("Supabase Storage returned an invalid signed URL.");
   }
-  const candidate = /^https?:\\/\\//i.test(signedUrl)
+  const candidate = /^https?:\/\//i.test(signedUrl)
     ? new URL(signedUrl)
     : new URL(
       signedUrl.startsWith("/storage/v1/")
