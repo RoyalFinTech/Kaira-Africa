@@ -1209,8 +1209,10 @@ try {
       await inventoryNumbers.nth(0).fill('12');
       await inventoryNumbers.nth(1).fill('3');
       await pinPage.getByLabel('Currency for this item').selectOption('NGN');
-      await inventoryNumbers.nth(2).fill('7.5');
-      await inventoryNumbers.nth(3).fill('10');
+      await pinPage.getByLabel('Buying cost per unit').fill('7500000');
+      assert.equal(await pinPage.getByLabel('Buying cost per unit').inputValue(), '7,500,000', 'Inventory buying cost should format millions with commas');
+      await pinPage.getByLabel('Selling price per unit').fill('10000000');
+      assert.equal(await pinPage.getByLabel('Selling price per unit').inputValue(), '10,000,000', 'Inventory selling price should format millions with commas');
 
       // Small synthetic image: browser compression and API handling are tested,
       // while the intercepted route ensures no real product/photo is created.
@@ -1229,6 +1231,8 @@ try {
       assert.equal(inventoryCreateRequests[0].category, 'Eggs by crate or tray', 'Inventory form should submit a searched market-specific category');
       assert.equal(inventoryCreateRequests[0].unit, 'bag', 'Inventory form should submit the selected unit');
       assert.equal(inventoryCreateRequests[0].currency, 'NGN', 'Inventory form should submit the selected currency');
+      assert.equal(inventoryCreateRequests[0].unitCost, 7500000, 'Formatted inventory buying cost must reach the API as numeric 7500000');
+      assert.equal(inventoryCreateRequests[0].salePrice, 10000000, 'Formatted inventory selling price must reach the API as numeric 10000000');
       assert.equal(inventoryImageRequests.length, 1, 'Optional product photo should upload once after product creation');
       assert.equal(inventoryImageRequests[0].jpegDataUrl, true, 'Product photo should be converted to JPEG before upload');
       assert.ok(inventoryImageRequests[0].imageBytes > 0 && inventoryImageRequests[0].imageBytes <= 200 * 1024, 'Compressed JPEG upload must be 200 KB or smaller after base64 decoding');
