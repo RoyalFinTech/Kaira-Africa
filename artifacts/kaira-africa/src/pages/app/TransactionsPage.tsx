@@ -32,7 +32,7 @@ import {
   removeManagedTransactionAttachment, getReceiptBranding, type ManagedTransaction, type TransactionCurrency,
   type TransactionPaymentMethod, type ManagedTransactionStatus,
 } from "@/lib/platform-api";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatMoneyInput, parseMoneyInput } from "@/lib/utils";
 
 const TRANSACTION_TYPES = ["payment", "refund", "transfer", "withdrawal", "deposit"] as const;
 const CURRENCIES: { code: TransactionCurrency; label: string }[] = [
@@ -133,7 +133,7 @@ function NewTransactionDialog({
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    const numericAmount = Number(amount);
+    const numericAmount = parseMoneyInput(amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setError("Enter an amount greater than zero.");
       return;
@@ -183,7 +183,7 @@ function NewTransactionDialog({
           <form onSubmit={submit} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="space-y-1.5 text-sm font-medium">Amount
-                <Input aria-label="Transaction amount" type="number" min="0.01" step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+                <Input aria-label="Transaction amount" type="text" inputMode="decimal" autoComplete="off" required value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} placeholder="e.g. 100,000" />
                 <span className="block text-xs font-normal text-muted-foreground">Enter the amount in the selected currency only.</span>
               </label>
               <label className="space-y-1.5 text-sm font-medium">Currency
