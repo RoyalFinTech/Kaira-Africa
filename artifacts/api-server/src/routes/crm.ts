@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db, crmInteractions, customers, transactions, users } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
-import { recordActivity } from "../repositories/activity-logs";
+import { recordActivitySafely } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { supabaseStorageHeaders } from "../lib/supabase-storage-headers";
@@ -121,7 +121,7 @@ router.post("/crm/customers", requireUser, requireRole("owner", "admin", "manage
     country: input.country || null, city: input.city || null, status: input.status ?? "active",
     profileData: cleanProfileData(input.profileData),
   }).returning();
-  await recordActivity({ businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
+  await recordActivitySafely({ businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
     entityType: "customer", entityId: created.id, entityName: `${created.firstName} ${created.lastName}`,
     description: `${displayName(req.user!)} added a CRM customer record`, status: "success" });
   res.status(201).json(await serializeCustomer(created));
@@ -279,7 +279,7 @@ router.post("/crm/interactions", requireUser, requireRole("owner", "admin", "man
     businessId, customerId: customer.id, userId: req.user!.id, type: input.type,
     title: input.title, note: input.note, nextActionAt: input.nextActionAt ? new Date(input.nextActionAt) : null,
   }).returning();
-  await recordActivity({ businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
+  await recordActivitySafely({ businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
     entityType: "crm_interaction", entityId: created.id, entityName: created.title,
     description: displayName(req.user!) + " added a CRM " + created.type + " for " + customer.firstName + " " + customer.lastName,
     status: "success" });
