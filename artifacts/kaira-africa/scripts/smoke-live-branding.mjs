@@ -1064,21 +1064,37 @@ try {
     }
 
     if (routePath === '/savings') {
-      for (const label of ['Savings goal currency', 'Savings entry currency']) {
-        const selector = pinPage.getByLabel(label);
-        assert.equal(await selector.count(), 1, `${label} should be available exactly once`);
-        await selector.click();
-        for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
-          const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
-          assert.ok(await currencyOption.count() > 0, `${label} should expose the ${code} option`);
-          const visibleFlag = currencyOption.getByText(flag, { exact: true });
-          assert.equal(await visibleFlag.count(), 1, `${label} should render one ${code} flag node`);
-          assert.ok(await visibleFlag.isVisible(), `${label} should visibly display the ${code} flag`);
-        }
-        await pinPage.keyboard.press('Escape');
-        const selectedFlag = selector.locator('..').getByText('🇬🇲', { exact: true });
-        assert.ok(await selectedFlag.isVisible(), `${label} should keep the selected GMD flag visible`);
+      // Goal currency exists only after switching the Savings form to New goal.
+      await pinPage.getByRole('button', { name: 'New goal', exact: true }).click();
+      const goalCurrency = pinPage.getByLabel('Savings goal currency');
+      assert.equal(await goalCurrency.count(), 1, 'Savings goal currency should be available in goal mode');
+      await goalCurrency.click();
+      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+        const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
+        assert.ok(await currencyOption.count() > 0, `Savings goal currency should expose the ${code} option`);
+        const visibleFlag = currencyOption.getByText(flag, { exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Savings goal currency should render one ${code} flag node`);
+        assert.ok(await visibleFlag.isVisible(), `Savings goal currency should visibly display the ${code} flag`);
       }
+      await pinPage.keyboard.press('Escape');
+      const selectedGoalFlag = goalCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      assert.ok(await selectedGoalFlag.isVisible(), 'Selected GMD flag should remain visible on the savings goal form');
+
+      // Switch back to Record mode before checking the separate entry currency picker.
+      await pinPage.getByRole('button', { name: 'Record', exact: true }).click();
+      const entryCurrency = pinPage.getByLabel('Savings entry currency');
+      assert.equal(await entryCurrency.count(), 1, 'Savings entry currency should be available in record mode');
+      await entryCurrency.click();
+      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+        const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
+        assert.ok(await currencyOption.count() > 0, `Savings entry currency should expose the ${code} option`);
+        const visibleFlag = currencyOption.getByText(flag, { exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Savings entry currency should render one ${code} flag node`);
+        assert.ok(await visibleFlag.isVisible(), `Savings entry currency should visibly display the ${code} flag`);
+      }
+      await pinPage.keyboard.press('Escape');
+      const selectedEntryFlag = entryCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      assert.ok(await selectedEntryFlag.isVisible(), 'Selected GMD flag should remain visible on the savings entry form');
     }
 
     if (routePath === '/transactions') {
