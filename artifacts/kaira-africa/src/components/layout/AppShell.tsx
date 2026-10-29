@@ -24,7 +24,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="min-h-[100dvh] flex">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block shrink-0">
-        <Sidebar collapsed={desktopSidebarCollapsed} onLogoClick={() => setDesktopSidebarCollapsed(value => !value)} />
+        <Sidebar collapsed={desktopSidebarCollapsed} onLogoClick={() => setDesktopSidebarCollapsed(value => !value)} onNavigate={() => setDesktopSidebarCollapsed(true)} />
       </div>
 
       {/* Mobile Sidebar Drawer */}
