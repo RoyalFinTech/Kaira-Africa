@@ -268,7 +268,7 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 
 ## QA continuation — photo safety and financial invariants (2026-10-29)
 
-Current main after the QA-focused merges is `74c39e0a6db676a00511efe0460d395ffad3c1c3`; both Render frontend and API are live on that commit. Backend CI typecheck/build/API tests, fresh-DB migration validation, health check and Docker build passed.
+The application-code release baseline after the QA-focused merges is `74c39e0a6db676a00511efe0460d395ffad3c1c3`; both Render frontend and API were verified live on that commit before the subsequent documentation-only reconciliation. Backend CI typecheck/build/API tests, fresh-DB migration validation, health check and Docker build passed.
 
 - **Photo safety:** PR #123 validates canonical Base64, file signatures, supported formats and exact CRM (2 MB) / inventory (200 KB) boundaries. PR #126 restricts private object paths and validates CRM/inventory paths before signing or cleanup. These are unit-level guarantees; signed-in upload/replace/reload/remove and private-object access still require E2E tests.
 - **Anonymous access:** PRs #124–#125 added read-only anonymous probes. Live workflow [40878832914](https://github.com/RoyalFinTech/Kaira-Africa/actions/runs/40878832914) passed with HTTP 401 for auth/me, CRM customers, inventory products, investment plans, savings overview and daily ledger. This does not prove cross-business isolation for authenticated users.
