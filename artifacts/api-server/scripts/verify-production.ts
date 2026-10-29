@@ -115,6 +115,27 @@ async function checkHealthEndpoints() {
   }
 }
 
+async function checkProtectedBusinessRoutes() {
+  // These read-only probes prove that sensitive business data endpoints reject
+  // anonymous requests. They do not create, update, or delete business records.
+  const paths = [
+    "/api/crm/customers",
+    "/api/inventory/products",
+    "/api/investment-plans",
+    "/api/savings/overview",
+    "/api/daily-ledger",
+  ];
+  for (const path of paths) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });
+      record(`Access control: ${path}`, res.status === 401, `GET ${path} without a token -> HTTP ${res.status} (expected 401)`);
+      await res.body?.cancel().catch(() => {});
+    } catch (err) {
+      record(`Access control: ${path}`, false, `Request failed: ${(err as Error).message}`);
+    }
+  }
+}
+
 async function checkAuthentication() {
   // Safe, non-destructive checks: confirm the auth surface responds
   // correctly WITHOUT creating real accounts or sending real
@@ -179,6 +200,7 @@ async function main() {
   await checkSms();
   await checkHealthEndpoints();
   await checkAuthentication();
+  await checkProtectedBusinessRoutes();
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} checks passed.`);
