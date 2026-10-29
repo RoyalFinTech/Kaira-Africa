@@ -9,7 +9,7 @@ import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { supabaseStorageHeaders } from "../lib/supabase-storage-headers";
-import { extractSignedCustomerPhotoUrl, isCustomerPhotoPathForCustomer } from "../lib/crm-photo";
+import { extractSignedCustomerPhotoUrl, isCustomerPhotoPathForCustomer, parseCustomerPhotoDataUrl } from "../lib/crm-photo";
 
 const router: IRouter = Router();
 const profileDataSchema = z.record(z.string(), z.unknown()).default({});
@@ -74,12 +74,10 @@ async function serializeCustomer(row: typeof customers.$inferSelect) {
   return { ...row, avatarUrl: await signCustomerPhoto(row.avatarUrl), profileData: row.profileData ?? {} };
 }
 async function uploadCustomerPhoto(businessId: string, customerId: string, dataUrl: string) {
-  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
-  if (!match) throw new BadRequestError("Choose a JPEG, PNG or WebP image.");
-  const mime = `image/${match[1]}`;
-  const bytes = Buffer.from(match[2], "base64");
-  if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new BadRequestError("Customer photos must be 2 MB or smaller.");
-  const ext = match[1] === "jpeg" ? "jpg" : match[1];
+  let parsed: ReturnType<typeof parseCustomerPhotoDataUrl>;
+  try { parsed = parseCustomerPhotoDataUrl(dataUrl); }
+  catch (error) { throw new BadRequestError(error instanceof Error ? error.message : "Choose a valid customer photo."); }
+  const { mime, extension: ext, bytes } = parsed;
   const path = `${businessId}/${customerId}/${randomUUID()}.${ext}`;
   const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
   const response = await fetch(`${base}/storage/v1/object/customer-photos/${path.split("/").map(encodeURIComponent).join("/")}`, {
