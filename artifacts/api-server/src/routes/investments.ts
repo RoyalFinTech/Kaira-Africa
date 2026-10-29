@@ -5,6 +5,7 @@ import { db, investmentPlans, investmentDailyRecords } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
+import { validateInvestmentPlanAmounts } from "../lib/investment-plan-validation";
 
 const router: IRouter = Router();
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -88,10 +89,11 @@ router.post("/investment-plans", requireUser, async (req, res) => {
   const additionalCostsMinor = toMinorUnits(input.additionalCosts, input.currency);
   const expectedRevenueMinor = toMinorUnits(input.expectedRevenue, input.currency);
   const expectedProfitMinor = toMinorUnits(input.expectedProfit, input.currency);
-  if (expectedRevenueMinor <= 0) throw new BadRequestError("Expected revenue must be at least 0.01 in the selected currency.");
-  const totalCostMinor = initialInvestmentMinor + additionalCostsMinor;
-  if (expectedRevenueMinor < totalCostMinor) throw new BadRequestError("Expected revenue should be at least the total planned cost. Review the assumptions if a loss is expected.");
-  if (expectedProfitMinor > expectedRevenueMinor - totalCostMinor) throw new BadRequestError("Expected profit cannot exceed expected revenue minus planned costs.");
+  try {
+    validateInvestmentPlanAmounts({ initialInvestmentMinor, additionalCostsMinor, expectedRevenueMinor, expectedProfitMinor });
+  } catch (error) {
+    throw new BadRequestError(error instanceof Error ? error.message : "Review the investment plan amounts.");
+  }
   const [p] = await db.insert(investmentPlans).values({
     businessId, createdBy: req.user!.id, name: input.name, businessCategory: input.businessCategory,
     customCategory: input.customCategory || null, businessModel: input.businessModel, description: input.description || null,
