@@ -38,3 +38,18 @@ export function getInitials(
   if (!lastName) return firstName.charAt(0).toUpperCase();
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
+
+/** Format user-entered monetary amounts with thousands separators while preserving decimal entry. */
+export function formatMoneyInput(value: string): string {
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  const normalized = firstDot < 0 ? cleaned : cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  const [whole = "", fraction] = normalized.split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return fraction === undefined ? grouped : `${grouped}.${fraction.slice(0, 2)}`;
+}
+
+/** Parse a formatted amount for numeric validation and API payloads. */
+export function parseMoneyInput(value: string): number {
+  return Number(value.replace(/,/g, ""));
+}

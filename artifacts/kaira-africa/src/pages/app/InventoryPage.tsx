@@ -9,6 +9,7 @@ import { PageTransition } from "@/components/common/PageTransition";
 import { getInventoryProducts, createInventoryProduct, adjustInventory, uploadInventoryProductImage } from "@/lib/platform-api";
 import type { InventoryProduct } from "@/lib/platform-api";
 import { INVENTORY_CATEGORIES, INVENTORY_UNITS } from "@/lib/inventory-categories";
+import { formatMoneyInput, parseMoneyInput } from "@/lib/utils";
 
 const MAX_IMAGE_BYTES = 200 * 1024;
 type Currency = "GMD" | "NGN" | "USD";
@@ -71,7 +72,7 @@ export default function InventoryPage() {
   const qc = useQueryClient();
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: ["inventory-products"], queryFn: getInventoryProducts });
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" as Currency });
+  const [form, setForm] = useState({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: "0", salePrice: "0", currency: "GMD" as Currency });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [pendingPhotoProductId, setPendingPhotoProductId] = useState<string | null>(null);
@@ -88,7 +89,7 @@ export default function InventoryPage() {
     return totals;
   }, {}), [data]);
   const resetForm = () => {
-    setForm({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" });
+    setForm({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: "0", salePrice: "0", currency: "GMD" });
     setPhotoFile(null); setPhotoPreview(""); setPendingPhotoProductId(null); setFormError(null);
     if (fileRef.current) fileRef.current.value = "";
     if (cameraRef.current) cameraRef.current.value = "";
@@ -144,9 +145,11 @@ export default function InventoryPage() {
     if (!normalizedUnit || normalizedUnit.length > 30) { setFormError("Choose or enter a unit name up to 30 characters."); return; }
     if (!Number.isSafeInteger(form.quantity) || form.quantity < 0) { setFormError("Opening quantity must be a whole number of zero or more."); return; }
     if (!Number.isSafeInteger(form.reorderLevel) || form.reorderLevel < 0) { setFormError("The low-stock alert level must be a whole number of zero or more."); return; }
+    const unitCost = parseMoneyInput(form.unitCost);
+    const salePrice = parseMoneyInput(form.salePrice);
     const validPrice = (value: number) => Number.isFinite(value) && value >= 0 &&
       Number.isSafeInteger(Math.round(value * 100)) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
-    if (![form.unitCost, form.salePrice].every(validPrice)) {
+    if (![unitCost, salePrice].every(validPrice)) {
       setFormError("Buying cost and selling price must be valid non-negative amounts with no more than two decimal places.");
       return;
     }
@@ -155,6 +158,8 @@ export default function InventoryPage() {
     try {
       const product = await createInventoryProduct({
         ...form,
+        unitCost,
+        salePrice,
         name: form.name.trim(),
         sku: normalizedSku,
         unit: normalizedUnit,
@@ -234,8 +239,8 @@ export default function InventoryPage() {
         <label className="space-y-1.5 text-sm font-medium">Opening quantity<Input type="number" min={0} step={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">How many you have right now.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Alert me when stock reaches<Input type="number" min={0} step={1} value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">We flag the item when stock is at or below this number.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Currency for this item<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value as Currency })}>{CURRENCIES.map((currency) => <option key={currency.value} value={currency.value}>{currency.label}</option>)}</select><span className="block text-xs font-normal text-muted-foreground">Prices and stock value use this currency; totals are kept separate.</span></label>
-        <label className="space-y-1.5 text-sm font-medium">Buying cost per unit<Input type="number" min={0} step="0.01" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">What one unit costs your business.</span></label>
-        <label className="space-y-1.5 text-sm font-medium">Selling price per unit<Input type="number" min={0} step="0.01" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">The normal price you charge a customer.</span></label>
+        <label className="space-y-1.5 text-sm font-medium">Buying cost per unit<Input type="text" inputMode="decimal" autoComplete="off" placeholder="e.g. 100,000.00" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: formatMoneyInput(e.target.value) })} required /><span className="block text-xs font-normal text-muted-foreground">What one unit costs your business.</span></label>
+        <label className="space-y-1.5 text-sm font-medium">Selling price per unit<Input type="text" inputMode="decimal" autoComplete="off" placeholder="e.g. 150,000.00" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: formatMoneyInput(e.target.value) })} required /><span className="block text-xs font-normal text-muted-foreground">The normal price you charge a customer.</span></label>
       </div>
       <div className="rounded-xl border border-dashed p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

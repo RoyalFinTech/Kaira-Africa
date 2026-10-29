@@ -11,7 +11,7 @@ import { PaginationControls } from "@/components/common/PaginationControls";
 import { PageTransition } from "@/components/common/PageTransition";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerEntry, type DailyLedgerResponse, type DailyLedgerType, type DailyLedgerCurrency } from "@/lib/platform-api";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatMoneyInput, parseMoneyInput } from "@/lib/utils";
 import { INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
 
 const TYPE_LABELS: Record<DailyLedgerType, string> = {
@@ -29,18 +29,6 @@ const LEDGER_CATEGORIES: Record<DailyLedgerType, string[]> = {
   debt_payment: ["Customer repayment", "Part payment", "Final repayment", ...INVENTORY_CATEGORIES],
   other_income: ["Commission", "Interest", "Refund", ...INVENTORY_CATEGORIES],
 };
-function formatMoneyInput(value: string): string {
-  const cleaned = value.replace(/[^0-9.]/g, "");
-  const firstDot = cleaned.indexOf(".");
-  const normalized = firstDot < 0 ? cleaned : cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
-  const [whole = "", fraction] = normalized.split(".");
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return fraction === undefined ? grouped : `${grouped}.${fraction.slice(0, 2)}`;
-}
-function parseMoneyInput(value: string): number {
-  return Number(value.replace(/,/g, ""));
-}
-
 function todayDate() {
   const now = new Date();
   return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
