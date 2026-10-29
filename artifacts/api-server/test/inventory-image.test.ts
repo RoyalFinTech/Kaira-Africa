@@ -47,14 +47,18 @@ test("rejects successful Storage responses that omit a signed URL", () => {
   );
 });
 
-test("validates inventory photo MIME, canonical base64 and the exact 200 KB boundary", () => {
-  const oneByteJpeg = "data:image/jpeg;base64,/w==";
-  assert.deepEqual([...parseInventoryPhotoDataUrl(oneByteJpeg)], [255]);
+test("validates inventory photo MIME, image signatures, canonical base64 and exact 200 KB boundary", () => {
+  const jpeg = Buffer.alloc(4, 0);
+  jpeg.set([0xff, 0xd8, 0xff]);
+  assert.deepEqual([...parseInventoryPhotoDataUrl("data:image/jpeg;base64," + jpeg.toString("base64")).subarray(0, 3)], [255, 216, 255]);
 
-  const exactLimit = Buffer.alloc(204800).toString("base64");
-  assert.equal(parseInventoryPhotoDataUrl("data:image/jpeg;base64," + exactLimit).length, 204800);
-  const tooLarge = Buffer.alloc(204801).toString("base64");
-  assert.throws(() => parseInventoryPhotoDataUrl("data:image/jpeg;base64," + tooLarge), /200 KB/);
+  const exactLimit = Buffer.alloc(204800);
+  exactLimit.set([0xff, 0xd8, 0xff]);
+  assert.equal(parseInventoryPhotoDataUrl("data:image/jpeg;base64," + exactLimit.toString("base64")).length, 204800);
+  const tooLarge = Buffer.alloc(204801);
+  tooLarge.set([0xff, 0xd8, 0xff]);
+  assert.throws(() => parseInventoryPhotoDataUrl("data:image/jpeg;base64," + tooLarge.toString("base64")), /200 KB/);
   assert.throws(() => parseInventoryPhotoDataUrl("data:image/png;base64,/w=="), /JPEG product photo/);
   assert.throws(() => parseInventoryPhotoDataUrl("data:image/jpeg;base64,A"), /valid JPEG images/);
+  assert.throws(() => parseInventoryPhotoDataUrl("data:image/jpeg;base64,/w=="), /valid JPEG images/);
 });
