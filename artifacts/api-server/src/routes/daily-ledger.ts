@@ -113,7 +113,7 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
   const sales = fromMinorUnits(Number(totals.salesMinor), query.currency);
   const expenses = fromMinorUnits(Number(totals.expenseMinor), query.currency);
   res.json({
-    startDate, endDate,
+    startDate, endDate, currency: query.currency,
     entries: entries.map(serialize),
     pagination: {
       page: query.page,
