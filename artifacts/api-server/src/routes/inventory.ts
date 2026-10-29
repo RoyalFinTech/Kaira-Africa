@@ -8,6 +8,7 @@ import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { logger } from "../lib/logger";
+import { inventoryImageObjectPath, isInventoryImagePathForProduct, normalizeSignedInventoryImageUrl } from "../lib/inventory-image";
 
 const router: IRouter = Router();
 
@@ -28,7 +29,7 @@ function serialize(p: typeof inventoryProducts.$inferSelect) {
     createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() };
 }
 
-async function describeInventoryImageUploadFailure(response: Response): Promise<string> {
+async function describeInventoryStorageFailure(response: Response, operation: "upload" | "signing"): Promise<string> {
   let remoteMessage = "";
   try {
     const body: unknown = await response.json();
@@ -55,7 +56,7 @@ async function describeInventoryImageUploadFailure(response: Response): Promise<
     return "Supabase Storage rejected the API credentials. Confirm SUPABASE_URL matches the Kaira Africa project and that SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is configured on the API service in Render.";
   }
   if (response.status === 404) {
-    return "Supabase could not find the private inventory-images bucket or upload path. Confirm the bucket exists in the project configured for the Kaira Africa API.";
+    return "Supabase could not find the private inventory-images bucket or object path. Confirm the bucket exists in the project configured for the Kaira Africa API.";
   }
   if (response.status === 413) {
     return "Supabase rejected the photo because it exceeds the 200 KB inventory image limit. Choose a smaller photo.";
@@ -63,8 +64,44 @@ async function describeInventoryImageUploadFailure(response: Response): Promise<
   if (response.status === 400 && /mime|content.?type|image/i.test(remoteMessage)) {
     return "Supabase rejected the photo format. Choose a JPEG image.";
   }
-  return "Supabase Storage rejected the inventory photo upload (HTTP " + response.status + ")" +
+  const action = operation === "upload" ? "photo upload" : "private photo preview link";
+  return "Supabase Storage rejected the inventory " + action + " (HTTP " + response.status + ")" +
     (remoteMessage ? ": " + remoteMessage : ". Check the private inventory-images bucket and API Storage configuration.");
+}
+
+async function requestSignedInventoryImageUrl(storage: ReturnType<typeof requireSupabaseStorageConfig>, objectPath: string): Promise<string> {
+  const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+  const response = await fetch(storage.base + "/storage/v1/object/sign/inventory-images/" + encodedPath, {
+    method: "POST",
+    headers: { ...storage.headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn: 86400 }),
+  });
+  if (!response.ok) {
+    const message = await describeInventoryStorageFailure(response, "signing");
+    throw new HttpError(502, "inventory_image_signing_failed", message);
+  }
+  const result = await response.json() as { signedURL?: string; signedUrl?: string };
+  const signedUrl = result.signedURL ?? result.signedUrl;
+  if (!signedUrl) {
+    throw new HttpError(502, "inventory_image_signing_failed", "Supabase accepted the photo but did not return a private preview link. Try the upload again.");
+  }
+  return normalizeSignedInventoryImageUrl(storage.base, signedUrl);
+}
+
+async function removeInventoryImageObject(storage: ReturnType<typeof requireSupabaseStorageConfig>, objectPath: string, businessId: string, productId: string): Promise<void> {
+  if (!isInventoryImagePathForProduct(objectPath, businessId, productId)) return;
+  try {
+    const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+    const response = await fetch(storage.base + "/storage/v1/object/inventory-images/" + encodedPath, {
+      method: "DELETE",
+      headers: storage.headers,
+    });
+    if (!response.ok && response.status !== 404) {
+      logger.warn({ statusCode: response.status }, "Could not clean up an unused inventory image object");
+    }
+  } catch {
+    logger.warn("Could not clean up an unused inventory image object");
+  }
 }
 
 async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
@@ -72,35 +109,10 @@ async function serializeWithImage(p: typeof inventoryProducts.$inferSelect) {
   if (!p.imageUrl || /^https?:\/\//i.test(p.imageUrl)) return product;
   if (!hasSupabaseStorageConfig()) return { ...product, imageUrl: null };
   const storage = requireSupabaseStorageConfig("Inventory product image storage");
-
-  // Product photos are private. Store the object path in Postgres and return
-  // a short-lived signed URL to authenticated business users only.
-  const baseUrl = storage.base;
-  const objectPath = p.imageUrl.split("/").map(encodeURIComponent).join("/");
   try {
-    const response = await fetch(`${baseUrl}/storage/v1/object/sign/inventory-images/${objectPath}`, {
-      method: "POST",
-      headers: {
-        ...storage.headers,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ expiresIn: 86400 }),
-    });
-    if (!response.ok) {
-      logger.warn({ statusCode: response.status }, "Could not create a signed URL for an inventory product image");
-      return { ...product, imageUrl: null };
-    }
-    const result = await response.json() as { signedURL?: string; signedUrl?: string };
-    const signedUrl = result.signedURL ?? result.signedUrl;
-    if (!signedUrl) return { ...product, imageUrl: null };
-    const fullUrl = signedUrl.startsWith("http")
-      ? signedUrl
-      : signedUrl.startsWith("/storage/v1/")
-        ? baseUrl + signedUrl
-        : `${baseUrl}/storage/v1${signedUrl.startsWith("/") ? "" : "/"}${signedUrl}`;
-    return { ...product, imageUrl: fullUrl };
-  } catch {
-    // Keep product and stock information available even if image signing fails.
+    return { ...product, imageUrl: await requestSignedInventoryImageUrl(storage, p.imageUrl) };
+  } catch (error) {
+    logger.warn({ error: error instanceof Error ? error.message : "Unknown signing error" }, "Could not create a signed URL for an inventory product image");
     return { ...product, imageUrl: null };
   }
 }
@@ -155,7 +167,7 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
   if (!bytes.length || bytes.length > 204800) {
     throw new BadRequestError("Product photos must be 200 KB or smaller.");
   }
-  const objectPath = `${businessId}/${product.id}/${Date.now()}.jpg`;
+  const objectPath = inventoryImageObjectPath(businessId, product.id);
   const storageUrl = `${storage.base}/storage/v1/object/inventory-images/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
   const upload = await fetch(storageUrl, {
     method: "POST",
@@ -167,14 +179,37 @@ router.post("/inventory/products/:id/image", requireUser, requireRole("owner", "
     body: bytes,
   });
   if (!upload.ok) {
-    const message = await describeInventoryImageUploadFailure(upload);
+    const message = await describeInventoryStorageFailure(upload, "upload");
     logger.error({ statusCode: upload.status }, "Supabase Storage rejected an inventory photo upload");
     throw new HttpError(502, "inventory_image_upload_failed", message);
   }
-  const imageUrl = objectPath;
-  const [updated] = await db.update(inventoryProducts).set({ imageUrl, updatedAt: new Date() })
-    .where(and(eq(inventoryProducts.id, product.id), eq(inventoryProducts.businessId, businessId))).returning();
-  res.json(await serializeWithImage(updated));
+
+  let signedUrl: string;
+  try {
+    // Do not report success or persist a new path until Storage can create
+    // the private signed URL that the UI needs to display the uploaded photo.
+    signedUrl = await requestSignedInventoryImageUrl(storage, objectPath);
+  } catch (error) {
+    if (product.imageUrl !== objectPath) await removeInventoryImageObject(storage, objectPath, businessId, product.id);
+    if (error instanceof HttpError) throw error;
+    logger.error({ error: error instanceof Error ? error.message : "Unknown signing error" }, "Could not verify the inventory image preview URL");
+    throw new HttpError(502, "inventory_image_signing_failed", "The photo was uploaded but its private preview link could not be verified. Please retry the photo upload.");
+  }
+
+  let updated: typeof inventoryProducts.$inferSelect | undefined;
+  try {
+    [updated] = await db.update(inventoryProducts).set({ imageUrl: objectPath, updatedAt: new Date() })
+      .where(and(eq(inventoryProducts.id, product.id), eq(inventoryProducts.businessId, businessId))).returning();
+    if (!updated) throw new NotFoundError("Inventory product not found");
+  } catch (error) {
+    if (product.imageUrl !== objectPath) await removeInventoryImageObject(storage, objectPath, businessId, product.id);
+    throw error;
+  }
+
+  if (product.imageUrl && product.imageUrl !== objectPath) {
+    await removeInventoryImageObject(storage, product.imageUrl, businessId, product.id);
+  }
+  res.json({ ...serialize(updated), imageUrl: signedUrl });
 });
 
 router.post("/inventory/products/:id/adjust", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
