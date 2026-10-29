@@ -43,7 +43,7 @@ export default function CalendarSchedulePage() {
     return range==="upcoming"?rows.filter(x=>x.kind==="task"?Boolean(x.dateOnlyValue&&x.dateOnlyValue>=businessToday):x.date.getTime()>=now.getTime()):rows;
   },[tasksQ.data,meetingsQ.data,range,businessTimeZone]);
   const loading=tasksQ.isLoading||meetingsQ.isLoading||businessPreferencesQ.isLoading;
-  const error=tasksQ.error||meetingsQ.error;
+  const error=tasksQ.error||meetingsQ.error||businessPreferencesQ.error;
   return <PageTransition><main className="mx-auto w-full max-w-6xl space-y-6 p-1 sm:p-2">
     <section className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-5 sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
