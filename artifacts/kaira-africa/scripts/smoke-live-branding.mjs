@@ -1190,12 +1190,12 @@ try {
 
       await pinPage.getByPlaceholder('e.g. 25 kg bag of rice').fill('Rice 25 kg bag');
       await pinPage.getByPlaceholder('e.g. RICE-25KG').fill('RICE-SMOKE-25KG');
-      await pinPage.getByPlaceholder('e.g. Food, clothing, supplies').fill('Food');
-      await pinPage.getByPlaceholder('piece, bag, bottle, box').fill('bag');
+      await pinPage.getByLabel('Category (optional)').selectOption('Food and groceries');
+      await pinPage.getByLabel('Unit name').selectOption('bag');
       const inventoryNumbers = pinPage.locator('input[type="number"]');
       await inventoryNumbers.nth(0).fill('12');
       await inventoryNumbers.nth(1).fill('3');
-      await pinPage.locator('select').selectOption('NGN');
+      await pinPage.getByLabel('Currency for this item').selectOption('NGN');
       await inventoryNumbers.nth(2).fill('7.5');
       await inventoryNumbers.nth(3).fill('10');
 
