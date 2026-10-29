@@ -12,6 +12,7 @@ type CurrencyPickerProps = {
   options: CurrencyPickerOption[];
   ariaLabel: string;
   className?: string;
+  disabled?: boolean;
 };
 
 /**
@@ -19,7 +20,7 @@ type CurrencyPickerProps = {
  * The flag is outside the native option rendering area, so it remains visible
  * on platforms whose dropdown menus do not render emoji flags reliably.
  */
-export function CurrencyPicker({ value, onValueChange, options, ariaLabel, className }: CurrencyPickerProps) {
+export function CurrencyPicker({ value, onValueChange, options, ariaLabel, className, disabled = false }: CurrencyPickerProps) {
   const selected = options.find((option) => option.value === value) ?? options[0];
 
   return (
@@ -29,8 +30,8 @@ export function CurrencyPicker({ value, onValueChange, options, ariaLabel, class
           {selected.flag}
         </span>
       )}
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger aria-label={ariaLabel} className="min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus:ring-0">
+      <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+        <SelectTrigger disabled={disabled} aria-label={ariaLabel} className="min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus:ring-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
