@@ -133,9 +133,31 @@ export default function InventoryPage() {
       await retryPhotoUpload();
       return;
     }
+    const normalizedSku = form.sku.trim();
+    const normalizedUnit = form.unit.trim();
+    const categoryToSave = form.category === "Other" ? customCategory.trim() : form.category.trim();
+    if (!form.name.trim()) { setFormError("Enter a product name."); return; }
+    if (!/^[A-Za-z0-9._-]{1,80}$/.test(normalizedSku)) {
+      setFormError("Enter a unique item code using letters, numbers, dots, hyphens or underscores only.");
+      return;
+    }
+    if (!normalizedUnit || normalizedUnit.length > 30) { setFormError("Choose or enter a unit name up to 30 characters."); return; }
+    if (!Number.isSafeInteger(form.quantity) || form.quantity < 0) { setFormError("Opening quantity must be a whole number of zero or more."); return; }
+    if (!Number.isSafeInteger(form.reorderLevel) || form.reorderLevel < 0) { setFormError("The low-stock alert level must be a whole number of zero or more."); return; }
+    if (![form.unitCost, form.salePrice].every((value) => Number.isFinite(value) && value >= 0 && Number.isSafeInteger(Math.round(value * 100)))) {
+      setFormError("Buying cost and selling price must be valid non-negative amounts with no more than two decimal places.");
+      return;
+    }
+    if (categoryToSave.length > 80) { setFormError("Category must be 80 characters or fewer."); return; }
     setSaving(true); setFormError(null); setNotice(null);
     try {
-      const product = await createInventoryProduct({ ...form, category: form.category === "Other" ? customCategory.trim() : form.category });
+      const product = await createInventoryProduct({
+        ...form,
+        name: form.name.trim(),
+        sku: normalizedSku,
+        unit: normalizedUnit,
+        category: categoryToSave || undefined,
+      });
       if (photoPreview) {
         try {
           await uploadInventoryProductImage(product.id, photoPreview);
