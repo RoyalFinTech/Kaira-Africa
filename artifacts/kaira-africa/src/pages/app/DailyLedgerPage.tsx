@@ -10,7 +10,7 @@ import { KairaLogo } from "@/components/common/KairaLogo";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { PageTransition } from "@/components/common/PageTransition";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
-import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerEntry, type DailyLedgerResponse, type DailyLedgerType } from "@/lib/platform-api";
+import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerEntry, type DailyLedgerResponse, type DailyLedgerType, type DailyLedgerCurrency } from "@/lib/platform-api";
 import { formatCurrency } from "@/lib/utils";
 
 const TYPE_LABELS: Record<DailyLedgerType, string> = {
@@ -39,6 +39,7 @@ export default function DailyLedgerPage() {
   const [startDate, setStartDate] = useState(firstOfMonth());
   const [endDate, setEndDate] = useState(todayDate());
   const [entryPage, setEntryPage] = useState(1);
+  const [currency, setCurrency] = useState<DailyLedgerCurrency>("GMD");
   const [entryType, setEntryType] = useState<DailyLedgerType>("sale");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -66,8 +67,8 @@ export default function DailyLedgerPage() {
   } | null>(null);
 
   const ledgerQuery = useQuery({
-    queryKey: ["daily-ledger", startDate, endDate, entryPage],
-    queryFn: () => getDailyLedger(startDate, endDate, entryPage, 50),
+    queryKey: ["daily-ledger", startDate, endDate, entryPage, currency],
+    queryFn: () => getDailyLedger(startDate, endDate, entryPage, 50, currency),
     enabled: Boolean(startDate && endDate && startDate <= endDate),
   });
   const { data: inventoryProducts = [] } = useQuery({
@@ -79,6 +80,7 @@ export default function DailyLedgerPage() {
   const productSaleTotal = selectedProduct ? selectedProduct.salePrice * Number(quantity || 0) : 0;
   const response = ledgerQuery.data;
   const summary = response?.summary;
+  const activeCurrency = response?.currency ?? currency;
 
   useEffect(() => {
     if (!printPending || !printSnapshot) return;
@@ -98,7 +100,7 @@ export default function DailyLedgerPage() {
 
     setPrintingPeriod(true);
     try {
-      const firstPage = await getDailyLedger(startDate, endDate, 1, 100);
+      const firstPage = await getDailyLedger(startDate, endDate, 1, 100, currency);
       const allEntries = [...firstPage.entries];
       const pageBatchSize = 5;
 
@@ -108,7 +110,7 @@ export default function DailyLedgerPage() {
           (_, index) => pageNumber + index,
         );
         const nextPages = await Promise.all(
-          pageNumbers.map((nextPage) => getDailyLedger(startDate, endDate, nextPage, 100)),
+          pageNumbers.map((nextPage) => getDailyLedger(startDate, endDate, nextPage, 100, currency)),
         );
         for (const result of nextPages) allEntries.push(...result.entries);
       }
@@ -171,7 +173,7 @@ export default function DailyLedgerPage() {
         description: description.trim(),
         category: category.trim() || undefined,
         amount: numericAmount,
-        currency: "GMD",
+        currency,
         customerName: customerName.trim() || undefined,
         productId: entryType === "sale" && productId ? productId : undefined,
         quantity: entryType === "sale" && productId ? Number(quantity) : undefined,
@@ -197,7 +199,7 @@ export default function DailyLedgerPage() {
 
   const exportCsv = () => {
     const rows = response?.entries ?? [];
-    const header = ["Date", "Time", "Entry type", "Description", "Category", "Customer", "Payment method", "Remarks", "Status", "Amount (GMD)", "Balance (GMD)"];
+    const header = ["Date", "Time", "Entry type", "Description", "Category", "Customer", "Payment method", "Remarks", "Status", "Amount (" + currency + ")", "Balance (" + currency + ")"];
     const escapeCell = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
     const csv = [header, ...rows.map((entry) => [entry.recordedDate, entry.recordedTime, TYPE_LABELS[entry.entryType], entry.description, entry.category, entry.customerName, entry.paymentMethod, entry.remarks, entry.status, entry.amount, entry.balance])].map((row) => row.map(escapeCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" }));
@@ -232,7 +234,12 @@ export default function DailyLedgerPage() {
             <h1 className="font-display flex items-center gap-2 text-3xl font-bold"><BookOpen className="h-7 w-7 text-primary" />Daily Sales & Expense Book</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Your everyday business book: record each sale, expense, credit and repayment with its date, time, person, payment method and remarks. Entries feed your reports automatically.</p>
           </div>
-          <Badge variant="outline" className="w-fit gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> GMD ledger</Badge>
+          <label className="w-full space-y-1.5 text-sm font-medium sm:w-44">Ledger currency
+            <select value={currency} onChange={(e) => { const next = e.target.value as DailyLedgerCurrency; setCurrency(next); setEntryPage(1); setProductId(""); setAmount(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+              <option value="GMD">GMD · Dalasi</option><option value="NGN">NGN · Naira</option><option value="USD">USD · US Dollar</option>
+            </select>
+            <span className="block text-xs font-normal text-muted-foreground">The form, summaries, charts and exports use this currency only.</span>
+          </label>
         </div>
 
         <Card>
@@ -251,7 +258,7 @@ export default function DailyLedgerPage() {
                     {Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </label>
-                <label className="space-y-1.5 text-sm font-medium">Amount (GMD)
+                <label className="space-y-1.5 text-sm font-medium">Amount ({currency})
                   <Input value={stockLinkedSale ? productSaleTotal.toFixed(2) : amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="e.g. 250.00" disabled={stockLinkedSale} required />
                   {stockLinkedSale && <span className="block text-xs font-normal text-muted-foreground">Calculated from the product price and quantity.</span>}
                 </label>
@@ -281,11 +288,11 @@ export default function DailyLedgerPage() {
                         if (product) setAmount((product.salePrice * Number(quantity || 0)).toFixed(2));
                       }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                         <option value="">Manual sale (no stock adjustment)</option>
-                        {inventoryProducts.filter((p) => p.active && p.currency === "GMD" && p.quantity > 0 && p.salePrice > 0).map((product) => (
-                          <option key={product.id} value={product.id}>{product.name} · {product.quantity} {product.unit} in stock · {formatCurrency(product.salePrice, "GMD")}</option>
+                        {inventoryProducts.filter((p) => p.active && p.currency === currency && p.quantity > 0 && p.salePrice > 0).map((product) => (
+                          <option key={product.id} value={product.id}>{product.name} · {product.quantity} {product.unit} in stock · {formatCurrency(product.salePrice, currency)}</option>
                         ))}
                       </select>
-                      <span className="block text-xs font-normal text-muted-foreground">Choose a GMD-priced stocked product to calculate the sale and reduce inventory in the same database transaction. NGN/USD products stay out of this GMD ledger until currency-specific ledger reports are implemented.</span>
+                      <span className="block text-xs font-normal text-muted-foreground">Choose a {currency}-priced stocked product to calculate the sale and reduce inventory in the same database transaction. Only products in the selected currency are listed.</span>
                     </label>
                     {productId && selectedProduct && (
                       <label className="space-y-1.5 text-sm font-medium">Quantity sold
@@ -350,27 +357,27 @@ export default function DailyLedgerPage() {
         </Card>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Sales received <TrendingUp className="h-4 w-4 text-primary" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.sales ?? 0, "GMD")}</div></CardContent></Card>
-          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Business expenses <TrendingDown className="h-4 w-4 text-destructive" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.expenses ?? 0, "GMD")}</div></CardContent></Card>
-          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Outstanding debts <HandCoins className="h-4 w-4 text-amber-600" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.outstandingDebt ?? 0, "GMD")}</div></CardContent></Card>
-          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Sales less expenses <WalletCards className="h-4 w-4 text-primary" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.salesLessExpenses ?? 0, "GMD")}</div><p className="mt-1 text-xs text-muted-foreground">Before stock cost, tax and other adjustments</p></CardContent></Card>
+          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Sales received <TrendingUp className="h-4 w-4 text-primary" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.sales ?? 0, activeCurrency)}</div></CardContent></Card>
+          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Business expenses <TrendingDown className="h-4 w-4 text-destructive" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.expenses ?? 0, activeCurrency)}</div></CardContent></Card>
+          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Outstanding debts <HandCoins className="h-4 w-4 text-amber-600" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.outstandingDebt ?? 0, activeCurrency)}</div></CardContent></Card>
+          <Card><CardContent className="p-5"><div className="flex items-center justify-between text-sm text-muted-foreground">Sales less expenses <WalletCards className="h-4 w-4 text-primary" /></div><div className="mt-2 text-2xl font-bold">{formatCurrency(summary?.salesLessExpenses ?? 0, activeCurrency)}</div><p className="mt-1 text-xs text-muted-foreground">Before stock cost, tax and other adjustments</p></CardContent></Card>
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <Card><CardHeader><CardTitle className="text-base">Daily sales vs expenses</CardTitle></CardHeader><CardContent>
             {ledgerQuery.isLoading ? <div className="h-[260px] animate-pulse rounded-xl bg-muted" /> : (response?.dailyTrend.length ?? 0) === 0 ? <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">No records for this period yet.</div> : (
-              <ResponsiveContainer width="100%" height={260}><BarChart data={response?.dailyTrend ?? []}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" fontSize={10} /><YAxis fontSize={11} /><Tooltip formatter={(value) => formatCurrency(Number(value), "GMD")} /><Legend /><Bar dataKey="sales" name="Sales" fill="hsl(var(--chart-1))" radius={[4,4,0,0]} /><Bar dataKey="expenses" name="Expenses" fill="hsl(var(--chart-2))" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}><BarChart data={response?.dailyTrend ?? []}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" fontSize={10} /><YAxis fontSize={11} /><Tooltip formatter={(value) => formatCurrency(Number(value), activeCurrency)} /><Legend /><Bar dataKey="sales" name="Sales" fill="hsl(var(--chart-1))" radius={[4,4,0,0]} /><Bar dataKey="expenses" name="Expenses" fill="hsl(var(--chart-2))" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer>
             )}
           </CardContent></Card>
           <Card><CardHeader><CardTitle className="text-base">Sales, expenses and debt mix</CardTitle></CardHeader><CardContent>
             {pieData.length === 0 ? <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">Record sales, expenses or debts to see the chart.</div> : (
-              <ResponsiveContainer width="100%" height={260}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" outerRadius={85} label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}>{pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value) => formatCurrency(Number(value), "GMD")} /></PieChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" outerRadius={85} label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}>{pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value) => formatCurrency(Number(value), activeCurrency)} /></PieChart></ResponsiveContainer>
             )}
           </CardContent></Card>
         </div>
 
         <Card>
-          <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="text-lg">Your business book</CardTitle><p className="mt-1 text-sm text-muted-foreground">A spreadsheet-style register of every recorded transaction. Scroll sideways on smaller screens.</p></div><div className="flex flex-wrap gap-2 print:hidden"><Button type="button" size="sm" variant="outline" onClick={() => void printFullPeriod()} disabled={printingPeriod || ledgerQuery.isLoading || (response?.pagination.total ?? 0) === 0}><Printer className="mr-1 h-4 w-4" />{printingPeriod ? "Preparing report…" : "Print / PDF"}</Button><Button type="button" size="sm" variant="outline" onClick={exportCsv} disabled={!response?.entries.length}><CalendarDays className="mr-1 h-4 w-4" />Export current page</Button></div></div></CardHeader>
+          <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="text-lg">Your business book</CardTitle><p className="mt-1 text-sm text-muted-foreground">A spreadsheet-style register of recorded transactions in the selected currency. Scroll sideways on smaller screens.</p></div><div className="flex flex-wrap gap-2 print:hidden"><Button type="button" size="sm" variant="outline" onClick={() => void printFullPeriod()} disabled={printingPeriod || ledgerQuery.isLoading || (response?.pagination.total ?? 0) === 0}><Printer className="mr-1 h-4 w-4" />{printingPeriod ? "Preparing report…" : "Print / PDF"}</Button><Button type="button" size="sm" variant="outline" onClick={exportCsv} disabled={!response?.entries.length}><CalendarDays className="mr-1 h-4 w-4" />Export current page</Button></div></div></CardHeader>
           <CardContent>
             {printError && <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert">{printError}</div>}
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
@@ -402,16 +409,16 @@ export default function DailyLedgerPage() {
             )}
           </CardContent>
         </Card>
-        <PrintableBusinessDocument id="daily-ledger-print" title="Daily Ledger Report" documentNumber={(printSnapshot?.startDate ?? startDate) + " to " + (printSnapshot?.endDate ?? endDate)} issuedAt={new Date().toLocaleString()}>
+        <PrintableBusinessDocument id="daily-ledger-print" title={`Daily Ledger Report · ${printSnapshot?.response.currency ?? activeCurrency}`} documentNumber={(printSnapshot?.startDate ?? startDate) + " to " + (printSnapshot?.endDate ?? endDate)} issuedAt={new Date().toLocaleString()}>
           <p><strong>Reporting period:</strong> {printSnapshot?.startDate ?? startDate} through {printSnapshot?.endDate ?? endDate}</p>
           <p><strong>Entries included:</strong> {printSnapshot?.entries.length ?? response?.entries.length ?? 0} of {printSnapshot?.response.pagination.total ?? response?.pagination.total ?? 0} records in the period.</p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="kaira-print-total"><p>Sales received</p><strong>{formatCurrency(printSnapshot?.response.summary.sales ?? summary?.sales ?? 0, "GMD")}</strong></div>
-            <div className="kaira-print-total"><p>Expenses</p><strong>{formatCurrency(printSnapshot?.response.summary.expenses ?? summary?.expenses ?? 0, "GMD")}</strong></div>
-            <div className="kaira-print-total"><p>Outstanding debt</p><strong>{formatCurrency(printSnapshot?.response.summary.outstandingDebt ?? summary?.outstandingDebt ?? 0, "GMD")}</strong></div>
-            <div className="kaira-print-total"><p>Debt payments received</p><strong>{formatCurrency(printSnapshot?.response.summary.debtPayments ?? summary?.debtPayments ?? 0, "GMD")}</strong></div>
-            <div className="kaira-print-total"><p>Other income</p><strong>{formatCurrency(printSnapshot?.response.summary.otherIncome ?? summary?.otherIncome ?? 0, "GMD")}</strong></div>
-            <div className="kaira-print-total"><p>Sales less expenses</p><strong>{formatCurrency(printSnapshot?.response.summary.salesLessExpenses ?? summary?.salesLessExpenses ?? 0, "GMD")}</strong></div>
+            <div className="kaira-print-total"><p>Sales received</p><strong>{formatCurrency(printSnapshot?.response.summary.sales ?? summary?.sales ?? 0, printSnapshot?.response.currency ?? activeCurrency)}</strong></div>
+            <div className="kaira-print-total"><p>Expenses</p><strong>{formatCurrency(printSnapshot?.response.summary.expenses ?? summary?.expenses ?? 0, printSnapshot?.response.currency ?? activeCurrency)}</strong></div>
+            <div className="kaira-print-total"><p>Outstanding debt</p><strong>{formatCurrency(printSnapshot?.response.summary.outstandingDebt ?? summary?.outstandingDebt ?? 0, printSnapshot?.response.currency ?? activeCurrency)}</strong></div>
+            <div className="kaira-print-total"><p>Debt payments received</p><strong>{formatCurrency(printSnapshot?.response.summary.debtPayments ?? summary?.debtPayments ?? 0, printSnapshot?.response.currency ?? activeCurrency)}</strong></div>
+            <div className="kaira-print-total"><p>Other income</p><strong>{formatCurrency(printSnapshot?.response.summary.otherIncome ?? summary?.otherIncome ?? 0, printSnapshot?.response.currency ?? activeCurrency)}</strong></div>
+            <div className="kaira-print-total"><p>Sales less expenses</p><strong>{formatCurrency(printSnapshot?.response.summary.salesLessExpenses ?? summary?.salesLessExpenses ?? 0, printSnapshot?.response.currency ?? activeCurrency)}</strong></div>
           </div>
           <table className="mt-5">
             <thead><tr><th>Date / time</th><th>Type / description</th><th>Customer</th><th>Payment method</th><th>Status / remarks</th><th>Amount</th><th>Balance left</th></tr></thead>
