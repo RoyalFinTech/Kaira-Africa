@@ -281,11 +281,11 @@ export default function DailyLedgerPage() {
                         if (product) setAmount((product.salePrice * Number(quantity || 0)).toFixed(2));
                       }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                         <option value="">Manual sale (no stock adjustment)</option>
-                        {inventoryProducts.filter((p) => p.active && p.quantity > 0 && p.salePrice > 0).map((product) => (
+                        {inventoryProducts.filter((p) => p.active && p.currency === "GMD" && p.quantity > 0 && p.salePrice > 0).map((product) => (
                           <option key={product.id} value={product.id}>{product.name} · {product.quantity} {product.unit} in stock · {formatCurrency(product.salePrice, "GMD")}</option>
                         ))}
                       </select>
-                      <span className="block text-xs font-normal text-muted-foreground">Choose a stocked product to calculate the sale and reduce inventory in the same database transaction.</span>
+                      <span className="block text-xs font-normal text-muted-foreground">Choose a GMD-priced stocked product to calculate the sale and reduce inventory in the same database transaction. NGN/USD products stay out of this GMD ledger until currency-specific ledger reports are implemented.</span>
                     </label>
                     {productId && selectedProduct && (
                       <label className="space-y-1.5 text-sm font-medium">Quantity sold
