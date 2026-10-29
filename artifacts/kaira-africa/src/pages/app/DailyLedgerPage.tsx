@@ -289,7 +289,7 @@ export default function DailyLedgerPage() {
                   <Input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} required />
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Category
-                  <select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== "Other") setCustomCategory(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Choose a category</option>{LEDGER_CATEGORIES[entryType].map((item) => <option key={item} value={item}>{item}</option>)}</select>
+                  <select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== "Other") setCustomCategory(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Choose a category</option>{Array.from(new Set([...LEDGER_CATEGORIES[entryType], ...(category && !LEDGER_CATEGORIES[entryType].includes(category) ? [category] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
                   {category === "Other" && <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Type a custom category" maxLength={80} aria-label="Custom category" />}
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Time of record
@@ -326,7 +326,7 @@ export default function DailyLedgerPage() {
                         <Input type="number" min="1" max={selectedProduct.quantity} step="1" value={quantity} onChange={(e) => {
                           const nextQuantity = e.target.value;
                           setQuantity(nextQuantity);
-                          setAmount((selectedProduct.salePrice * Number(nextQuantity || 0)).toFixed(2));
+                          setAmount(formatMoneyInput((selectedProduct.salePrice * Number(nextQuantity || 0)).toFixed(2)));
                         }} required />
                         <span className="block text-xs font-normal text-muted-foreground">Available: {selectedProduct.quantity} {selectedProduct.unit}. Stock is checked again by the server when you save.</span>
                       </label>
