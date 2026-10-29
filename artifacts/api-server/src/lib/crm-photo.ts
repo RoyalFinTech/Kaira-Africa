@@ -17,9 +17,11 @@ export function parseCustomerPhotoDataUrl(dataUrl: string): { mime: string; exte
   return { mime, extension: match[1] === "jpeg" ? "jpg" : match[1], bytes };
 }
 export function isCustomerPhotoPathForCustomer(path: string, businessId: string, customerId: string): boolean {
-  if (!path || /^https?:\/\//i.test(path)) return false;
-  return path.startsWith(`${businessId}/${customerId}/`) &&
-    path.length > businessId.length + customerId.length + 2;
+  if (!path || /^https?:\/\//i.test(path) || path.includes("\\\\") || /[%?#\u0000-\u001f]/.test(path)) return false;
+  const segments = path.split("/");
+  if (segments.length !== 3 || segments[0] !== businessId || segments[1] !== customerId) return false;
+  const filename = segments[2];
+  return filename !== "." && filename !== ".." && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(filename);
 }
 
 export function normalizeSignedCustomerPhotoUrl(baseUrl: string, signedUrl: string): string {
