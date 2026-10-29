@@ -170,7 +170,7 @@ router.post("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin
   }
 
   // The replacement is persisted. Clean up the previous private object afterward.
-  if (previousPath && previousPath !== path && !/^https?:\/\//i.test(previousPath)) {
+  if (previousPath && previousPath !== path && isCustomerPhotoPathForCustomer(previousPath, businessId, customer.id)) {
     try {
       const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
       const cleanup = await fetch(`${base}/storage/v1/object/customer-photos`, {
@@ -205,7 +205,7 @@ router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "adm
 
   // Record removal is complete. A storage cleanup failure leaves only a private
   // orphan object, not a customer row pointing at a missing photo.
-  if (previousPath && !/^https?:\/\//i.test(previousPath)) {
+  if (previousPath && isCustomerPhotoPathForCustomer(previousPath, businessId, customer.id)) {
     try {
       const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
       const response = await fetch(`${base}/storage/v1/object/customer-photos`, {
