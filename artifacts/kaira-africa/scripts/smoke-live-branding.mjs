@@ -1190,7 +1190,7 @@ try {
 
       await pinPage.getByPlaceholder('e.g. 25 kg bag of rice').fill('Rice 25 kg bag');
       await pinPage.getByPlaceholder('e.g. RICE-25KG').fill('RICE-SMOKE-25KG');
-      await pinPage.getByLabel('Category (optional)').selectOption('Food and groceries');
+      await pinPage.getByLabel('Search or enter inventory category').fill('Eggs by crate or tray');
       await pinPage.getByLabel('Unit name').selectOption('bag');
       const inventoryNumbers = pinPage.locator('input[type="number"]');
       await inventoryNumbers.nth(0).fill('12');
@@ -1213,7 +1213,7 @@ try {
       assert.equal(inventoryCreateRequests.length, 1, 'Inventory form should make one intercepted product-create request');
       assert.equal(inventoryCreateRequests[0].name, 'Rice 25 kg bag', 'Inventory form should submit the product name');
       assert.equal(inventoryCreateRequests[0].sku, 'RICE-SMOKE-25KG', 'Inventory form should submit the item code');
-      assert.equal(inventoryCreateRequests[0].category, 'Food and groceries', 'Inventory form should submit the selected shared business category');
+      assert.equal(inventoryCreateRequests[0].category, 'Eggs by crate or tray', 'Inventory form should submit a searched market-specific category');
       assert.equal(inventoryCreateRequests[0].unit, 'bag', 'Inventory form should submit the selected unit');
       assert.equal(inventoryCreateRequests[0].currency, 'NGN', 'Inventory form should submit the selected currency');
       assert.equal(inventoryImageRequests.length, 1, 'Optional product photo should upload once after product creation');

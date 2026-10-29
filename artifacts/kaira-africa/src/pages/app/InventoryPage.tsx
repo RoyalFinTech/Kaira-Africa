@@ -72,7 +72,6 @@ export default function InventoryPage() {
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: ["inventory-products"], queryFn: getInventoryProducts });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" as Currency });
-  const [customCategory, setCustomCategory] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [pendingPhotoProductId, setPendingPhotoProductId] = useState<string | null>(null);
@@ -90,7 +89,6 @@ export default function InventoryPage() {
   }, {}), [data]);
   const resetForm = () => {
     setForm({ name: "", sku: "", category: "", unit: "piece", quantity: 0, reorderLevel: 5, unitCost: 0, salePrice: 0, currency: "GMD" });
-    setCustomCategory("");
     setPhotoFile(null); setPhotoPreview(""); setPendingPhotoProductId(null); setFormError(null);
     if (fileRef.current) fileRef.current.value = "";
     if (cameraRef.current) cameraRef.current.value = "";
@@ -118,8 +116,10 @@ export default function InventoryPage() {
       await uploadInventoryProductImage(pendingPhotoProductId, photoPreview);
       resetForm();
       setOpen(false);
-      await qc.invalidateQueries({ queryKey: ["inventory-products"] });
       setNotice("Product photo uploaded successfully.");
+      void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => {
+        setNotice("Product photo uploaded successfully, but the inventory list could not refresh. Reload the page to see the latest photo.");
+      });
     } catch (cause) {
       setFormError(cause instanceof Error
         ? `The product is already saved, but its photo upload failed again: ${cause.message}`
@@ -135,7 +135,7 @@ export default function InventoryPage() {
     }
     const normalizedSku = form.sku.trim();
     const normalizedUnit = form.unit.trim();
-    const categoryToSave = form.category === "Other" ? customCategory.trim() : form.category.trim();
+    const categoryToSave = form.category.trim();
     if (!form.name.trim()) { setFormError("Enter a product name."); return; }
     if (!/^[A-Za-z0-9._-]{1,80}$/.test(normalizedSku)) {
       setFormError("Enter a unique item code using letters, numbers, dots, hyphens or underscores only.");
@@ -171,13 +171,17 @@ export default function InventoryPage() {
             ? `Product saved, but its photo could not be uploaded: ${cause.message}`
             : "Product saved, but the photo upload failed. Your selected photo is kept for retry.");
           setNotice("Your product details are saved. Retry the photo upload below; do not create the product again.");
-          await qc.invalidateQueries({ queryKey: ["inventory-products"] });
+          void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => undefined);
           return;
         }
       }
       resetForm(); setOpen(false);
-      await qc.invalidateQueries({ queryKey: ["inventory-products"] });
       setNotice("Product saved. Opening stock has been recorded in your inventory.");
+      // Creation is committed before refreshing the product list. Keep the success
+      // state if the refresh fails so the user does not create a duplicate SKU.
+      void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => {
+        setNotice("Product saved successfully, but the inventory list could not refresh. Reload the page to see it. Do not create the same product again.");
+      });
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "We couldn't save this product. Check your details and try again.");
     } finally {
@@ -188,8 +192,10 @@ export default function InventoryPage() {
     setAdjustingId(product.id); setFormError(null); setNotice(null);
     try {
       await adjustInventory(product.id, { quantityDelta: delta, type: delta > 0 ? "purchase" : "sale", reason: delta > 0 ? "Stock received" : "Stock sold/removed" });
-      await qc.invalidateQueries({ queryKey: ["inventory-products"] });
       setNotice(delta > 0 ? `One ${product.unit} added to ${product.name}.` : `One ${product.unit} removed from ${product.name}.`);
+      void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => {
+        setNotice("Stock adjustment saved successfully, but the inventory list could not refresh. Reload the page to see the latest quantity.");
+      });
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "Stock could not be updated.");
     } finally {
@@ -223,7 +229,7 @@ export default function InventoryPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="space-y-1.5 text-sm font-medium">Product name <span className="text-destructive">*</span><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. 25 kg bag of rice" autoComplete="off" maxLength={160} required /><span className="block text-xs font-normal text-muted-foreground">Use the name your staff and customers recognise.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Item code (SKU) <span className="text-destructive">*</span><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value.toUpperCase().replace(/[^A-Z0-9._-]/g, "").slice(0,80) })} placeholder="e.g. RICE-25KG" autoComplete="off" maxLength={80} required /><span className="block text-xs font-normal text-muted-foreground">Your own short, unique code. No two items in this business can share a code.</span></label>
-        <label className="space-y-1.5 text-sm font-medium">Category (optional)<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.category === "Other" ? "Other" : form.category} onChange={(e) => { setForm({ ...form, category: e.target.value }); if (e.target.value !== "Other") setCustomCategory(""); }}><option value="">Choose a category</option>{INVENTORY_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select>{form.category === "Other" && <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Type a custom category (optional)" maxLength={80} aria-label="Custom inventory category" /> }<span className="block text-xs font-normal text-muted-foreground">Choose a category or enter your own when you select Other.</span></label>
+        <label className="space-y-1.5 text-sm font-medium">Category (optional)<Input list="kaira-inventory-category-options" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Search eggs, pancakes, phone accessories…" maxLength={80} autoComplete="off" aria-label="Search or enter inventory category" /><datalist id="kaira-inventory-category-options">{INVENTORY_CATEGORIES.map((item) => <option key={item} value={item} />)}</datalist><span className="block text-xs font-normal leading-5 text-muted-foreground">Start typing a product type to find a suggestion, or enter your own category. Examples include eggs by crate or tray, pancakes, grilled sausage, and phone accessories.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Unit name<select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={INVENTORY_UNITS.includes(form.unit) ? form.unit : "Other"} onChange={(e) => setForm({ ...form, unit: e.target.value === "Other" ? "" : e.target.value })} required><option value="" disabled>Choose a unit</option>{INVENTORY_UNITS.map((unit) => <option key={unit} value={unit}>{unit === "Other" ? "Other (type your own)" : unit}</option>)}</select>{(!form.unit || !INVENTORY_UNITS.includes(form.unit)) && <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="Enter unit name" maxLength={30} required aria-label="Custom unit name" />}<span className="block text-xs font-normal text-muted-foreground">Choose a common unit or enter a custom one.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Opening quantity<Input type="number" min={0} step={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">How many you have right now.</span></label>
         <label className="space-y-1.5 text-sm font-medium">Alert me when stock reaches<Input type="number" min={0} step={1} value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: Math.max(0, Number(e.target.value)) })} required /><span className="block text-xs font-normal text-muted-foreground">We flag the item when stock is at or below this number.</span></label>

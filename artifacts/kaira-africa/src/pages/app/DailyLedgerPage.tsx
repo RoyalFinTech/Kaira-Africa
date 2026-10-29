@@ -62,7 +62,6 @@ export default function DailyLedgerPage() {
   const [entryType, setEntryType] = useState<DailyLedgerType>("sale");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [customCategory, setCustomCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -158,7 +157,6 @@ export default function DailyLedgerPage() {
     setEntryType("sale");
     setDescription("");
     setCategory("");
-    setCustomCategory("");
     setAmount("");
     setProductId("");
     setQuantity("1");
@@ -192,7 +190,7 @@ export default function DailyLedgerPage() {
       await createDailyLedgerEntry({
         entryType,
         description: description.trim(),
-        category: (category === "Other" ? customCategory.trim() : category.trim()) || undefined,
+        category: category.trim() || undefined,
         amount: numericAmount,
         currency,
         customerName: customerName.trim() || undefined,
@@ -204,13 +202,23 @@ export default function DailyLedgerPage() {
         paymentMethod: paymentMethod as "cash" | "bank_transfer" | "mobile_money" | "card" | "credit" | "other",
         remarks: remarks.trim() || undefined,
       });
+      // The POST has committed. A list refresh failure must never tell the user
+      // the record failed or encourage a duplicate sale.
+      const successMessage = entryType === "sale" && productId
+        ? "Sale recorded and inventory stock updated together."
+        : entryType === "debt_payment"
+          ? "Debt payment saved and applied to this customer’s oldest outstanding debt."
+          : "Daily record saved to your business ledger.";
       setEntryPage(1);
-      await Promise.all([
+      resetForm();
+      setNotice(successMessage);
+      const refreshResults = await Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ["daily-ledger"] }),
         queryClient.invalidateQueries({ queryKey: ["inventory-products"] }),
       ]);
-      setNotice(entryType === "sale" && productId ? "Sale recorded and inventory stock updated together." : entryType === "debt_payment" ? "Debt payment saved and applied to this customer’s oldest outstanding debt." : "Daily record saved to your business ledger.");
-      resetForm();
+      if (refreshResults.some((result) => result.status === "rejected")) {
+        setFormError("Your record was saved successfully, but the page could not refresh the latest figures. Reload the ledger to see the updated totals. Do not submit the same record again.");
+      }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not save this record. Please try again.");
     } finally {
@@ -238,8 +246,10 @@ export default function DailyLedgerPage() {
     try {
       await updateDailyLedgerStatus(id, "paid");
       setEntryPage(1);
-      await queryClient.invalidateQueries({ queryKey: ["daily-ledger"] });
       setNotice("Debtor record marked as paid.");
+      void queryClient.invalidateQueries({ queryKey: ["daily-ledger"] }).catch(() => {
+        setFormError("The payment status was saved, but the ledger could not refresh. Reload the page to see the updated balance.");
+      });
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not update the debtor record.");
     } finally {
@@ -289,8 +299,9 @@ export default function DailyLedgerPage() {
                   <Input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} required />
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Category
-                  <select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== "Other") setCustomCategory(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Choose a category</option>{Array.from(new Set([...LEDGER_CATEGORIES[entryType], ...(category && !LEDGER_CATEGORIES[entryType].includes(category) ? [category] : [])])).map((item) => <option key={item} value={item}>{item}</option>)}</select>
-                  {category === "Other" && <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Type a custom category" maxLength={80} aria-label="Custom category" />}
+                  <Input list="kaira-ledger-category-options" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={entryType === "sale" || entryType === "debt" ? "Search eggs, pancakes, grilled food…" : "Search or enter a category…"} maxLength={80} autoComplete="off" aria-label="Search or enter sales and expense category" />
+                  <datalist id="kaira-ledger-category-options">{Array.from(new Set([...LEDGER_CATEGORIES[entryType], ...(category && !LEDGER_CATEGORIES[entryType].includes(category) ? [category] : [])])).map((item) => <option key={item} value={item} />)}</datalist>
+                  <span className="block text-xs leading-5 text-muted-foreground">Start typing to find a suggested category or enter the name you use in your business.</span>
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Time of record
                   <Input type="time" value={recordedTime} onChange={(e) => setRecordedTime(e.target.value)} required />
