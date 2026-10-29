@@ -12,6 +12,7 @@ import { PageTransition } from "@/components/common/PageTransition";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerEntry, type DailyLedgerResponse, type DailyLedgerType, type DailyLedgerCurrency } from "@/lib/platform-api";
 import { formatCurrency, formatMoneyInput, parseMoneyInput } from "@/lib/utils";
+import { CurrencyPicker, COMMON_CURRENCIES } from "@/components/common/CurrencyPicker";
 import { INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
 
 const TYPE_LABELS: Record<DailyLedgerType, string> = {
@@ -254,9 +255,7 @@ export default function DailyLedgerPage() {
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Your everyday business book: record each sale, expense, credit and repayment with its date, time, person, payment method and remarks. Entries feed your reports automatically.</p>
           </div>
           <label className="w-full space-y-1.5 text-sm font-medium sm:w-44">Ledger currency
-            <select value={currency} onChange={(e) => { const next = e.target.value as DailyLedgerCurrency; setCurrency(next); setEntryPage(1); setProductId(""); setAmount(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="GMD">🇬🇲 GMD · Gambian dalasi (D)</option><option value="NGN">🇳🇬 NGN · Nigerian naira (₦)</option><option value="USD">🇺🇸 USD · US dollar ($)</option>
-            </select>
+            <CurrencyPicker value={currency} onValueChange={(value) => { const next = value as DailyLedgerCurrency; setCurrency(next); setEntryPage(1); setProductId(""); setAmount(""); }} options={COMMON_CURRENCIES} ariaLabel="Ledger currency" className="w-full" />
             <span className="block text-xs font-normal text-muted-foreground">The form, summaries, charts and exports use this currency only.</span>
           </label>
         </div>
