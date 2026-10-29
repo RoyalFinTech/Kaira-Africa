@@ -1202,7 +1202,7 @@ try {
       // Small synthetic image: browser compression and API handling are tested,
       // while the intercepted route ensures no real product/photo is created.
       const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64');
-      await pinPage.locator('input[type="file"]').setInputFiles({
+      await pinPage.locator('input[type="file"]:not([capture])').setInputFiles({
         name: 'rice-product.png',
         mimeType: 'image/png',
         buffer: onePixelPng,
