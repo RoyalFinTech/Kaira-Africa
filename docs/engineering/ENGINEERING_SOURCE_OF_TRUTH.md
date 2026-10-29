@@ -264,3 +264,16 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 - PR #121 passed PR-head typechecks, frontend build, API tests, fresh-database migration validation, health check and production Docker image build. Post-merge Docker verification remains in progress; deployed splash/onboarding browser smoke passed.
 - Daily ledger supports GMD/NGN/USD with GMD default. The selected currency scopes entries, summaries, debt totals, trends/categories, print/CSV, and available inventory products. Debt payment allocations match currency; linked sales keep stock, movement and ledger writes transactional. Authenticated end-to-end tests and tenant-isolation checks remain outstanding.
 - No production business records or Storage objects were modified.
+
+
+## QA continuation — photo safety and financial invariants (2026-10-29)
+
+Current main after the QA-focused merges is `74c39e0a6db676a00511efe0460d395ffad3c1c3`; both Render frontend and API are live on that commit. Backend CI typecheck/build/API tests, fresh-DB migration validation, health check and Docker build passed.
+
+- **Photo safety:** PR #123 validates canonical Base64, file signatures, supported formats and exact CRM (2 MB) / inventory (200 KB) boundaries. PR #126 restricts private object paths and validates CRM/inventory paths before signing or cleanup. These are unit-level guarantees; signed-in upload/replace/reload/remove and private-object access still require E2E tests.
+- **Anonymous access:** PRs #124–#125 added read-only anonymous probes. Live workflow [40878832914](https://github.com/RoyalFinTech/Kaira-Africa/actions/runs/40878832914) passed with HTTP 401 for auth/me, CRM customers, inventory products, investment plans, savings overview and daily ledger. This does not prove cross-business isolation for authenticated users.
+- **Investment Planner:** PR #127 extracts and tests money validation (planned costs, expected revenue/profit bounds, zero/negative values and safe integer limits). Signed-in plan creation, daily recording, currency/business isolation and exports remain NOT VERIFIED.
+- **Daily Ledger:** PR #128 validates debt allocation inputs/aggregate totals and adds tests for oldest-first allocation, exact payoff, overpayment and malformed amounts. Signed-in payment allocation, stock/ledger transaction behavior, cross-currency rejection and export behavior remain NOT VERIFIED.
+- **Savings:** PR #129 guards cumulative savings balance overflow. The agreed business rule remains: goal withdrawals draw only from that goal; unassigned withdrawals draw only from the unassigned balance in the same currency; advisory transaction locks serialize withdrawals per pool. Concurrent withdrawal, currency/business isolation and signed-in persistence tests remain NOT VERIFIED.
+- **Production safety:** No customer records, financial entries or Storage objects were created or mutated for QA. Read-only checks found the CRM, inventory, investment and savings tables empty; the profile-avatar bucket had one existing object.
+- **Remaining release gate:** obtain an authorized signed-in test session or isolated staging identities and execute CRUD, photo lifecycle, tenant isolation, multi-currency/stock/debt, investment/savings concurrency, and print/CSV/PDF checks. Do not promote features from “implemented in code” to “E2E verified” before those checks.
