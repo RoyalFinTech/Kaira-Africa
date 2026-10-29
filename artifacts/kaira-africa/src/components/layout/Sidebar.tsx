@@ -103,9 +103,10 @@ const navigation: { section: string; items: NavItem[] }[] = [
 interface SidebarProps {
   collapsed?: boolean;
   onLogoClick?: () => void;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ collapsed = false, onLogoClick }: SidebarProps) {
+export function Sidebar({ collapsed = false, onLogoClick, onNavigate }: SidebarProps) {
   const [location, setLocation] = useLocationHook();
   const { data: user } = useGetMe();
   const { data: business } = useGetMyBusiness();
@@ -168,7 +169,7 @@ export function Sidebar({ collapsed = false, onLogoClick }: SidebarProps) {
               {group.items.map((item) => {
                 const isActive = location === item.href || location.startsWith(`${item.href}/`);
                 return (
-                  <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined}>
+                  <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined} onClick={onNavigate}>
                     <div
                       className={cn(
                         'flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-all',
@@ -193,7 +194,7 @@ export function Sidebar({ collapsed = false, onLogoClick }: SidebarProps) {
 
       {/* Bottom Actions */}
       <div className={cn("space-y-1", collapsed ? "p-2" : "p-3")}>
-        <Link href="/profile" aria-current={location === "/profile" ? "page" : undefined} title={collapsed ? "Profile" : undefined}>
+        <Link href="/profile" aria-current={location === "/profile" ? "page" : undefined} title={collapsed ? "Profile" : undefined} onClick={onNavigate}>
           <div
             className={cn(
               "flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-all",
@@ -207,7 +208,7 @@ export function Sidebar({ collapsed = false, onLogoClick }: SidebarProps) {
             {!collapsed && <span>Profile</span>}
           </div>
         </Link>
-        <Link href="/settings" title={collapsed ? "Settings" : undefined}>
+        <Link href="/settings" title={collapsed ? "Settings" : undefined} onClick={onNavigate}>
           <div
             className={cn(
               'flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-all',
