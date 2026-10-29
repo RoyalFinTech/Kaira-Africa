@@ -193,7 +193,13 @@ export default function CrmPage() {
   const directoryPageCount = Math.max(1, Math.ceil(directoryTotal / 200));
   const metrics = overview?.metrics;
   const openForm = (customer?: ManagedCrmCustomer) => { setFormInstance((instance) => instance + 1); setEditing(customer ?? null); setSelected(null); setFormError(null); setFormOpen(true); };
-  const refresh = async () => { await qc.invalidateQueries({ queryKey: ["crm-customers"] }); await qc.invalidateQueries({ queryKey: ["crm-overview"] }); };
+  const refresh = async () => {
+    const results = await Promise.allSettled([
+      qc.invalidateQueries({ queryKey: ["crm-customers"] }),
+      qc.invalidateQueries({ queryKey: ["crm-overview"] }),
+    ]);
+    return results.every((result) => result.status === "fulfilled");
+  };
   const saveQuickPhoto = async (file: File | undefined) => {
     const target = photoTargetRef.current;
     if (!file || !target) return;
@@ -206,8 +212,8 @@ export default function CrmPage() {
       const updated = await uploadCrmCustomerPhoto(target.id, await readImage(file));
       if (selected?.id === target.id) setSelected(updated);
       photoTargetRef.current = updated;
-      await refresh();
-      setFormError(null);
+      const refreshed = await refresh();
+      setFormError(refreshed ? null : "Photo uploaded successfully, but the customer list could not refresh. Reload the page to see the latest photo.");
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Photo upload failed.");
     }
@@ -226,8 +232,13 @@ export default function CrmPage() {
           setFormError("Customer details were saved, but the photo upload failed: " + (error instanceof Error ? error.message : "Please retry the photo upload."));
         }
       }
-      await refresh();
-      if (!photoFailed) { setFormOpen(false); setEditing(null); setSelected(saved); }
+      const refreshed = await refresh();
+      if (!photoFailed) {
+        setFormOpen(false); setEditing(null); setSelected(saved);
+        if (!refreshed) setFormError("Customer saved successfully, but the customer list could not refresh. Reload the page to see the latest record. Do not create the customer again.");
+      } else if (!refreshed) {
+        setFormError("Customer details were saved, but the photo upload failed and the customer list could not refresh. Retry the photo upload from the saved customer record.");
+      }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "The customer could not be saved. Please try again.");
     } finally { setSaving(false); }
@@ -237,7 +248,9 @@ export default function CrmPage() {
     setActivitySaving(true); setActivityError("");
     try {
       await createCrmInteraction({ customerId, type: "note", title: title.trim(), note: note.trim(), nextActionAt: nextActionAt ? new Date(nextActionAt).toISOString() : undefined });
-      setTitle(""); setNote(""); setNextActionAt(""); await qc.invalidateQueries({ queryKey: ["crm-overview"] });
+      setTitle(""); setNote(""); setNextActionAt("");
+      const refreshResult = await Promise.allSettled([qc.invalidateQueries({ queryKey: ["crm-overview"] })]);
+      if (refreshResult[0].status === "rejected") setActivityError("Activity saved successfully, but the timeline could not refresh. Reload the page to see it.");
     } catch (error) { setActivityError(error instanceof Error ? error.message : "Could not save this activity."); }
     finally { setActivitySaving(false); }
   };
