@@ -2,7 +2,7 @@
 
 This is the implementation-level companion to [ENGINEERING_SOURCE_OF_TRUTH.md](./ENGINEERING_SOURCE_OF_TRUTH.md). Keep one row per feature area, and split rows further when the implementation has distinct API/data paths. Status must be evidence-based.
 
-**Audit baseline (verified 2026-10-29):** current `main` commit `67544481977f11767a1fb9d4a1645cbbaac0aac6` includes PR #110 timezone/calendar fixes. Render frontend deployment `dep-dbhikp7b9u1s739tlc00` and API deployment `dep-dbhikp7b9u1s739tlbng` both report this commit as live. This confirms deployment status, not authenticated end-to-end behavior.
+**Audit baseline (verified 2026-10-29):** current `main` commit `e5372e6c23120929d7df20c1f6c66649e0675020` includes PR #110 timezone/calendar fixes, PR #111 savings-ledger hardening, and PR #112 database privilege hardening. Render frontend deployment `dep-dbhiqli9lscs739otr40` and API deployment `dep-dbhiqli9lscs739otqrg` both report this commit as live. This confirms deployment status, not authenticated end-to-end behavior.
 
 **Migration tracking note (verified 2026-10-29):** the application's Drizzle journal contains migrations `0018_work_task_reminders`, `0019_business_timezones_notification_preferences`, `0020_task_reminder_email_outbox`, and `0021_work_meeting_time_zone`; live `drizzle.__drizzle_migrations` records IDs through 22, and the corresponding reminder/time-zone tables and columns exist. Supabase's separate `supabase_migrations.schema_migrations` listing currently stops at `0017_work_time_tracking`; do not use that separate listing alone to infer the application's Drizzle migration state. Investigate the split migration-tracking conventions before introducing future schema changes.
 
@@ -41,13 +41,13 @@ This is the implementation-level companion to [ENGINEERING_SOURCE_OF_TRUTH.md](.
 | Calendar/meeting export and page PDF/print | Some export requirements discussed across modules | Per-module paths need audit | NOT VERIFIED | Test each agreed print/PDF workflow |
 | Mobile navigation | Shared Sidebar/App routing | N/A | NOT VERIFIED | Check every group/item at narrow viewport and ensure no orphaned destinations |
 
-## Supabase advisor findings — hardening in progress (2026-10-29)
+## Supabase advisor findings — hardening deployed and checked (2026-10-29)
 
-Read-only Supabase security/performance advisor review found:
-- `public.rls_auto_enable()` is a `SECURITY DEFINER` event-trigger function owned by `postgres`; its default ACL currently permits `anon` and `authenticated` to EXECUTE it. The security advisor flags this. PR #112 adds a guarded migration to revoke generic-role EXECUTE while leaving the event trigger itself enabled.
-- RLS is enabled on 32 public tables and there are no RLS policies. For the audited application tables, `anon` and `authenticated` do not have SELECT/INSERT/UPDATE/DELETE grants; they do have unnecessary TRUNCATE/REFERENCES/TRIGGER grants (and PostgreSQL 17 MAINTAIN where present). PR #112 revokes those grants on existing tables and from future table defaults created by `postgres`.
-- Investment and savings tables exist with RLS enabled and zero current rows. No production records were inserted or modified during this read-only audit.
-- After PR #112 is merged and deployed, rerun the security advisor and read-only privilege checks. If any generic role still has table privileges from other grantors/default ACLs, investigate before making broader changes. Do not create broad RLS policies solely to silence the linter; the API currently owns authentication and business-scoped access.
+PR #112 is merged as `e5372e6c23120929d7df20c1f6c66649e0675020`; both Render services report it live, and the API's Drizzle migration table records migration ID 23 at timestamp `1793272912826`.
+- Before deployment, `public.rls_auto_enable()` was a `SECURITY DEFINER` event-trigger function owned by `postgres`, with EXECUTE available to `anon` and `authenticated`. After migration, read-only checks show `anon_execute=false`, `authenticated_execute=false`, and `postgres_execute=true`.
+- Before deployment, generic roles had unnecessary TRUNCATE/REFERENCES/TRIGGER grants (and PostgreSQL 17 MAINTAIN where supported) across public tables. After migration, the read-only `information_schema.role_table_grants` query returned zero matching grants for `anon` and `authenticated`.
+- The security advisor now reports only the informational `rls_enabled_no_policy` finding on 32 tables; the two `SECURITY DEFINER` execution warnings are no longer present. Do not create broad RLS policies solely to silence the informational finding: the API currently owns authentication and business-scoped access, and generic roles have no direct SELECT/INSERT/UPDATE/DELETE grants on these application tables.
+- Investment and savings tables exist with RLS enabled and zero current rows. No production records were inserted or modified during this verification.
 
 ## Production verification evidence
 
