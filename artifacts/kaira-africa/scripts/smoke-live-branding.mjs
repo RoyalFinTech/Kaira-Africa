@@ -1046,16 +1046,38 @@ try {
       }));
     }
 
+    if (routePath === '/investments') {
+      await pinPage.getByRole('button', { name: 'Create your first plan' }).click();
+      const investmentCurrency = pinPage.getByLabel('Investment currency');
+      await investmentCurrency.waitFor({ state: 'visible', timeout: 10_000 });
+      await investmentCurrency.click();
+      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+        const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
+        assert.ok(await currencyOption.count() > 0, `Investment currency should expose the ${code} option`);
+        const visibleFlag = currencyOption.getByText(flag, { exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Investment currency should render one ${code} flag node`);
+        assert.ok(await visibleFlag.isVisible(), `Investment currency should visibly display the ${code} flag`);
+      }
+      await pinPage.keyboard.press('Escape');
+      const selectedInvestmentFlag = investmentCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      assert.ok(await selectedInvestmentFlag.isVisible(), 'Selected GMD flag should remain visible on the investment form');
+    }
+
     if (routePath === '/savings') {
       for (const label of ['Savings goal currency', 'Savings entry currency']) {
         const selector = pinPage.getByLabel(label);
         assert.equal(await selector.count(), 1, `${label} should be available exactly once`);
         await selector.click();
         for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
-          assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `${label} should show the ${code} flag option`);
+          const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
+          assert.ok(await currencyOption.count() > 0, `${label} should expose the ${code} option`);
+          const visibleFlag = currencyOption.getByText(flag, { exact: true });
+          assert.equal(await visibleFlag.count(), 1, `${label} should render one ${code} flag node`);
+          assert.ok(await visibleFlag.isVisible(), `${label} should visibly display the ${code} flag`);
         }
         await pinPage.keyboard.press('Escape');
-        assert.match(await selector.locator('..').textContent(), /🇬🇲|🇳🇬|🇺🇸/, `${label} should show a visible selected currency flag`);
+        const selectedFlag = selector.locator('..').getByText('🇬🇲', { exact: true });
+        assert.ok(await selectedFlag.isVisible(), `${label} should keep the selected GMD flag visible`);
       }
     }
 
@@ -1115,10 +1137,15 @@ try {
       const ledgerCurrency = pinPage.getByLabel('Ledger currency');
       await ledgerCurrency.click();
       for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
-        assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `Ledger selector should show the ${code} flag option`);
+        const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
+        assert.ok(await currencyOption.count() > 0, `Ledger selector should expose the ${code} option`);
+        const visibleFlag = currencyOption.getByText(flag, { exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Ledger selector should render one ${code} flag node`);
+        assert.ok(await visibleFlag.isVisible(), `Ledger selector should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      assert.match(await ledgerCurrency.locator('..').textContent(), /🇬🇲/, 'Selected GMD flag should remain visible on the ledger form');
+      const selectedLedgerFlag = ledgerCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      assert.ok(await selectedLedgerFlag.isVisible(), 'Selected GMD flag should remain visible on the ledger form');
       // Verify comma-formatted amounts are submitted as their true numeric value.
       await pinPage.getByLabel('Amount in GMD').fill('100000');
       assert.equal(await pinPage.getByLabel('Amount in GMD').inputValue(), '100,000', 'Ledger amount should format thousands with commas while typing');
@@ -1252,10 +1279,15 @@ try {
       const inventoryCurrency = pinPage.getByLabel('Currency for this item');
       await inventoryCurrency.click();
       for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
-        assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `Inventory currency should show the ${code} flag option`);
+        const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
+        assert.ok(await currencyOption.count() > 0, `Inventory currency should expose the ${code} option`);
+        const visibleFlag = currencyOption.getByText(flag, { exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Inventory currency should render one ${code} flag node`);
+        assert.ok(await visibleFlag.isVisible(), `Inventory currency should visibly display the ${code} flag`);
       }
-      await pinPage.getByRole('option', { name: /🇳🇬 NGN/ }).click();
-      assert.match(await inventoryCurrency.locator('..').textContent(), /🇳🇬/, 'Selected NGN flag should remain visible in inventory');
+      await pinPage.getByRole('option', { name: /NGN/ }).click();
+      const selectedInventoryFlag = inventoryCurrency.locator('..').getByText('🇳🇬', { exact: true });
+      assert.ok(await selectedInventoryFlag.isVisible(), 'Selected NGN flag should remain visible in inventory');
       await pinPage.getByLabel('Buying cost per unit').fill('7500000');
       assert.equal(await pinPage.getByLabel('Buying cost per unit').inputValue(), '7,500,000', 'Inventory buying cost should format millions with commas');
       await pinPage.getByLabel('Selling price per unit').fill('10000000');
@@ -1297,7 +1329,7 @@ try {
       await pinPage.getByLabel('Ledger currency').waitFor({ state: 'visible', timeout: 10_000 });
       const saleCurrency = pinPage.getByLabel('Ledger currency');
       await saleCurrency.click();
-      await pinPage.getByRole('option', { name: /🇳🇬 NGN/ }).click();
+      await pinPage.getByRole('option', { name: /NGN/ }).click();
       const inventoryProductSelect = pinPage.getByLabel('Inventory product (optional)');
       await inventoryProductSelect.selectOption('product_visual_smoke');
       const salesProductPhoto = pinPage.getByRole('img', { name: 'Rice 25 kg bag' }).last();
