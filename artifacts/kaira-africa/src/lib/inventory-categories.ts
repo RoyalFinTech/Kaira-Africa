@@ -109,7 +109,6 @@ export const INVENTORY_CATEGORIES = [
   "Handmade goods and crafts",
   "Second-hand goods",
   "General merchandise",
-  "Other",
 ];
 
 export const INVENTORY_UNITS = [
