@@ -34,12 +34,27 @@ function waitForBrandingReady(target: HTMLElement, timeoutMs = 8_000): Promise<v
 function waitForImage(image: HTMLImageElement, timeoutMs = 5_000): Promise<void> {
   return new Promise((resolve) => {
     let timeout: ReturnType<typeof setTimeout>;
+    let finished = false;
     const finish = async () => {
+      if (finished) return;
+      finished = true;
       clearTimeout(timeout);
       image.removeEventListener("load", onLoad);
       image.removeEventListener("error", onError);
       if (image.naturalWidth > 0 && typeof image.decode === "function") {
-        try { await image.decode(); } catch { /* Keep a usable fallback if this image cannot be decoded. */ }
+        // Some browser/image combinations can leave decode() pending even after
+        // load/complete. Bound that extra wait so printing never hangs forever.
+        await new Promise<void>((decodeResolve) => {
+          let decodeFinished = false;
+          const settleDecode = () => {
+            if (decodeFinished) return;
+            decodeFinished = true;
+            clearTimeout(decodeTimeout);
+            decodeResolve();
+          };
+          const decodeTimeout = setTimeout(settleDecode, 750);
+          void Promise.resolve().then(() => image.decode()).then(settleDecode, settleDecode);
+        });
       }
       resolve();
     };

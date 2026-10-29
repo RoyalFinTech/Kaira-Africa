@@ -1209,9 +1209,39 @@ try {
       // verified branding metadata and a secure preview URL.
       await pinPage.locator('input[type="file"]').last().setInputFiles({ name: 'smoke-receipt-logo.png', mimeType: 'image/png', buffer: logoFile });
       await pinPage.locator('section[role="status"]').filter({ hasText: 'Logo saved securely' }).waitFor({ state: 'visible', timeout: 10_000 });
+      const receiptPrintPrecheck = await pinPage.locator('#receipt-preview-print').evaluate((target) => {
+        const logo = target.querySelector('img.kaira-print-logo');
+        return {
+          brandingReady: target.dataset.brandingReady,
+          printHookInstalled: window.print.toString().includes('__kairaPrintCalls'),
+          logoSrc: logo?.getAttribute('src') || '',
+          logoComplete: logo?.complete ?? false,
+          logoNaturalWidth: logo?.naturalWidth ?? 0,
+        };
+      });
+      console.log('RECEIPT SAMPLE PRINT PRECHECK:', JSON.stringify(receiptPrintPrecheck));
+      assert.equal(receiptPrintPrecheck.brandingReady, 'true', 'Receipt sample branding must be ready before printing');
+      assert.ok(receiptPrintPrecheck.printHookInstalled, 'Print spy must remain installed on the receipt branding route');
       const samplePrintBefore = await pinPage.evaluate(() => window.__kairaPrintCalls);
       await pinPage.getByRole('button', { name: 'Print sample / Save PDF' }).click();
-      await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 10_000 });
+      try {
+        await pinPage.waitForFunction((before) => window.__kairaPrintCalls > before, samplePrintBefore, { timeout: 15_000 });
+      } catch (error) {
+        const printDiagnostic = await pinPage.locator('#receipt-preview-print').evaluate((target) => {
+          const logo = target.querySelector('img.kaira-print-logo');
+          return {
+            brandingReady: target.dataset.brandingReady,
+            active: target.classList.contains('kaira-print-active'),
+            printCalls: window.__kairaPrintCalls,
+            printHookInstalled: window.print.toString().includes('__kairaPrintCalls'),
+            logoSrc: logo?.getAttribute('src') || '',
+            logoComplete: logo?.complete ?? false,
+            logoNaturalWidth: logo?.naturalWidth ?? 0,
+          };
+        });
+        console.log('RECEIPT SAMPLE PRINT DIAGNOSTICS:', JSON.stringify(printDiagnostic));
+        throw error;
+      }
       const samplePrinted = await pinPage.evaluate(() => window.__lastKairaPrintedDocument);
       assert.equal(samplePrinted.companyName, 'Smoke Receipt Studio', 'Printed sample reflects the current company name, not a stale template');
       assert.ok(samplePrinted.logoSrc.startsWith('data:image/png;base64,'), 'Printed sample reflects the uploaded logo');
