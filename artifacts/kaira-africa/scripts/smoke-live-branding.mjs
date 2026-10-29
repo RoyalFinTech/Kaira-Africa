@@ -1064,7 +1064,14 @@ try {
       await pinPage.getByLabel('Transaction currency').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Transaction currency').click();
       for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸'], ['EUR', '🇪🇺'], ['GBP', '🇬🇧']]) {
-        assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `Transaction currency ${code} should display its flag`);
+        // CurrencyPicker marks the emoji decorative for screen readers, so the
+        // accessible option name contains the code/label but not the flag. Check
+        // the option by code, then assert the separate flag node is actually visible.
+        const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
+        assert.ok(await currencyOption.count() > 0, `Transaction currency ${code} option should exist`);
+        const visibleFlag = currencyOption.getByText(flag, { exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Transaction currency ${code} should render one flag node`);
+        assert.ok(await visibleFlag.isVisible(), `Transaction currency ${code} should display its flag`);
       }
       await pinPage.keyboard.press('Escape');
       await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
