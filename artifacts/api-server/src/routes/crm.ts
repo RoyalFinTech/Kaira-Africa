@@ -9,6 +9,7 @@ import { recordActivity } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { supabaseStorageHeaders } from "../lib/supabase-storage-headers";
+import { extractSignedCustomerPhotoUrl, isCustomerPhotoPathForCustomer } from "../lib/crm-photo";
 
 const router: IRouter = Router();
 const profileDataSchema = z.record(z.string(), z.unknown()).default({});
@@ -52,11 +53,22 @@ async function signCustomerPhoto(path: string | null) {
       body: JSON.stringify({ expiresIn: 3600 }),
     });
     if (!response.ok) return null;
-    const result = await response.json() as { signedURL?: string; signedUrl?: string };
-    const url = result.signedURL ?? result.signedUrl;
-    if (!url) return null;
-    return url.startsWith("http") ? url : url.startsWith("/storage/v1/") ? base + url : `${base}/storage/v1${url.startsWith("/") ? "" : "/"}${url}`;
+    return extractSignedCustomerPhotoUrl(await response.json(), base);
   } catch { return null; }
+}
+async function removeUploadedCustomerPhoto(businessId: string, customerId: string, path: string) {
+  if (!isCustomerPhotoPathForCustomer(path, businessId, customerId)) return;
+  try {
+    const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
+    const response = await fetch(`${base}/storage/v1/object/customer-photos`, {
+      method: "DELETE",
+      headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
+      body: JSON.stringify({ prefixes: [path] }),
+    });
+    if (!response.ok) console.warn("CRM uploaded photo cleanup failed", { customerId, statusCode: response.status });
+  } catch {
+    console.warn("CRM uploaded photo cleanup was unreachable", { customerId });
+  }
 }
 async function serializeCustomer(row: typeof customers.$inferSelect) {
   return { ...row, avatarUrl: await signCustomerPhoto(row.avatarUrl), profileData: row.profileData ?? {} };
@@ -142,6 +154,11 @@ router.post("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin
   const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
   const previousPath = customer.avatarUrl;
   const path = await uploadCustomerPhoto(businessId, customer.id, dataUrl);
+  const signedPreviewUrl = await signCustomerPhoto(path);
+  if (!signedPreviewUrl) {
+    await removeUploadedCustomerPhoto(businessId, customer.id, path);
+    throw new HttpError(502, "photo_preview_failed", "The photo was uploaded but its private preview could not be created. Your existing customer photo was kept; please retry.");
+  }
   let updated: typeof customer | undefined;
   try {
     [updated] = await db.update(customers).set({ avatarUrl: path, updatedAt: new Date() })
@@ -149,14 +166,7 @@ router.post("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin
     if (!updated) throw new NotFoundError("Customer not found");
   } catch (error) {
     // The database did not adopt the new object path; remove only the new upload.
-    try {
-      const { base, key } = requireSupabaseStorageConfig("Private customer photo storage");
-      await fetch(`${base}/storage/v1/object/customer-photos`, {
-        method: "DELETE",
-        headers: supabaseStorageHeaders(key, { "Content-Type": "application/json" }),
-        body: JSON.stringify({ prefixes: [path] }),
-      });
-    } catch { /* Best-effort cleanup; preserve the database error. */ }
+    await removeUploadedCustomerPhoto(businessId, customer.id, path);
     throw error;
   }
 
@@ -177,7 +187,9 @@ router.post("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin
       console.warn("Previous CRM customer photo cleanup was unreachable after replacement", { customerId: customer.id });
     }
   }
-  res.json(await serializeCustomer(updated));
+  // Use the already-verified signed URL for this response so a second,
+  // transient signing failure cannot make a successful upload look blank.
+  res.json({ ...updated, avatarUrl: signedPreviewUrl, profileData: updated.profileData ?? {} });
 });
 
 router.delete("/crm/customers/:id/photo", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
