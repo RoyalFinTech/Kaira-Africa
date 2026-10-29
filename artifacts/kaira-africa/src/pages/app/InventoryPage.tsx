@@ -94,6 +94,7 @@ export default function InventoryPage() {
     setCustomCategory("");
     setPhotoFile(null); setPhotoPreview(""); setPendingPhotoProductId(null); setFormError(null);
     if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
   };
   const choosePhoto = async (file?: File) => {
     setFormError(null); setPhotoFile(null); setPhotoPreview("");
