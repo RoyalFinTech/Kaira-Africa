@@ -200,6 +200,9 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
         eq(inventoryProducts.active, true),
       )).limit(1).for("update");
       if (!product) throw new NotFoundError("Inventory product not found in this business");
+      if (product.currency !== input.currency) {
+        throw new BadRequestError("This daily ledger currently records GMD only. Select a GMD-priced inventory product; NGN/USD ledger support requires currency-specific reporting first.");
+      }
       if (product.salePriceMinor <= 0) {
         throw new BadRequestError("Set a sale price for this inventory product before recording a sale");
       }
