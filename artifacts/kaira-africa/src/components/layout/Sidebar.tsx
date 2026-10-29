@@ -168,7 +168,7 @@ export function Sidebar({ collapsed = false, onLogoClick }: SidebarProps) {
               {group.items.map((item) => {
                 const isActive = location === item.href || location.startsWith(`${item.href}/`);
                 return (
-                  <Link key={item.href} href={item.href}>
+                  <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined}>
                     <div
                       className={cn(
                         'flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-all',
