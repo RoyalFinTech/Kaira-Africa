@@ -33,15 +33,9 @@ import {
   type TransactionPaymentMethod, type ManagedTransactionStatus,
 } from "@/lib/platform-api";
 import { formatDate, formatMoneyInput, parseMoneyInput } from "@/lib/utils";
+import { CurrencyPicker, TRANSACTION_CURRENCIES } from "@/components/common/CurrencyPicker";
 
 const TRANSACTION_TYPES = ["payment", "refund", "transfer", "withdrawal", "deposit"] as const;
-const CURRENCIES: { code: TransactionCurrency; label: string }[] = [
-  { code: "GMD", label: "GMD — Gambian dalasi" },
-  { code: "NGN", label: "NGN — Nigerian naira" },
-  { code: "USD", label: "USD — US dollar" },
-  { code: "EUR", label: "EUR — Euro" },
-  { code: "GBP", label: "GBP — British pound" },
-];
 const PAYMENT_METHODS: { value: TransactionPaymentMethod; label: string }[] = [
   { value: "manual_entry", label: "Manual entry / bookkeeping" },
   { value: "cash", label: "Cash" },
@@ -187,10 +181,7 @@ function NewTransactionDialog({
                 <span className="block text-xs font-normal text-muted-foreground">Enter the amount in the selected currency only.</span>
               </label>
               <label className="space-y-1.5 text-sm font-medium">Currency
-                <Select value={currency} onValueChange={(v) => setCurrency(v as TransactionCurrency)}>
-                  <SelectTrigger aria-label="Transaction currency"><SelectValue /></SelectTrigger>
-                  <SelectContent>{CURRENCIES.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}</SelectContent>
-                </Select>
+                <CurrencyPicker value={currency} onValueChange={(value) => setCurrency(value as TransactionCurrency)} options={TRANSACTION_CURRENCIES} ariaLabel="Transaction currency" className="w-full" />
                 <span className="block text-xs font-normal text-muted-foreground">Different currencies are kept separate; the app does not add unlike currencies together.</span>
               </label>
               <label className="space-y-1.5 text-sm font-medium">Transaction type

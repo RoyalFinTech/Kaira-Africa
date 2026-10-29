@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Plus, CheckCircle2, CalendarDays, WalletCards, TrendingUp, TrendingDown, HandCoins, Printer } from "lucide-react";
+import { BookOpen, Plus, CheckCircle2, CalendarDays, WalletCards, TrendingUp, TrendingDown, HandCoins, Printer, Package } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { PageTransition } from "@/components/common/PageTransition";
 import { PrintableBusinessDocument, printKairaDocument } from "@/components/common/PrintableBusinessDocument";
 import { createDailyLedgerEntry, getDailyLedger, getInventoryProducts, updateDailyLedgerStatus, type DailyLedgerEntry, type DailyLedgerResponse, type DailyLedgerType, type DailyLedgerCurrency } from "@/lib/platform-api";
 import { formatCurrency, formatMoneyInput, parseMoneyInput } from "@/lib/utils";
+import { CurrencyPicker, COMMON_CURRENCIES } from "@/components/common/CurrencyPicker";
 import { INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
 
 const TYPE_LABELS: Record<DailyLedgerType, string> = {
@@ -254,9 +255,7 @@ export default function DailyLedgerPage() {
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Your everyday business book: record each sale, expense, credit and repayment with its date, time, person, payment method and remarks. Entries feed your reports automatically.</p>
           </div>
           <label className="w-full space-y-1.5 text-sm font-medium sm:w-44">Ledger currency
-            <select value={currency} onChange={(e) => { const next = e.target.value as DailyLedgerCurrency; setCurrency(next); setEntryPage(1); setProductId(""); setAmount(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="GMD">GMD · Dalasi</option><option value="NGN">NGN · Naira</option><option value="USD">USD · US Dollar</option>
-            </select>
+            <CurrencyPicker value={currency} onValueChange={(value) => { const next = value as DailyLedgerCurrency; setCurrency(next); setEntryPage(1); setProductId(""); setAmount(""); }} options={COMMON_CURRENCIES} ariaLabel="Ledger currency" className="w-full" />
             <span className="block text-xs font-normal text-muted-foreground">The form, summaries, charts and exports use this currency only.</span>
           </label>
         </div>
@@ -319,6 +318,12 @@ export default function DailyLedgerPage() {
                       </select>
                       <span className="block text-xs font-normal text-muted-foreground">Choose a {currency}-priced stocked product to calculate the sale and reduce inventory in the same database transaction. Only products in the selected currency are listed.</span>
                     </label>
+                    {productId && selectedProduct && (
+                      <div className="flex min-w-0 items-center gap-3 rounded-xl border bg-muted/20 p-3" aria-label="Selected inventory product preview">
+                        {selectedProduct.imageUrl ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} loading="lazy" className="h-16 w-16 shrink-0 rounded-lg border bg-background object-cover" /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Package className="h-6 w-6" /></div>}
+                        <div className="min-w-0"><p className="break-words font-semibold">{selectedProduct.name}</p><p className="text-xs text-muted-foreground">{selectedProduct.sku}{selectedProduct.category ? " · " + selectedProduct.category : ""}</p><p className="mt-1 text-sm">{formatCurrency(selectedProduct.salePrice, currency)} per {selectedProduct.unit}</p><p className="text-xs text-muted-foreground">{selectedProduct.quantity} {selectedProduct.unit} available</p></div>
+                      </div>
+                    )}
                     {productId && selectedProduct && (
                       <label className="space-y-1.5 text-sm font-medium">Quantity sold
                         <Input type="number" min="1" max={selectedProduct.quantity} step="1" value={quantity} onChange={(e) => {
