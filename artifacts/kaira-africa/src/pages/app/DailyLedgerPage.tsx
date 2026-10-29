@@ -292,7 +292,7 @@ export default function DailyLedgerPage() {
                           <option key={product.id} value={product.id}>{product.name} · {product.quantity} {product.unit} in stock · {formatCurrency(product.salePrice, currency)}</option>
                         ))}
                       </select>
-                      <span className="block text-xs font-normal text-muted-foreground">Choose a ${currency}-priced stocked product to calculate the sale and reduce inventory in the same database transaction. Only products in the selected currency are listed.</span>
+                      <span className="block text-xs font-normal text-muted-foreground">Choose a {currency}-priced stocked product to calculate the sale and reduce inventory in the same database transaction. Only products in the selected currency are listed.</span>
                     </label>
                     {productId && selectedProduct && (
                       <label className="space-y-1.5 text-sm font-medium">Quantity sold
