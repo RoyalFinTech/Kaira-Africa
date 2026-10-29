@@ -8,16 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageTransition } from "@/components/common/PageTransition";
 import { apiRequestJson } from "@/lib/api-client";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
+import { dateInTimeZone } from "@/lib/time-zone";
 
 type Task = { id:string; title:string; status:string; priority:string; dueDate:string|null; projectId:string|null };
 type Meeting = { id:string; title:string; meetingType:string; startsAt:string|null; timeZone?:string; status:string; attendees:string[] };
 type ScheduleItem = { id:string; title:string; kind:"task"|"meeting"; date:Date; dateOnlyValue?:string; status:string; detail:string; href:string; timeZone:string };
-
-function dateInTimeZone(date:Date, timeZone:string):string {
-  const parts=new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date);
-  const read=(type:string)=>parts.find(part=>part.type===type)?.value??"";
-  return `${read("year")}-${read("month")}-${read("day")}`;
-}
 
 function readableDate(date:Date, timeZone:string) {
   return new Intl.DateTimeFormat(undefined,{timeZone,weekday:"short",month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}).format(date);
