@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, inventoryProducts, inventoryMovements } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
 import { displayName } from "../lib/display-name";
-import { recordActivity } from "../repositories/activity-logs";
+import { recordActivitySafely } from "../repositories/activity-logs";
 import { BadRequestError, HttpError, NotFoundError } from "../lib/http-errors";
 import { hasSupabaseStorageConfig, requireSupabaseStorageConfig } from "../lib/supabase-storage";
 import { logger } from "../lib/logger";
@@ -138,7 +138,7 @@ router.post("/inventory/products", requireUser, requireRole("owner", "admin", "m
       });
       return product;
     });
-    await recordActivity({
+    await recordActivitySafely({
       businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
       entityType: "inventory_product", entityId: created.id, entityName: created.name,
       description: displayName(req.user!) + " added inventory product " + created.name, status: "success",
@@ -235,7 +235,7 @@ router.post("/inventory/products/:id/adjust", requireUser, requireRole("owner", 
     return { product, updated };
   });
 
-  await recordActivity({
+  await recordActivitySafely({
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "updated",
     entityType: "inventory_product", entityId: result.product.id, entityName: result.product.name,
     description: displayName(req.user!) + " adjusted " + result.product.name + " stock by " + (input.quantityDelta > 0 ? "+" : "") + input.quantityDelta,
