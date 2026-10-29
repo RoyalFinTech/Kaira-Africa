@@ -61,6 +61,7 @@ export default function DailyLedgerPage() {
   const [entryType, setEntryType] = useState<DailyLedgerType>("sale");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -156,6 +157,7 @@ export default function DailyLedgerPage() {
     setEntryType("sale");
     setDescription("");
     setCategory("");
+    setCustomCategory("");
     setAmount("");
     setProductId("");
     setQuantity("1");
@@ -189,7 +191,7 @@ export default function DailyLedgerPage() {
       await createDailyLedgerEntry({
         entryType,
         description: description.trim(),
-        category: category.trim() || undefined,
+        category: (category === "Other" ? customCategory.trim() : category.trim()) || undefined,
         amount: numericAmount,
         currency,
         customerName: customerName.trim() || undefined,
@@ -269,6 +271,8 @@ export default function DailyLedgerPage() {
                   <select value={entryType} onChange={(e) => {
                     const nextType = e.target.value as DailyLedgerType;
                     setEntryType(nextType);
+                    setCategory("");
+                    setCustomCategory("");
                     if (nextType !== "sale") { setProductId(""); setQuantity("1"); }
                     if (nextType === "debt") setPaymentMethod("credit");
                     else if (paymentMethod === "credit") setPaymentMethod("cash");
@@ -284,8 +288,8 @@ export default function DailyLedgerPage() {
                   <Input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} required />
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Category
-                  <select value={LEDGER_CATEGORIES[entryType].includes(category) ? category : (category ? "Other" : "")} onChange={(e) => setCategory(e.target.value === "Other" ? "" : e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Choose a category</option>{LEDGER_CATEGORIES[entryType].map((item) => <option key={item} value={item}>{item}</option>)}</select>
-                  {(!category || !LEDGER_CATEGORIES[entryType].includes(category)) && <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Type a custom category" maxLength={80} aria-label="Custom category" />}
+                  <select value={category} onChange={(e) => { setCategory(e.target.value); if (e.target.value !== "Other") setCustomCategory(""); }} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Choose a category</option>{LEDGER_CATEGORIES[entryType].map((item) => <option key={item} value={item}>{item}</option>)}</select>
+                  {category === "Other" && <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Type a custom category" maxLength={80} aria-label="Custom category" />}
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Time of record
                   <Input type="time" value={recordedTime} onChange={(e) => setRecordedTime(e.target.value)} required />
