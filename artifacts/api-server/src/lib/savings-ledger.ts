@@ -14,8 +14,16 @@ export function calculateSavingsBalanceMinor(entries: readonly SavingsLedgerBala
     if (!Number.isSafeInteger(amount) || amount < 0) {
       throw new Error("Savings ledger amounts must be non-negative safe integers in minor units.");
     }
-    if (entry.entryType === "deposit") return balance + amount;
-    if (entry.entryType === "withdrawal") return balance - amount;
+    if (entry.entryType === "deposit") {
+      const next = balance + amount;
+      if (!Number.isSafeInteger(next)) throw new Error("Savings ledger balance exceeds the safe integer limit.");
+      return next;
+    }
+    if (entry.entryType === "withdrawal") {
+      const next = balance - amount;
+      if (!Number.isSafeInteger(next)) throw new Error("Savings ledger balance exceeds the safe integer limit.");
+      return next;
+    }
     throw new Error("Unsupported savings ledger entry type.");
   }, 0);
 }
