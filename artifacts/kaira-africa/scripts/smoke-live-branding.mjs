@@ -929,6 +929,8 @@ try {
     ['/daily-ledger', 'Daily Ledger'],
     ['/crm', 'CRM'],
     ['/inventory', 'Inventory'],
+    ['/investments', 'Investment Planner'],
+    ['/savings', 'Savings Tracker'],
     ['/analytics', 'Analytics'],
     ['/reports', 'Reports'],
     ['/activity', 'Activity'],
@@ -1044,9 +1046,25 @@ try {
       }));
     }
 
+    if (routePath === '/savings') {
+      const currencySelectors = pinPage.getByLabel('Currency');
+      assert.equal(await currencySelectors.count(), 2, 'Savings goal and entry forms should each provide a currency selector');
+      for (let i = 0; i < 2; i += 1) {
+        const selector = currencySelectors.nth(i);
+        assert.match(await selector.locator('option[value="GMD"]').textContent(), /🇬🇲 GMD/, 'Savings GMD option should display the Gambian flag');
+        assert.match(await selector.locator('option[value="NGN"]').textContent(), /🇳🇬 NGN/, 'Savings NGN option should display the Nigerian flag');
+        assert.match(await selector.locator('option[value="USD"]').textContent(), /🇺🇸 USD/, 'Savings USD option should display the US flag');
+      }
+    }
+
     if (routePath === '/transactions') {
       await pinPage.getByRole('button', { name: 'New transaction' }).click();
       await pinPage.getByLabel('Transaction currency').waitFor({ state: 'visible', timeout: 10_000 });
+      await pinPage.getByLabel('Transaction currency').click();
+      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸'], ['EUR', '🇪🇺'], ['GBP', '🇬🇧']]) {
+        assert.ok(await pinPage.getByRole('option', { name: new RegExp(flag + ' ' + code) }).count() > 0, `Transaction currency ${code} should display its flag`);
+      }
+      await pinPage.keyboard.press('Escape');
       await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Transaction amount').fill('1250000');
@@ -1081,6 +1099,11 @@ try {
       const printedLedgerRows = await pinPage.locator('#daily-ledger-print tbody tr').count();
       assert.equal(printedLedgerRows, 101, 'Daily ledger print should include all records across pages in the selected date range');
 
+      // Verify flag labels remain visible in the ledger currency selector.
+      const ledgerCurrency = pinPage.getByLabel('Ledger currency');
+      assert.match(await ledgerCurrency.locator('option[value="GMD"]').textContent(), /🇬🇲 GMD/, 'Ledger selector should label GMD with the Gambian flag');
+      assert.match(await ledgerCurrency.locator('option[value="NGN"]').textContent(), /🇳🇬 NGN/, 'Ledger selector should label NGN with the Nigerian flag');
+      assert.match(await ledgerCurrency.locator('option[value="USD"]').textContent(), /🇺🇸 USD/, 'Ledger selector should label USD with the US flag');
       // Verify comma-formatted amounts are submitted as their true numeric value.
       await pinPage.getByLabel('Amount in GMD').fill('100000');
       assert.equal(await pinPage.getByLabel('Amount in GMD').inputValue(), '100,000', 'Ledger amount should format thousands with commas while typing');
@@ -1211,6 +1234,9 @@ try {
       await inventoryNumbers.nth(0).fill('12');
       await inventoryNumbers.nth(1).fill('3');
       await pinPage.getByLabel('Currency for this item').selectOption('NGN');
+      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+        assert.match(await pinPage.getByLabel('Currency for this item').locator(`option[value="${code}"]`).textContent(), new RegExp(flag + ' ' + code), `Inventory currency ${code} should display its flag`);
+      }
       await pinPage.getByLabel('Buying cost per unit').fill('7500000');
       assert.equal(await pinPage.getByLabel('Buying cost per unit').inputValue(), '7,500,000', 'Inventory buying cost should format millions with commas');
       await pinPage.getByLabel('Selling price per unit').fill('10000000');
