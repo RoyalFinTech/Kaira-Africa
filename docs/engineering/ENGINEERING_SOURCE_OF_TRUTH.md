@@ -237,10 +237,19 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 
 ## Continuation record — calculator and navigation (2026-10-29)
 
-- PR #117 was merged to main as `f0d1881090e279ce051ace7a5ecbb10b36a17b64`; typechecks, frontend build, API tests, fresh database migration validation, health check and Docker build passed. At the latest Render check both frontend and API deploys were `build_in_progress`, so verify live commit before describing the appearance fix as deployed. The fix applies light/dark/system, persists device preference and follows OS changes in system mode; authenticated/browser interaction remains unverified.
-- Branch `feat/smart-calculator-and-navigation-fix` adds a protected `/calculator` page named Smart Calculator. It has standard safe arithmetic (parser, no `eval`), live result preview, keyboard support, session-only history, and business calculations for gross profit, margin, markup, discounts and percentage tax/charges. It does not write into ledger or business data. Automated validation is pending.
+- PR #117 was merged to main as `f0d1881090e279ce051ace7a5ecbb10b36a17b64`; typechecks, frontend build, API tests, fresh database migration validation, health check and Docker build passed. Both Render services are now live on the subsequent release commit `72f098646846c9985be8057aeef6bb0d86c24f3c`, which includes PR #117 and PR #118. PR-head CI passed; main post-merge Docker/browser checks are being checked separately. The fix applies light/dark/system, persists device preference and follows OS changes in system mode; authenticated/browser interaction remains unverified.
+- PR #118 merged as `72f098646846c9985be8057aeef6bb0d86c24f3c` and both Render services report it live. The protected `/calculator` page named Smart Calculator is deployed. It has standard safe arithmetic (parser, no `eval`), live result preview, keyboard support, session-only history, and business calculations for gross profit, margin, markup, discounts and percentage tax/charges. It does not write into ledger or business data. Automated validation is pending.
 - The same branch repairs navigation: route changes close the mobile drawer; hamburger and mobile logo toggle it; desktop hamburger toggles a collapsible sidebar; selecting a desktop destination returns it to compact mode; expanded state uses the full Kaira Africa logo and labels, collapsed state shows a compact logo and icon-only links. Check route changes, Escape/outside close, keyboard/focus and 320px mobile layouts before release.
 - No production business records or Storage objects were modified.
+
+
+## Release reconciliation — calculator and navigation (2026-10-29)
+
+- Current `main` is `72f098646846c9985be8057aeef6bb0d86c24f3c`. Render frontend deployment `dep-dbhjg0p5efls738tkfm0` and API deployment `dep-dbhjg0p5efls738tkfd0` both report this commit live.
+- PR #118 passed PR-head frontend typecheck/build, backend typechecks, API/smoke tests, fresh-database migration validation, server health and production Docker image build. Post-merge main Docker and deployed-browser smoke checks were still in progress at the time of this update; check their final result before closing release QA.
+- Smart Calculator route `/calculator` is now in the app and sidebar. Standard mode uses a safe expression parser without `eval`, live preview, keyboard input, copy result and session-only history. Business mode computes gross profit, margin, markup, discounts and tax/charge totals. It does not write to business records.
+- Navigation now closes the mobile drawer after route changes and toggles it from the hamburger/logo. Desktop navigation collapses to a compact logo/icon sidebar after destination selection and can be expanded from the header hamburger or logo. Responsive visual interaction still needs a real signed-in device/browser check.
+
 
 ## Continuation record — currency-specific daily sales (2026-10-29)
 
