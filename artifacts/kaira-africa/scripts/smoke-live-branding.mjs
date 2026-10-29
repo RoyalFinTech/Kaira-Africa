@@ -902,8 +902,10 @@ try {
   await pinPage.screenshot({ path: resolve(outputDir, 'profile-pin-settings.png'), fullPage: true });
   console.log('PROFILE NON-BLANK STATE, PIN CREATION AND PIN UPDATE VERIFIED');
 
-  // Exercise every primary desktop navigation destination through its actual link.
-  await pinPage.evaluate(() => {
+  // Install the print spy in the current document and every future document.
+  // Some navigation destinations may perform a full document navigation rather
+  // than a client-side transition, so evaluate() alone is not persistent.
+  const installPrintSpy = () => {
     window.__kairaPrintCalls = 0;
     window.__lastKairaPrintedDocument = null;
     window.print = () => {
@@ -920,7 +922,9 @@ try {
       } : null;
       window.__kairaPrintCalls += 1;
     };
-  });
+  };
+  await pinPage.addInitScript(installPrintSpy);
+  await pinPage.evaluate(installPrintSpy);
   const navigationTargets = [
     ['/dashboard', 'Dashboard'],
     ['/team', 'Team'],
