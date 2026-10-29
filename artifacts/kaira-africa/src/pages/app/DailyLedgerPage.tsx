@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Plus, CheckCircle2, CalendarDays, WalletCards, TrendingUp, TrendingDown, HandCoins, Printer } from "lucide-react";
+import { BookOpen, Plus, CheckCircle2, CalendarDays, WalletCards, TrendingUp, TrendingDown, HandCoins, Printer, Package } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -318,6 +318,12 @@ export default function DailyLedgerPage() {
                       </select>
                       <span className="block text-xs font-normal text-muted-foreground">Choose a {currency}-priced stocked product to calculate the sale and reduce inventory in the same database transaction. Only products in the selected currency are listed.</span>
                     </label>
+                    {productId && selectedProduct && (
+                      <div className="flex min-w-0 items-center gap-3 rounded-xl border bg-muted/20 p-3" aria-label="Selected inventory product preview">
+                        {selectedProduct.imageUrl ? <img src={selectedProduct.imageUrl} alt={selectedProduct.name} loading="lazy" className="h-16 w-16 shrink-0 rounded-lg border bg-background object-cover" /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Package className="h-6 w-6" /></div>}
+                        <div className="min-w-0"><p className="break-words font-semibold">{selectedProduct.name}</p><p className="text-xs text-muted-foreground">{selectedProduct.sku}{selectedProduct.category ? " · " + selectedProduct.category : ""}</p><p className="mt-1 text-sm">{formatCurrency(selectedProduct.salePrice, currency)} per {selectedProduct.unit}</p><p className="text-xs text-muted-foreground">{selectedProduct.quantity} {selectedProduct.unit} available</p></div>
+                      </div>
+                    )}
                     {productId && selectedProduct && (
                       <label className="space-y-1.5 text-sm font-medium">Quantity sold
                         <Input type="number" min="1" max={selectedProduct.quantity} step="1" value={quantity} onChange={(e) => {
