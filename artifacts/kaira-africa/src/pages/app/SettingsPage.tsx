@@ -1,5 +1,5 @@
 import { KairaLogo } from '@/components/common/KairaLogo';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
@@ -72,7 +72,36 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('business');
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
+    try {
+      const savedTheme = window.localStorage.getItem('kaira-theme');
+      return savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system' ? savedTheme : 'system';
+    } catch {
+      return 'system';
+    }
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => {
+      const useDark = theme === 'dark' || (theme === 'system' && systemTheme.matches);
+      root.classList.toggle('dark', useDark);
+      root.style.colorScheme = useDark ? 'dark' : 'light';
+    };
+
+    applyTheme();
+    if (theme === 'system') systemTheme.addEventListener('change', applyTheme);
+    try {
+      window.localStorage.setItem('kaira-theme', theme);
+    } catch {
+      // Theme still applies for this session when browser storage is unavailable.
+    }
+
+    return () => {
+      if (theme === 'system') systemTheme.removeEventListener('change', applyTheme);
+    };
+  }, [theme]);
 
   // Backend's requireRole("owner") is the actual boundary on
   // PATCH /businesses/me (see api-server/src/routes/businesses.ts) —
@@ -328,7 +357,7 @@ export default function SettingsPage() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-4">Full theme switching isn't wired up yet — this selection isn't saved.</p>
+                    <p className="text-xs text-muted-foreground mt-4">Your choice is saved on this device. “Follow system” automatically tracks your device’s light or dark setting.</p>
                   </CardContent>
                 </Card>
               )}
