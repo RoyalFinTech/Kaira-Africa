@@ -215,7 +215,11 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
       if (product.quantity < input.quantity!) {
         throw new BadRequestError("Not enough stock. Available: " + product.quantity + " " + product.unit);
       }
-      amountMinor = product.salePriceMinor * input.quantity!;
+      const calculatedSaleMinor = product.salePriceMinor * input.quantity!;
+      if (!Number.isSafeInteger(calculatedSaleMinor) || calculatedSaleMinor <= 0 || calculatedSaleMinor > toMinorUnits(1_000_000_000, input.currency)) {
+        throw new BadRequestError("The calculated sale total exceeds the safe amount limit. Reduce the quantity or check the product price.");
+      }
+      amountMinor = calculatedSaleMinor;
       productId = product.id;
       quantity = input.quantity!;
       description = input.description + " · " + quantity + " × " + product.name;
