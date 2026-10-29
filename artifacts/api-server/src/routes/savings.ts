@@ -5,6 +5,7 @@ import { db, savingsGoals, savingsEntries } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
+import { calculateSavingsBalanceMinor, canWithdrawFromSavingsPool } from "../lib/savings-ledger";
 
 const router: IRouter = Router();
 const currencies = ["GMD", "NGN", "USD"] as const;
@@ -112,8 +113,8 @@ router.post("/savings/entries", requireUser, async(req,res)=>{
         : and(eq(savingsEntries.businessId,businessId),sql`${savingsEntries.goalId} is null`,eq(savingsEntries.currency,input.currency));
       const prior = await tx.select({type:savingsEntries.entryType,amount:savingsEntries.amountMinor})
         .from(savingsEntries).where(filters);
-      const balance = prior.reduce((sum,row)=>sum+(row.type==="deposit"?Number(row.amount):-Number(row.amount)),0);
-      if(amountMinor>balance) throw new BadRequestError(input.goalId
+      const balance = calculateSavingsBalanceMinor(prior.map(row=>({entryType:row.type,amountMinor:row.amount})));
+      if(!canWithdrawFromSavingsPool(amountMinor,balance)) throw new BadRequestError(input.goalId
         ? "This withdrawal is greater than the recorded savings for the selected goal."
         : `This withdrawal is greater than the unassigned recorded savings balance in ${input.currency}. Choose a savings goal or record a deposit first.`);
       const [created] = await tx.insert(savingsEntries).values({businessId,goalId:input.goalId||null,createdBy:req.user!.id,entryType:input.entryType,
