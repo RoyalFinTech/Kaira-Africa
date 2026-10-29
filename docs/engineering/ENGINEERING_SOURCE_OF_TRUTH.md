@@ -246,13 +246,21 @@ For every row in the detailed audit (to be maintained as `docs/engineering/FEATU
 ## Release reconciliation — calculator and navigation (2026-10-29)
 
 - Current `main` is `72f098646846c9985be8057aeef6bb0d86c24f3c`. Render frontend deployment `dep-dbhjg0p5efls738tkfm0` and API deployment `dep-dbhjg0p5efls738tkfd0` both report this commit live.
-- PR #118 passed PR-head frontend typecheck/build, backend typechecks, API/smoke tests, fresh-database migration validation, server health and production Docker image build. Post-merge main Docker and deployed-browser smoke checks were still in progress at the time of this update; check their final result before closing release QA.
+- PR #118 passed PR-head frontend typecheck/build, backend typechecks, API/smoke tests, fresh-database migration validation, server health and production Docker image build. The deployed-browser smoke check passed. Post-merge Docker verification for the latest currency release is still running.
 - Smart Calculator route `/calculator` is now in the app and sidebar. Standard mode uses a safe expression parser without `eval`, live preview, keyboard input, copy result and session-only history. Business mode computes gross profit, margin, markup, discounts and tax/charge totals. It does not write to business records.
 - Navigation now closes the mobile drawer after route changes and toggles it from the hamburger/logo. Desktop navigation collapses to a compact logo/icon sidebar after destination selection and can be expanded from the header hamburger or logo. Responsive visual interaction still needs a real signed-in device/browser check.
 
 
 ## Continuation record — currency-specific daily sales (2026-10-29)
 
-- Branch `feat/daily-ledger-currency-support-release` implements the next slice for the audited currency mismatch: daily ledger supports GMD/NGN/USD with GMD default, a currency selector scopes entries and summaries, trends/categories, print/CSV and linked inventory product options to one currency, and the API validates currency values and enforces same-currency debt payment allocation.
-- Linked product sales preserve the existing transaction that decrements stock, writes an inventory movement and inserts the ledger entry. Product/ledger currency mismatch is rejected server-side. Automated CI and manual authenticated workflows are still required before merge/release.
+- PR #121 merged as `3681d354f5685559900aeb96a1f21b3a6a53ece1` and both Render services report this commit live. It implements the next slice for the audited currency mismatch: daily ledger supports GMD/NGN/USD with GMD default, a currency selector scopes entries and summaries, trends/categories, print/CSV and linked inventory product options to one currency, and the API validates currency values and enforces same-currency debt payment allocation.
+- Linked product sales preserve the existing transaction that decrements stock, writes an inventory movement and inserts the ledger entry. Product/ledger currency mismatch is rejected server-side. PR-head CI passed, including typechecks/build, API tests, fresh-database migration validation, health check and Docker image build. Post-merge Docker verification is still running; manual authenticated workflows remain required.
+- No production business records or Storage objects were modified.
+
+
+## Release reconciliation — multi-currency daily ledger (2026-10-29)
+
+- Current `main` is `3681d354f5685559900aeb96a1f21b3a6a53ece1`. Render frontend `dep-dbhjm1favr4c739u833g` and API `dep-dbhjm1favr4c739u82r0` both report this SHA live.
+- PR #121 passed PR-head typechecks, frontend build, API tests, fresh-database migration validation, health check and production Docker image build. Post-merge Docker verification remains in progress; deployed splash/onboarding browser smoke passed.
+- Daily ledger supports GMD/NGN/USD with GMD default. The selected currency scopes entries, summaries, debt totals, trends/categories, print/CSV, and available inventory products. Debt payment allocations match currency; linked sales keep stock, movement and ledger writes transactional. Authenticated end-to-end tests and tenant-isolation checks remain outstanding.
 - No production business records or Storage objects were modified.
