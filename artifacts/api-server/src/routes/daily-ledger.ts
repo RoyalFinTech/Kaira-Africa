@@ -18,7 +18,7 @@ const createEntryInput = z.object({
   description: z.string().trim().min(2).max(200),
   category: z.string().trim().max(80).optional(),
   amount: z.number().finite().positive().max(1_000_000_000),
-  currency: z.literal("GMD").default("GMD"),
+  currency: z.enum(["GMD", "NGN", "USD"]).default("GMD"),
   customerName: z.string().trim().max(160).optional(),
   productId: z.string().uuid().optional(),
   quantity: z.number().int().positive().max(100000).optional(),
@@ -63,6 +63,7 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
   const query = z.object({
     startDate: z.string().regex(datePattern).optional(),
     endDate: z.string().regex(datePattern).optional(),
+    currency: z.enum(["GMD", "NGN", "USD"]).default("GMD"),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(50),
   }).parse(req.query);
@@ -75,6 +76,7 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
     eq(dailyLedgerEntries.businessId, businessId),
     gte(dailyLedgerEntries.recordedDate, startDate),
     lte(dailyLedgerEntries.recordedDate, endDate),
+    eq(dailyLedgerEntries.currency, query.currency),
   );
 
   const [entries, [totals], [outstandingTotals], trend, expensesByCategory] = await Promise.all([
@@ -90,7 +92,10 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
     }).from(dailyLedgerEntries).where(conditions),
     db.select({
       outstandingDebtMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'debt' and ${dailyLedgerEntries.status} = 'unpaid' then coalesce(${dailyLedgerEntries.balanceMinor}, ${dailyLedgerEntries.amountMinor}) else 0 end), 0)`,
-    }).from(dailyLedgerEntries).where(eq(dailyLedgerEntries.businessId, businessId)),
+    }).from(dailyLedgerEntries).where(and(
+      eq(dailyLedgerEntries.businessId, businessId),
+      eq(dailyLedgerEntries.currency, query.currency),
+    )),
     db.select({
       date: dailyLedgerEntries.recordedDate,
       salesMinor: sql<number>`coalesce(sum(case when ${dailyLedgerEntries.entryType} = 'sale' then ${dailyLedgerEntries.amountMinor} else 0 end), 0)`,
@@ -105,8 +110,8 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
       .orderBy(desc(sql`sum(${dailyLedgerEntries.amountMinor})`)),
   ]);
 
-  const sales = fromMinorUnits(Number(totals.salesMinor), "GMD");
-  const expenses = fromMinorUnits(Number(totals.expenseMinor), "GMD");
+  const sales = fromMinorUnits(Number(totals.salesMinor), query.currency);
+  const expenses = fromMinorUnits(Number(totals.expenseMinor), query.currency);
   res.json({
     startDate, endDate,
     entries: entries.map(serialize),
@@ -119,20 +124,20 @@ router.get("/daily-ledger", requireUser, async (req, res) => {
     summary: {
       sales,
       expenses,
-      outstandingDebt: fromMinorUnits(Number(outstandingTotals.outstandingDebtMinor), "GMD"),
-      debtPayments: fromMinorUnits(Number(totals.debtPaymentMinor), "GMD"),
-      otherIncome: fromMinorUnits(Number(totals.otherIncomeMinor), "GMD"),
+      outstandingDebt: fromMinorUnits(Number(outstandingTotals.outstandingDebtMinor), query.currency),
+      debtPayments: fromMinorUnits(Number(totals.debtPaymentMinor), query.currency),
+      otherIncome: fromMinorUnits(Number(totals.otherIncomeMinor), query.currency),
       salesLessExpenses: Number((sales - expenses).toFixed(2)),
       totalRecords: Number(totals.totalRecords),
     },
     dailyTrend: trend.map((row) => ({
       date: row.date,
-      sales: fromMinorUnits(Number(row.salesMinor), "GMD"),
-      expenses: fromMinorUnits(Number(row.expenseMinor), "GMD"),
+      sales: fromMinorUnits(Number(row.salesMinor), query.currency),
+      expenses: fromMinorUnits(Number(row.expenseMinor), query.currency),
     })),
     expensesByCategory: expensesByCategory.map((row) => ({
       label: row.label,
-      value: fromMinorUnits(Number(row.amountMinor), "GMD"),
+      value: fromMinorUnits(Number(row.amountMinor), query.currency),
     })),
   });
 });
@@ -169,6 +174,7 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
         eq(dailyLedgerEntries.businessId, businessId),
         eq(dailyLedgerEntries.entryType, "debt"),
         eq(dailyLedgerEntries.status, "unpaid"),
+        eq(dailyLedgerEntries.currency, input.currency),
         sql`lower(trim(coalesce(${dailyLedgerEntries.customerName}, ''))) = ${customerKey}`,
       )).orderBy(asc(dailyLedgerEntries.recordedDate), asc(dailyLedgerEntries.createdAt)).for("update");
       const totalDueMinor = openDebts.reduce((sum, debt) => sum + Number(debt.balanceMinor ?? debt.amountMinor), 0);
@@ -178,7 +184,7 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
       }
       if (!allocation && amountMinor > totalDueMinor) {
         throw new BadRequestError("This payment exceeds " + input.customerName + "'s remaining debt of " +
-          fromMinorUnits(totalDueMinor, input.currency).toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD.");
+          fromMinorUnits(totalDueMinor, input.currency).toLocaleString("en", { maximumFractionDigits: 2 }) + " " + input.currency + ".");
       }
       if (!allocation) throw new BadRequestError("Enter a valid payment amount and try again.");
       for (const item of allocation.allocations) {
@@ -201,7 +207,7 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
       )).limit(1).for("update");
       if (!product) throw new NotFoundError("Inventory product not found in this business");
       if (product.currency !== input.currency) {
-        throw new BadRequestError("This daily ledger currently records GMD only. Select a GMD-priced inventory product; NGN/USD ledger support requires currency-specific reporting first.");
+        throw new BadRequestError("The selected inventory product uses " + product.currency + ". Change the ledger currency to match the product, or select a product priced in " + input.currency + ".");
       }
       if (product.salePriceMinor <= 0) {
         throw new BadRequestError("Set a sale price for this inventory product before recording a sale");
@@ -256,7 +262,7 @@ router.post("/daily-ledger", requireUser, requireRole("owner", "admin", "manager
     businessId, userId: req.user!.id, userName: displayName(req.user!), action: "created",
     entityType: "daily_ledger_entry", entityId: entry.id, entityName: entry.description,
     description: displayName(req.user!) + " recorded a daily " + entry.entryType.replace("_", " ") + " of " +
-      input.amount.toLocaleString("en-GM", { maximumFractionDigits: 2 }) + " GMD",
+      input.amount.toLocaleString("en", { maximumFractionDigits: 2 }) + " " + input.currency,
     status: "success",
   });
   res.status(201).json(serialize(entry));
