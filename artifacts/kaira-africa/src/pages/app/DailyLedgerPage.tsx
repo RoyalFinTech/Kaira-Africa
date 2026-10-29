@@ -246,8 +246,10 @@ export default function DailyLedgerPage() {
     try {
       await updateDailyLedgerStatus(id, "paid");
       setEntryPage(1);
-      await queryClient.invalidateQueries({ queryKey: ["daily-ledger"] });
       setNotice("Debtor record marked as paid.");
+      void queryClient.invalidateQueries({ queryKey: ["daily-ledger"] }).catch(() => {
+        setFormError("The payment status was saved, but the ledger could not refresh. Reload the page to see the updated balance.");
+      });
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not update the debtor record.");
     } finally {
