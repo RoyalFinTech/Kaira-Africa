@@ -116,8 +116,10 @@ export default function InventoryPage() {
       await uploadInventoryProductImage(pendingPhotoProductId, photoPreview);
       resetForm();
       setOpen(false);
-      await qc.invalidateQueries({ queryKey: ["inventory-products"] });
       setNotice("Product photo uploaded successfully.");
+      void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => {
+        setNotice("Product photo uploaded successfully, but the inventory list could not refresh. Reload the page to see the latest photo.");
+      });
     } catch (cause) {
       setFormError(cause instanceof Error
         ? `The product is already saved, but its photo upload failed again: ${cause.message}`
@@ -190,8 +192,10 @@ export default function InventoryPage() {
     setAdjustingId(product.id); setFormError(null); setNotice(null);
     try {
       await adjustInventory(product.id, { quantityDelta: delta, type: delta > 0 ? "purchase" : "sale", reason: delta > 0 ? "Stock received" : "Stock sold/removed" });
-      await qc.invalidateQueries({ queryKey: ["inventory-products"] });
       setNotice(delta > 0 ? `One ${product.unit} added to ${product.name}.` : `One ${product.unit} removed from ${product.name}.`);
+      void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => {
+        setNotice("Stock adjustment saved successfully, but the inventory list could not refresh. Reload the page to see the latest quantity.");
+      });
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "Stock could not be updated.");
     } finally {
