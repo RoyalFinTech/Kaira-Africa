@@ -21,6 +21,10 @@ test("only treats object paths under the exact business and product as owned", (
   assert.equal(isInventoryImagePathForProduct("business-2/product-9/product.jpg", "business-1", "product-9"), false);
   assert.equal(isInventoryImagePathForProduct("business-1/product-10/product.jpg", "business-1", "product-9"), false);
   assert.equal(isInventoryImagePathForProduct("https://example.com/photo.jpg", "business-1", "product-9"), false);
+  assert.equal(isInventoryImagePathForProduct("business-1/product-9/../product-10/product.jpg", "business-1", "product-9"), false);
+  assert.equal(isInventoryImagePathForProduct("business-1/product-9/%2e%2e.jpg", "business-1", "product-9"), false);
+  assert.equal(isInventoryImagePathForProduct("business-1/product-9/nested/photo.jpg", "business-1", "product-9"), false);
+  assert.equal(isInventoryImagePathForProduct("business-1/product-9/\\\\server.jpg", "business-1", "product-9"), false);
 });
 
 test("normalizes Supabase signed URLs without duplicating storage path prefixes", () => {
