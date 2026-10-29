@@ -32,7 +32,7 @@ export function CurrencyPicker({ value, onValueChange, options, ariaLabel, class
       )}
       <Select value={value} onValueChange={onValueChange} disabled={disabled}>
         <SelectTrigger disabled={disabled} aria-label={ariaLabel} className="min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus:ring-0">
-          <SelectValue />
+          <SelectValue>{selected?.label}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
