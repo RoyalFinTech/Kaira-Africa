@@ -27,3 +27,11 @@ test("rejects invalid ledger amounts and unknown entry types", () => {
     { entryType: "transfer", amountMinor: 100 },
   ]), /Unsupported savings ledger entry type/);
 });
+
+test("rejects savings balances whose cumulative total exceeds safe integer precision", () => {
+  assert.throws(() => calculateSavingsBalanceMinor([
+    { entryType: "deposit", amountMinor: Number.MAX_SAFE_INTEGER },
+    { entryType: "deposit", amountMinor: 1 },
+  ]), /exceeds the safe integer limit/);
+  assert.equal(canWithdrawFromSavingsPool(1, Number.MAX_SAFE_INTEGER + 1), false);
+});
