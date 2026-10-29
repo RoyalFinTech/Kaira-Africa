@@ -40,6 +40,14 @@ test("signed customer photo URLs normalize Supabase storage paths", () => {
     () => normalizeSignedCustomerPhotoUrl("https://project.supabase.co", "https://project.supabase.co/storage/v1/object/public/customer-photos/b/c/photo.jpg"),
     /invalid signed URL/,
   );
+  assert.throws(
+    () => normalizeSignedCustomerPhotoUrl("https://project.supabase.co", "https://project.supabase.co/storage/v1/object/sign/inventory-images/b/p.jpg?token=x"),
+    /invalid signed URL/,
+  );
+  assert.throws(
+    () => normalizeSignedCustomerPhotoUrl("https://project.supabase.co", "https://user:pass@project.supabase.co/storage/v1/object/sign/customer-photos/b/c/photo.jpg?token=x"),
+    /invalid signed URL/,
+  );
 });
 
 test("missing signed URL payload is rejected", () => {
