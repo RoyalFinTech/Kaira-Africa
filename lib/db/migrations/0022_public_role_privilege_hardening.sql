@@ -16,7 +16,7 @@ BEGIN
   IF cardinality(revoke_roles) > 0 THEN
     SELECT string_agg(quote_ident(role_name), ', ')
       INTO role_list
-      FROM unnest(revoke_roles) AS role_name;
+      FROM unnest(revoke_roles) AS roles(role_name);
 
     EXECUTE format(
       'REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM %s',
@@ -32,12 +32,12 @@ BEGIN
   -- event-trigger function as executable by generic API roles. Revoking
   -- EXECUTE does not disable the event trigger itself.
   IF to_regprocedure('public.rls_auto_enable()') IS NOT NULL THEN
-    REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC;
+    EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC';
     IF to_regrole('anon') IS NOT NULL THEN
-      REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM anon;
+      EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM anon';
     END IF;
     IF to_regrole('authenticated') IS NOT NULL THEN
-      REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM authenticated;
+      EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM authenticated';
     END IF;
   END IF;
 END
