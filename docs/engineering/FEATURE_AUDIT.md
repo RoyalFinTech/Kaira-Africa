@@ -41,6 +41,14 @@ This is the implementation-level companion to [ENGINEERING_SOURCE_OF_TRUTH.md](.
 | Calendar/meeting export and page PDF/print | Some export requirements discussed across modules | Per-module paths need audit | NOT VERIFIED | Test each agreed print/PDF workflow |
 | Mobile navigation | Shared Sidebar/App routing | N/A | NOT VERIFIED | Check every group/item at narrow viewport and ensure no orphaned destinations |
 
+## Supabase advisor findings — hardening in progress (2026-10-29)
+
+Read-only Supabase security/performance advisor review found:
+- `public.rls_auto_enable()` is a `SECURITY DEFINER` event-trigger function owned by `postgres`; its default ACL currently permits `anon` and `authenticated` to EXECUTE it. The security advisor flags this. PR #112 adds a guarded migration to revoke generic-role EXECUTE while leaving the event trigger itself enabled.
+- RLS is enabled on 32 public tables and there are no RLS policies. For the audited application tables, `anon` and `authenticated` do not have SELECT/INSERT/UPDATE/DELETE grants; they do have unnecessary TRUNCATE/REFERENCES/TRIGGER grants (and PostgreSQL 17 MAINTAIN where present). PR #112 revokes those grants on existing tables and from future table defaults created by `postgres`.
+- Investment and savings tables exist with RLS enabled and zero current rows. No production records were inserted or modified during this read-only audit.
+- After PR #112 is merged and deployed, rerun the security advisor and read-only privilege checks. If any generic role still has table privileges from other grantors/default ACLs, investigate before making broader changes. Do not create broad RLS policies solely to silence the linter; the API currently owns authentication and business-scoped access.
+
 ## Production verification evidence
 
 | Check | Evidence | Result |
