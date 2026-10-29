@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   inventoryImageObjectPath,
+  parseInventoryPhotoDataUrl,
   isInventoryImagePathForProduct,
   extractSignedInventoryImageUrl,
   normalizeSignedInventoryImageUrl,
@@ -44,4 +45,16 @@ test("rejects successful Storage responses that omit a signed URL", () => {
     extractSignedInventoryImageUrl({ signedURL: "/object/sign/inventory-images/b/p.jpg?token=x" }, "https://project.supabase.co"),
     "https://project.supabase.co/storage/v1/object/sign/inventory-images/b/p.jpg?token=x",
   );
+});
+
+test("validates inventory photo MIME, canonical base64 and the exact 200 KB boundary", () => {
+  const oneByteJpeg = "data:image/jpeg;base64,/w==";
+  assert.deepEqual([...parseInventoryPhotoDataUrl(oneByteJpeg)], [255]);
+
+  const exactLimit = Buffer.alloc(204800).toString("base64");
+  assert.equal(parseInventoryPhotoDataUrl("data:image/jpeg;base64," + exactLimit).length, 204800);
+  const tooLarge = Buffer.alloc(204801).toString("base64");
+  assert.throws(() => parseInventoryPhotoDataUrl("data:image/jpeg;base64," + tooLarge), /200 KB/);
+  assert.throws(() => parseInventoryPhotoDataUrl("data:image/png;base64,/w=="), /JPEG product photo/);
+  assert.throws(() => parseInventoryPhotoDataUrl("data:image/jpeg;base64,A"), /valid JPEG images/);
 });
