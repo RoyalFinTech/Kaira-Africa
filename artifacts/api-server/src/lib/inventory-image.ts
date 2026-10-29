@@ -17,8 +17,11 @@ export function inventoryImageObjectPath(businessId: string, productId: string):
 
 /** Only delete stored object paths that belong to the exact business/product pair. */
 export function isInventoryImagePathForProduct(path: string, businessId: string, productId: string): boolean {
-  if (!path || /^https?:\/\//i.test(path)) return false;
-  return path.startsWith(`${businessId}/${productId}/`) && path.length > businessId.length + productId.length + 2;
+  if (!path || /^https?:\/\//i.test(path) || path.includes(String.fromCharCode(92)) || /[%?#\u0000-\u001f]/.test(path)) return false;
+  const segments = path.split("/");
+  if (segments.length !== 3 || segments[0] !== businessId || segments[1] !== productId) return false;
+  const filename = segments[2];
+  return filename !== "." && filename !== ".." && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(filename);
 }
 
 export function extractSignedInventoryImageUrl(payload: unknown, baseUrl: string): string {

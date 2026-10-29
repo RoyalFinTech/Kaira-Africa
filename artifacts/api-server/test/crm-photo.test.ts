@@ -13,6 +13,10 @@ test("customer photo cleanup is restricted to the exact business/customer prefix
   assert.equal(isCustomerPhotoPathForCustomer("business-2/customer-9/photo.jpg", "business-1", "customer-9"), false);
   assert.equal(isCustomerPhotoPathForCustomer("https://example.com/photo.jpg", "business-1", "customer-9"), false);
   assert.equal(isCustomerPhotoPathForCustomer("", "business-1", "customer-9"), false);
+  assert.equal(isCustomerPhotoPathForCustomer("business-1/customer-9/../customer-10/photo.jpg", "business-1", "customer-9"), false);
+  assert.equal(isCustomerPhotoPathForCustomer("business-1/customer-9/../../other.jpg", "business-1", "customer-9"), false);
+  assert.equal(isCustomerPhotoPathForCustomer("business-1/customer-9/%2e%2e.jpg", "business-1", "customer-9"), false);
+  assert.equal(isCustomerPhotoPathForCustomer("business-1/customer-9/nested/photo.jpg", "business-1", "customer-9"), false);
 });
 
 test("signed customer photo URLs normalize Supabase storage paths", () => {
