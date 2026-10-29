@@ -48,6 +48,14 @@ test("normalizes Supabase signed URLs without duplicating storage path prefixes"
     () => normalizeSignedInventoryImageUrl("https://project.supabase.co", "https://project.supabase.co/storage/v1/object/public/inventory-images/b/p.jpg"),
     /invalid signed URL/,
   );
+  assert.throws(
+    () => normalizeSignedInventoryImageUrl("https://project.supabase.co", "https://project.supabase.co/storage/v1/object/sign/customer-photos/b/c/photo.jpg?token=x"),
+    /invalid signed URL/,
+  );
+  assert.throws(
+    () => normalizeSignedInventoryImageUrl("https://project.supabase.co", "https://user:pass@project.supabase.co/storage/v1/object/sign/inventory-images/b/p.jpg?token=x"),
+    /invalid signed URL/,
+  );
 });
 
 test("rejects successful Storage responses that omit a signed URL", () => {
