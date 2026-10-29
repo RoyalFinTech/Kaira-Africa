@@ -26,7 +26,7 @@ function dateInTimeZone(date:Date,timeZone:string):string {
 }
 
 function localMeetingTimeToUtc(value:string,timeZone:string):string|null {
- const match=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(value);
+ const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
  if(!match) return null;
  const target=[Number(match[1]),Number(match[2]),Number(match[3]),Number(match[4]),Number(match[5])];
  const targetMs=Date.UTC(target[0],target[1]-1,target[2],target[3],target[4]);
@@ -41,7 +41,7 @@ function localMeetingTimeToUtc(value:string,timeZone:string):string|null {
  let guess=targetMs;
  for(let i=0;i<4;i++){
   const represented=formatLocal(new Date(guess));
-  const matchLocal=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(represented);
+  const matchLocal=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(represented);
   if(!matchLocal) return null;
   const representedMs=Date.UTC(Number(matchLocal[1]),Number(matchLocal[2])-1,Number(matchLocal[3]),Number(matchLocal[4]),Number(matchLocal[5]));
   guess=targetMs-(representedMs-guess);
