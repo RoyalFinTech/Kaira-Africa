@@ -283,7 +283,6 @@ export default function DailyLedgerPage() {
                     const nextType = e.target.value as DailyLedgerType;
                     setEntryType(nextType);
                     setCategory("");
-                    setCustomCategory("");
                     if (nextType !== "sale") { setProductId(""); setQuantity("1"); }
                     if (nextType === "debt") setPaymentMethod("credit");
                     else if (paymentMethod === "credit") setPaymentMethod("cash");
