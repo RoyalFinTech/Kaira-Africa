@@ -21,6 +21,24 @@ const TYPE_LABELS: Record<DailyLedgerType, string> = {
   other_income: "Other income",
 };
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
+const LEDGER_CATEGORIES: Record<DailyLedgerType, string[]> = {
+  sale: ["Retail sales", "Wholesale sales", "Product sales", "Service income", "Online sales", "Other"],
+  expense: ["Stock purchase", "Transport", "Rent", "Utilities", "Staff salaries", "Marketing", "Internet & data", "Repairs & maintenance", "Office supplies", "Bank charges", "Other"],
+  debt: ["Retail credit sale", "Wholesale credit sale", "Service on credit", "Other"],
+  debt_payment: ["Customer repayment", "Part payment", "Final repayment", "Other"],
+  other_income: ["Commission", "Interest", "Refund", "Other"],
+};
+function formatMoneyInput(value: string): string {
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  const normalized = firstDot < 0 ? cleaned : cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  const [whole = "", fraction] = normalized.split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return fraction === undefined ? grouped : `${grouped}.${fraction.slice(0, 2)}`;
+}
+function parseMoneyInput(value: string): number {
+  return Number(value.replace(/,/g, ""));
+}
 
 function todayDate() {
   const now = new Date();
@@ -153,7 +171,7 @@ export default function DailyLedgerPage() {
     event.preventDefault();
     setFormError(null);
     setNotice(null);
-    const numericAmount = Number(amount);
+    const numericAmount = parseMoneyInput(amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setFormError("Enter an amount greater than zero.");
       return;
@@ -231,7 +249,7 @@ export default function DailyLedgerPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="font-display flex items-center gap-2 text-3xl font-bold"><BookOpen className="h-7 w-7 text-primary" />Daily Sales & Expense Book</h1>
+            <h1 className="font-display flex items-center gap-2 text-2xl font-bold sm:text-3xl"><BookOpen className="h-6 w-6 shrink-0 text-primary sm:h-7 sm:w-7" />Daily Sales & Expense Book</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Your everyday business book: record each sale, expense, credit and repayment with its date, time, person, payment method and remarks. Entries feed your reports automatically.</p>
           </div>
           <label className="w-full space-y-1.5 text-sm font-medium sm:w-44">Ledger currency
@@ -259,14 +277,15 @@ export default function DailyLedgerPage() {
                   </select>
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Amount ({currency})
-                  <Input value={stockLinkedSale ? productSaleTotal.toFixed(2) : amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="e.g. 250.00" disabled={stockLinkedSale} required />
+                  <Input value={stockLinkedSale ? formatMoneyInput(productSaleTotal.toFixed(2)) : amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} type="text" inputMode="decimal" autoComplete="off" placeholder="e.g. 100,000" aria-label={`Amount in ${currency}`} disabled={stockLinkedSale} required />
                   {stockLinkedSale && <span className="block text-xs font-normal text-muted-foreground">Calculated from the product price and quantity.</span>}
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Record date
                   <Input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} required />
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Category
-                  <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={entryType === "expense" ? "e.g. transport, rent" : "e.g. groceries, sales"} />
+                  <select value={LEDGER_CATEGORIES[entryType].includes(category) ? category : (category ? "Other" : "")} onChange={(e) => setCategory(e.target.value === "Other" ? "" : e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Choose a category</option>{LEDGER_CATEGORIES[entryType].map((item) => <option key={item} value={item}>{item}</option>)}</select>
+                  {(!category || !LEDGER_CATEGORIES[entryType].includes(category)) && <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Type a custom category" maxLength={80} aria-label="Custom category" />}
                 </label>
                 <label className="space-y-1.5 text-sm font-medium">Time of record
                   <Input type="time" value={recordedTime} onChange={(e) => setRecordedTime(e.target.value)} required />
@@ -382,7 +401,26 @@ export default function DailyLedgerPage() {
             {printError && <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert">{printError}</div>}
             {ledgerQuery.isError && <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><KairaLogo width={28} className="shrink-0 rounded bg-white p-0.5" /><span>{ledgerQuery.error instanceof Error ? ledgerQuery.error.message : "Could not load daily ledger records."}</span></div>}
             {ledgerQuery.isLoading ? <div className="h-52 animate-pulse rounded-xl bg-muted" /> : !response?.entries.length ? <div className="py-12 text-center text-sm text-muted-foreground">No daily records in this period. Start by adding your first sale or expense above.</div> : (
-              <div className="overflow-x-auto rounded-xl border">
+              <div className="space-y-3 sm:hidden">
+                {response.entries.map((entry) => (
+                  <article key={entry.id} className="rounded-xl border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0"><p className="break-words font-semibold">{entry.description}</p><p className="mt-1 text-xs text-muted-foreground">{entry.recordedDate} · {entry.recordedTime || "—"}</p></div>
+                      <p className="shrink-0 text-right font-bold tabular-nums">{formatCurrency(entry.amount, entry.currency)}</p>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2"><Badge variant="outline">{TYPE_LABELS[entry.entryType]}</Badge>{entry.entryType === "debt" && <Badge variant={entry.status === "paid" ? "default" : "destructive"}>{entry.status === "paid" ? "Paid" : "Unpaid"}</Badge>}</div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                      <div><dt className="text-xs text-muted-foreground">Category</dt><dd className="break-words">{entry.category || "—"}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Customer</dt><dd className="break-words">{entry.customerName || "—"}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Payment</dt><dd className="break-words capitalize">{(entry.paymentMethod || "—").replace("_", " ")}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Balance left</dt><dd>{entry.entryType === "debt" ? formatCurrency(entry.balance ?? entry.amount, entry.currency) : "—"}</dd></div>
+                    </dl>
+                    {entry.remarks && <p className="mt-2 break-words text-xs text-muted-foreground">Note: {entry.remarks}</p>}
+                    {entry.entryType === "debt" && entry.status !== "paid" && <Button type="button" size="sm" variant="outline" className="mt-3 w-full gap-1" disabled={updatingId === entry.id} onClick={() => void markDebtPaid(entry.id)}><CheckCircle2 className="h-3.5 w-3.5" />{updatingId === entry.id ? "Saving…" : "Mark paid"}</Button>}
+                  </article>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto rounded-xl border sm:block">
                 <table className="w-full min-w-[1320px] border-collapse text-sm">
                   <thead className="bg-muted/70"><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-3 py-3">Date</th><th className="px-3 py-3">Time</th><th className="px-3 py-3">Entry type</th><th className="px-3 py-3">Particulars / description</th><th className="px-3 py-3">Category</th><th className="px-3 py-3">Customer / name</th><th className="px-3 py-3">Payment method</th><th className="px-3 py-3">Remarks / reference</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Balance left</th><th className="px-3 py-3 text-right">Action</th>
