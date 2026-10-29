@@ -169,13 +169,17 @@ export default function InventoryPage() {
             ? `Product saved, but its photo could not be uploaded: ${cause.message}`
             : "Product saved, but the photo upload failed. Your selected photo is kept for retry.");
           setNotice("Your product details are saved. Retry the photo upload below; do not create the product again.");
-          await qc.invalidateQueries({ queryKey: ["inventory-products"] });
+          void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => undefined);
           return;
         }
       }
       resetForm(); setOpen(false);
-      await qc.invalidateQueries({ queryKey: ["inventory-products"] });
       setNotice("Product saved. Opening stock has been recorded in your inventory.");
+      // Creation is committed before refreshing the product list. Keep the success
+      // state if the refresh fails so the user does not create a duplicate SKU.
+      void qc.invalidateQueries({ queryKey: ["inventory-products"] }).catch(() => {
+        setNotice("Product saved successfully, but the inventory list could not refresh. Reload the page to see it. Do not create the same product again.");
+      });
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "We couldn't save this product. Check your details and try again.");
     } finally {
