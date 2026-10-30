@@ -118,8 +118,8 @@ export default function PinLoginPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background lg:flex">
-      <section aria-label="Kaira Africa for growing businesses" className="relative isolate flex min-h-[180px] flex-col justify-between overflow-hidden bg-[#092718] px-5 py-5 sm:min-h-[205px] sm:px-7 lg:min-h-[100dvh] lg:w-[42%] lg:px-10 lg:py-10 xl:px-14">
+    <div className="flex min-h-[100dvh] w-full items-center justify-center bg-[#f4f7f4] px-3 py-6 sm:px-6 sm:py-10">
+      <section aria-label="Kaira Africa for growing businesses" className="hidden">
         <img src="/kaira-pin-login-hero.webp" alt="" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover object-[center_45%]" />
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-br from-[#062317]/95 via-[#062317]/75 to-[#062317]/45" />
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-secondary" />
@@ -138,12 +138,12 @@ export default function PinLoginPage() {
         <p className="relative z-10 mt-4 hidden text-xs text-white/65 lg:block">© {new Date().getFullYear()} Kaira Africa · Your business, clearly managed.</p>
       </section>
 
-      <main className="flex min-w-0 flex-1 items-start justify-center px-4 pb-8 pt-6 sm:px-7 sm:pb-10 sm:pt-8 lg:items-center lg:px-10 lg:py-12">
+      <main className="flex w-full items-center justify-center">
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-md">
           <div className="mb-5 flex items-center gap-2 text-sm text-muted-foreground sm:mb-7"><ShieldCheck className="h-4 w-4 text-primary" /> Secure returning-user sign-in</div>
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:mb-6 sm:h-12 sm:w-12"><KeyRound className="h-6 w-6" /></div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Welcome back</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose your mobile network, enter your number and unlock your account with your six-digit PIN.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{hasRememberedPhone ? "Enter your six-digit PIN to securely continue to your Kaira Africa dashboard." : "Enter your Gambian phone number and six-digit PIN to securely sign in."}</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-5 sm:mt-7">
             {showPhoneEditor ? (
