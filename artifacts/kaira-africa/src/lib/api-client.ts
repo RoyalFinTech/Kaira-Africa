@@ -20,16 +20,36 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000
 // need both simultaneously for testing.
 const TOKEN_STORAGE_KEY = 'kaira_token';
 
+// This flag deliberately lives only in memory. A full page refresh resets it,
+// requiring a returning user to verify their PIN again before protected routes render.
+let pinUnlockedForThisPage = false;
+
+export function isPinUnlocked(): boolean {
+  return pinUnlockedForThisPage;
+}
+
+export function hasRememberedUser(): boolean {
+  try {
+    const phone = localStorage.getItem('kaira_last_phone') ?? '';
+    return /^\\+?220\\d{7,9}$/.test(phone.replace(/[\\s()-]/g, ''));
+  } catch {
+    return false;
+  }
+}
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_STORAGE_KEY);
 }
 
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  // Successful PIN or SMS authentication unlocks this page load only.
+  pinUnlockedForThisPage = token.startsWith('usr_');
 }
 
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
+  pinUnlockedForThisPage = false;
 }
 
 export function isUserToken(): boolean {
