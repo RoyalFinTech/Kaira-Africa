@@ -801,6 +801,8 @@ try {
   });
   await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active), null, { timeout: 15_000 });
+  console.log('PWA SERVICE WORKER REGISTRATION VERIFIED:', await pinPage.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.scope || ''));
   await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
   const pinLogo = pinPage.locator('main img[alt="Kaira Africa"]');
   await pinLogo.waitFor({ state: 'visible', timeout: 10_000 });
