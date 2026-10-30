@@ -832,7 +832,7 @@ try {
 
   // When an existing PIN-enabled number is submitted from the phone screen,
   // the app should skip OTP and take the remembered phone to the PIN screen.
-  await pinPage.goto(baseUrl + '/login?returning-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.goto(baseUrl + '/login?recovery=1&returning-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await pinPage.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 10_000 });
   await pinPage.getByPlaceholder('*******').fill('1234567');
   await pinPage.getByRole('button', { name: 'Continue' }).click();
