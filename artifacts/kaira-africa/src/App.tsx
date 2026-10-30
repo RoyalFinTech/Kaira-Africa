@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
 import { AppShell } from '@/components/layout/AppShell';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { InstallAppPrompt } from '@/components/common/InstallAppPrompt';
 import { KairaFeedbackCard } from '@/components/common/KairaFeedbackCard';
 import { ApiError } from '@workspace/api-client-react';
 import { initApiClient, getToken, clearToken, isUserToken, isAdminToken, isPinUnlocked, hasRememberedUser } from '@/lib/api-client';
@@ -425,6 +426,7 @@ function App() {
           <Router />
         </WouterRouter>
         <KairaFeedbackHost />
+        <InstallAppPrompt />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
