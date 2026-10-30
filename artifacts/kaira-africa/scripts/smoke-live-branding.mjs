@@ -1435,7 +1435,7 @@ try {
   assert.ok(pinMobileLayout.documentWidth <= pinMobileLayout.viewportWidth, 'PIN sign-in must not overflow on mobile: ' + JSON.stringify(pinMobileLayout));
 
   await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
-  await pinPage.getByRole('button', { name: /Unlock Kaira|Unlock Kaira Africa|Unlock/i }).click();
+  // The six-digit PIN screen auto-submits when the sixth digit is entered.
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
   await pinPage.locator('nav[aria-label="Primary mobile navigation"]').waitFor({ state: 'visible', timeout: 10_000 });
   const dashboardMobileLayout = await pinPage.evaluate(() => ({
