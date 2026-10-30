@@ -8,7 +8,7 @@ self.addEventListener('install', (event) => {
     await cache.addAll([
       APP_ROOT,
       new URL('manifest.webmanifest', scopeUrl).pathname,
-      new URL('kaira-logo.png', scopeUrl).pathname
+      new URL('favicon.svg', scopeUrl).pathname
     ]);
     await self.skipWaiting();
   })());
