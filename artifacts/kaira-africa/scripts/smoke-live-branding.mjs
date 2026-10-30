@@ -1475,7 +1475,7 @@ try {
     deviceScaleFactor: 1,
   });
   await profileFailureContext.addInitScript(() => {
-    localStorage.setItem('kaira_token', 'usr_profile_failure_smoke');
+    localStorage.setItem('kaira_last_phone', '+220871234567');
     localStorage.setItem('kaira_onboarding_done', 'true');
   });
   const profileFailurePage = await profileFailureContext.newPage();
@@ -1495,6 +1495,19 @@ try {
       });
       return;
     }
+    if (route.request().method() === 'POST' && new URL(route.request().url()).pathname.endsWith('/api/auth/login-pin')) {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'access-control-allow-origin': baseUrl,
+          'access-control-allow-credentials': 'true',
+          'content-type': 'application/json; charset=utf-8',
+          vary: 'Origin',
+        },
+        body: JSON.stringify({ token: 'usr_profile_failure_smoke', isNewUser: false, user: visualUser }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 503,
       headers: {
@@ -1506,7 +1519,11 @@ try {
       body: JSON.stringify({ error: 'test_service_unavailable', message: 'The profile test API is deliberately unavailable.' }),
     });
   });
-  await profileFailurePage.goto(baseUrl + '/profile?profile-error-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await profileFailurePage.goto(baseUrl + '/login/pin?profile-error-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await profileFailurePage.getByLabel('Six-digit sign-in PIN').fill('482951');
+  await profileFailurePage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
+  await profileFailurePage.locator('a[href="/profile"]').first().click();
+  await profileFailurePage.waitForURL((url) => url.pathname === '/profile', { timeout: 10_000 });
   await profileFailurePage.getByRole('heading', { name: "We couldn't load your profile" }).waitFor({ state: 'visible', timeout: 15_000 });
   assert.ok((await profileFailurePage.locator('main').innerText()).includes('Try again'), 'Failed profile loads must show an actionable retry state');
   assert.deepEqual(profileFailureErrors, [], 'Profile API failure must not crash the page: ' + profileFailureErrors.join(' | '));
@@ -1544,6 +1561,15 @@ try {
       'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS',
       'access-control-allow-credentials': 'true',
     };
+    if (requestUrl.pathname.endsWith('/api/auth/login-pin') && route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: corsHeaders,
+        body: JSON.stringify({ token: 'usr_mobile_nav_visual_test', isNewUser: false, user: visualUser }),
+      });
+      return;
+    }
     if (requestUrl.pathname.endsWith('/api/analytics/revenue')) {
       analyticsRequests.push(requestUrl.href);
       await route.fulfill({
@@ -1577,10 +1603,12 @@ try {
     });
   });
   await mobilePage.addInitScript(() => {
-    localStorage.setItem('kaira_token', 'usr_mobile_nav_visual_test');
+    localStorage.setItem('kaira_last_phone', '+220871234567');
     localStorage.setItem('kaira_onboarding_done', 'true');
   });
-  await mobilePage.goto(`${baseUrl}/dashboard?mobile-nav-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await mobilePage.goto(`${baseUrl}/login/pin?mobile-nav-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await mobilePage.getByLabel('Six-digit sign-in PIN').fill('482951');
+  await mobilePage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
   const bottomNav = mobilePage.locator('div[class*="lg:hidden"] nav').first();
   await bottomNav.waitFor({ state: 'visible', timeout: 15_000 });
   const dailyLedgerLink = bottomNav.getByRole('link', { name: 'Daily Ledger' });
