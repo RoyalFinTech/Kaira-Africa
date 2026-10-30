@@ -1055,15 +1055,15 @@ try {
       const investmentCurrency = pinPage.getByLabel('Investment currency');
       await investmentCurrency.waitFor({ state: 'visible', timeout: 10_000 });
       await investmentCurrency.click();
-      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+      for (const [code, flagName] of [['GMD', 'Flag of The Gambia'], ['NGN', 'Flag of Nigeria'], ['USD', 'Flag of the United States']]) {
         const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
         assert.ok(await currencyOption.count() > 0, `Investment currency should expose the ${code} option`);
-        const visibleFlag = currencyOption.getByText(flag, { exact: true });
-        assert.equal(await visibleFlag.count(), 1, `Investment currency should render one ${code} flag node`);
+        const visibleFlag = currencyOption.getByRole('img', { name: flagName, exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Investment currency should render one accessible ${code} SVG flag`);
         assert.ok(await visibleFlag.isVisible(), `Investment currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedInvestmentFlag = investmentCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      const selectedInvestmentFlag = investmentCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
       assert.ok(await selectedInvestmentFlag.isVisible(), 'Selected GMD flag should remain visible on the investment form');
     }
 
@@ -1073,15 +1073,15 @@ try {
       const goalCurrency = pinPage.getByLabel('Savings goal currency');
       assert.equal(await goalCurrency.count(), 1, 'Savings goal currency should be available in goal mode');
       await goalCurrency.click();
-      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+      for (const [code, flagName] of [['GMD', 'Flag of The Gambia'], ['NGN', 'Flag of Nigeria'], ['USD', 'Flag of the United States']]) {
         const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
         assert.ok(await currencyOption.count() > 0, `Savings goal currency should expose the ${code} option`);
-        const visibleFlag = currencyOption.getByText(flag, { exact: true });
-        assert.equal(await visibleFlag.count(), 1, `Savings goal currency should render one ${code} flag node`);
+        const visibleFlag = currencyOption.getByRole('img', { name: flagName, exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Savings goal currency should render one accessible ${code} SVG flag`);
         assert.ok(await visibleFlag.isVisible(), `Savings goal currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedGoalFlag = goalCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      const selectedGoalFlag = goalCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
       assert.ok(await selectedGoalFlag.isVisible(), 'Selected GMD flag should remain visible on the savings goal form');
 
       // Switch back to Record mode before checking the separate entry currency picker.
@@ -1089,15 +1089,15 @@ try {
       const entryCurrency = pinPage.getByLabel('Savings entry currency');
       assert.equal(await entryCurrency.count(), 1, 'Savings entry currency should be available in record mode');
       await entryCurrency.click();
-      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+      for (const [code, flagName] of [['GMD', 'Flag of The Gambia'], ['NGN', 'Flag of Nigeria'], ['USD', 'Flag of the United States']]) {
         const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
         assert.ok(await currencyOption.count() > 0, `Savings entry currency should expose the ${code} option`);
-        const visibleFlag = currencyOption.getByText(flag, { exact: true });
-        assert.equal(await visibleFlag.count(), 1, `Savings entry currency should render one ${code} flag node`);
+        const visibleFlag = currencyOption.getByRole('img', { name: flagName, exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Savings entry currency should render one accessible ${code} SVG flag`);
         assert.ok(await visibleFlag.isVisible(), `Savings entry currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedEntryFlag = entryCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      const selectedEntryFlag = entryCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
       assert.ok(await selectedEntryFlag.isVisible(), 'Selected GMD flag should remain visible on the savings entry form');
     }
 
@@ -1105,19 +1105,18 @@ try {
       await pinPage.getByRole('button', { name: 'New transaction' }).click();
       await pinPage.getByLabel('Transaction currency').waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Transaction currency').click();
-      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸'], ['EUR', '🇪🇺'], ['GBP', '🇬🇧']]) {
-        // CurrencyPicker marks the emoji decorative for screen readers, so the
-        // accessible option name contains the code/label but not the flag. Check
-        // the option by code, then assert the separate flag node is actually visible.
+      for (const [code, flagName] of [['GMD', 'Flag of The Gambia'], ['NGN', 'Flag of Nigeria'], ['USD', 'Flag of the United States'], ['EUR', 'Flag of the European Union'], ['GBP', 'Flag of the United Kingdom']]) {
+        // CurrencyPicker renders the flag as an accessible SVG image. Check the option by
+        // currency code, then assert the vector flag itself is actually visible.
         const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
         assert.ok(await currencyOption.count() > 0, `Transaction currency ${code} option should exist`);
-        const visibleFlag = currencyOption.getByText(flag, { exact: true });
-        assert.equal(await visibleFlag.count(), 1, `Transaction currency ${code} should render one flag node`);
+        const visibleFlag = currencyOption.getByRole('img', { name: flagName, exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Transaction currency ${code} should render one SVG flag`);
         assert.ok(await visibleFlag.isVisible(), `Transaction currency ${code} should display its flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedTransactionFlag = pinPage.getByLabel('Transaction currency').locator('..').getByText('🇬🇲', { exact: true });
-      assert.equal(await selectedTransactionFlag.count(), 1, 'Selected transaction currency should render one flag node');
+      const selectedTransactionFlag = pinPage.getByLabel('Transaction currency').locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
+      assert.equal(await selectedTransactionFlag.count(), 1, 'Selected transaction currency should render one SVG flag');
       assert.ok(await selectedTransactionFlag.isVisible(), 'Selected transaction currency flag should remain visible after closing the dropdown');
       await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
@@ -1156,15 +1155,15 @@ try {
       // Verify the flag stays visible beside the selected ledger currency and all choices are flagged.
       const ledgerCurrency = pinPage.getByLabel('Ledger currency');
       await ledgerCurrency.click();
-      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+      for (const [code, flagName] of [['GMD', 'Flag of The Gambia'], ['NGN', 'Flag of Nigeria'], ['USD', 'Flag of the United States']]) {
         const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
         assert.ok(await currencyOption.count() > 0, `Ledger selector should expose the ${code} option`);
-        const visibleFlag = currencyOption.getByText(flag, { exact: true });
-        assert.equal(await visibleFlag.count(), 1, `Ledger selector should render one ${code} flag node`);
+        const visibleFlag = currencyOption.getByRole('img', { name: flagName, exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Ledger selector should render one accessible ${code} SVG flag`);
         assert.ok(await visibleFlag.isVisible(), `Ledger selector should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedLedgerFlag = ledgerCurrency.locator('..').getByText('🇬🇲', { exact: true });
+      const selectedLedgerFlag = ledgerCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
       assert.ok(await selectedLedgerFlag.isVisible(), 'Selected GMD flag should remain visible on the ledger form');
       // Verify comma-formatted amounts are submitted as their true numeric value.
       await pinPage.getByLabel('Amount in GMD').fill('100000');
@@ -1328,15 +1327,15 @@ try {
       await inventoryNumbers.nth(1).fill('3');
       const inventoryCurrency = pinPage.getByLabel('Currency for this item');
       await inventoryCurrency.click();
-      for (const [code, flag] of [['GMD', '🇬🇲'], ['NGN', '🇳🇬'], ['USD', '🇺🇸']]) {
+      for (const [code, flagName] of [['GMD', 'Flag of The Gambia'], ['NGN', 'Flag of Nigeria'], ['USD', 'Flag of the United States']]) {
         const currencyOption = pinPage.getByRole('option', { name: new RegExp(code) });
         assert.ok(await currencyOption.count() > 0, `Inventory currency should expose the ${code} option`);
-        const visibleFlag = currencyOption.getByText(flag, { exact: true });
-        assert.equal(await visibleFlag.count(), 1, `Inventory currency should render one ${code} flag node`);
+        const visibleFlag = currencyOption.getByRole('img', { name: flagName, exact: true });
+        assert.equal(await visibleFlag.count(), 1, `Inventory currency should render one accessible ${code} SVG flag`);
         assert.ok(await visibleFlag.isVisible(), `Inventory currency should visibly display the ${code} flag`);
       }
       await pinPage.getByRole('option', { name: /NGN/ }).click();
-      const selectedInventoryFlag = inventoryCurrency.locator('..').getByText('🇳🇬', { exact: true });
+      const selectedInventoryFlag = inventoryCurrency.locator('..').getByRole('img', { name: 'Flag of Nigeria', exact: true });
       assert.ok(await selectedInventoryFlag.isVisible(), 'Selected NGN flag should remain visible in inventory');
       await pinPage.getByLabel('Buying cost per unit').fill('7500000');
       assert.equal(await pinPage.getByLabel('Buying cost per unit').inputValue(), '7,500,000', 'Inventory buying cost should format millions with commas');
