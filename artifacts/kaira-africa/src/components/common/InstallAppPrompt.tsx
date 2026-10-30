@@ -109,7 +109,7 @@ export function InstallAppPrompt() {
   return (
     <aside
       className={mobile
-        ? 'fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[180] mx-auto flex w-auto max-w-xl items-center gap-3 rounded-2xl border border-[#D8B45A]/50 bg-[#0D2818] p-3.5 text-white shadow-2xl sm:inset-x-5 sm:bottom-5 sm:p-4'
+        ? 'fixed inset-x-3 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+5rem)] z-[180] mx-auto flex w-auto max-w-xl items-center gap-3 rounded-2xl border border-[#D8B45A]/50 bg-[#0D2818] p-3.5 text-white shadow-2xl sm:inset-x-5 sm:bottom-5 sm:p-4'
         : 'fixed right-5 top-1/2 z-[180] flex w-[min(22rem,calc(100vw-2.5rem))] -translate-y-1/2 items-center gap-3 rounded-2xl border border-[#D8B45A]/50 bg-[#0D2818] p-4 text-white shadow-2xl'}
       aria-label="Install Kaira Africa"
       data-testid="kaira-install-prompt"
