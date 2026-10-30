@@ -217,7 +217,7 @@ export default function PinLoginPage() {
           </div>
 
           <div className="mt-5 space-y-3 text-center text-sm">
-            <p className="text-muted-foreground">Forgot your PIN? <Link href="/login" className="font-semibold text-primary underline-offset-4 hover:underline">Sign in with SMS verification</Link></p>
+            <p className="text-muted-foreground">Forgot your PIN? <Link href="/login?recovery=1" className="font-semibold text-primary underline-offset-4 hover:underline">Sign in with SMS verification</Link></p>
             <p className="text-muted-foreground">New to Kaira Africa? <Link href="/login" className="font-semibold text-primary underline-offset-4 hover:underline">Create your account</Link></p>
           </div>
           <div className="mt-6 rounded-xl border border-border bg-card p-4 text-sm sm:mt-8">
