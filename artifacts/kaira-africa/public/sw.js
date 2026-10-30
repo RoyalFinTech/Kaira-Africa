@@ -49,7 +49,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Cache immutable-looking same-origin app assets only; never cache API data.
-  if (/\\.(?:js|css|svg|png|webp|woff2?)$/i.test(url.pathname)) {
+  if (/\.(?:js|css|svg|png|webp|woff2?)$/i.test(url.pathname)) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_NAME);
       const cached = await cache.match(request);
