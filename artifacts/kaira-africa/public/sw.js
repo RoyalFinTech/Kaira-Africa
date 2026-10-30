@@ -52,11 +52,15 @@ self.addEventListener('fetch', (event) => {
   if (/\.(?:js|css|svg|png|webp|woff2?)$/i.test(url.pathname)) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(request);
-      if (cached) return cached;
-      const response = await fetch(request);
-      if (response.ok) cache.put(request, response.clone());
-      return response;
+      try {
+        const response = await fetch(request);
+        if (response.ok) await cache.put(request, response.clone());
+        return response;
+      } catch {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        throw new Error('Kaira Africa asset is unavailable offline.');
+      }
     })());
   }
 });
