@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, Share, X } from 'lucide-react';
+import { Share, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface InstallPromptEvent extends Event {
@@ -57,8 +57,8 @@ export function InstallAppPrompt() {
 
   return (
     <aside className="fixed inset-x-3 bottom-3 z-[180] mx-auto flex w-auto max-w-xl items-center gap-3 rounded-2xl border border-[#D8B45A]/40 bg-[#0D2818] p-3.5 text-white shadow-2xl sm:inset-x-5 sm:bottom-5 sm:p-4" aria-label="Install Kaira Africa">
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/10 text-[#E7C66D]">
-        <Download className="h-5 w-5" />
+      <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white p-1.5">
+        <img src="/kaira-logo.png" alt="" className="h-full w-full object-contain" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold">Install Kaira Africa</p>
