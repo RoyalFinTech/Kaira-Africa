@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { KeyRound, ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KairaLogo } from "@/components/common/KairaLogo";
 import { GambiaFlag } from "@/components/common/GambiaFlag";
