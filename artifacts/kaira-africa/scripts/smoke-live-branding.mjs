@@ -819,6 +819,47 @@ try {
   await pinPage.getByRole('heading', { name: 'Your business is waiting.', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
   await pinPage.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active), null, { timeout: 15_000 });
   console.log('PWA SERVICE WORKER REGISTRATION VERIFIED:', await pinPage.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.scope || ''));
+
+  // Desktop: the native prompt is event-gated, but its in-app card must sit
+  // against the right edge instead of being centered across the viewport.
+  await pinPage.evaluate(() => {
+    const event = new Event('beforeinstallprompt', { cancelable: true });
+    Object.assign(event, {
+      prompt: async () => undefined,
+      userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+    });
+    window.dispatchEvent(event);
+  });
+  const desktopInstallPrompt = pinPage.getByTestId('kaira-install-prompt');
+  await desktopInstallPrompt.waitFor({ state: 'visible', timeout: 5_000 });
+  const desktopInstallBounds = await desktopInstallPrompt.boundingBox();
+  assert.ok(desktopInstallBounds && desktopInstallBounds.x > 900, 'Desktop install prompt must be docked at the right edge: ' + JSON.stringify(desktopInstallBounds));
+  assert.ok(desktopInstallBounds.x + desktopInstallBounds.width >= 1400, 'Desktop install prompt must finish close to the right viewport edge: ' + JSON.stringify(desktopInstallBounds));
+  await desktopInstallPrompt.getByRole('button', { name: 'Dismiss install suggestion' }).click();
+  console.log('DESKTOP INSTALL PROMPT RIGHT-EDGE POSITION VERIFIED:', JSON.stringify(desktopInstallBounds));
+
+  // Android: even when Chromium has not emitted beforeinstallprompt, the
+  // app must show a manual install guide instead of silently hiding the CTA.
+  const mobileInstallContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
+  });
+  const mobileInstallPage = await mobileInstallContext.newPage();
+  await mobileInstallPage.goto(`${baseUrl}/login/pin?mobile-install-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  const mobileInstallPrompt = mobileInstallPage.getByTestId('kaira-install-prompt');
+  await mobileInstallPrompt.waitFor({ state: 'visible', timeout: 10_000 });
+  const mobileBrandLogo = mobileInstallPrompt.locator('img[alt="Kaira Africa"]');
+  await mobileBrandLogo.waitFor({ state: 'visible', timeout: 5_000 });
+  const mobileLogoVisible = await mobileBrandLogo.evaluate((img) => img.complete && img.naturalWidth > 0);
+  assert.ok(mobileLogoVisible, 'Mobile install prompt must display the real Kaira Africa logo');
+  await mobileInstallPrompt.getByTestId('kaira-install-action').click();
+  await mobileInstallPage.getByRole('dialog', { name: 'Install Kaira on Android' }).waitFor({ state: 'visible', timeout: 5_000 });
+  await mobileInstallPage.getByRole('dialog').getByText(/Chrome.*Install app.*Add to Home screen/i).waitFor({ state: 'visible', timeout: 5_000 });
+  console.log('ANDROID MOBILE INSTALL FALLBACK AND OFFICIAL LOGO VERIFIED.');
+  await mobileInstallContext.close();
   await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
   const pinLogo = pinPage.locator('main img[alt="Kaira Africa"]');
   await pinLogo.waitFor({ state: 'visible', timeout: 10_000 });
