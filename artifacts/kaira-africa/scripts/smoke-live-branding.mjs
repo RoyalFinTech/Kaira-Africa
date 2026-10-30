@@ -1075,7 +1075,9 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Investment currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedInvestmentFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
+      const investmentCurrencyControl = pinPage.locator('div.flex.min-w-0.items-center.gap-2.rounded-md').filter({ has: investmentCurrency });
+      const selectedInvestmentFlag = investmentCurrencyControl.locator(':scope > svg[role="img"][aria-label="Flag of The Gambia"]');
+      assert.equal(await selectedInvestmentFlag.count(), 1, 'Investment currency control should contain one selected GMD flag');
       assert.ok(await selectedInvestmentFlag.isVisible(), 'Selected GMD flag should remain visible on the investment form');
     }
 
@@ -1093,7 +1095,9 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Savings goal currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedGoalFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
+      const goalCurrencyControl = pinPage.locator('div.flex.min-w-0.items-center.gap-2.rounded-md').filter({ has: goalCurrency });
+      const selectedGoalFlag = goalCurrencyControl.locator(':scope > svg[role="img"][aria-label="Flag of The Gambia"]');
+      assert.equal(await selectedGoalFlag.count(), 1, 'Savings goal currency control should contain one selected GMD flag');
       assert.ok(await selectedGoalFlag.isVisible(), 'Selected GMD flag should remain visible on the savings goal form');
 
       // Switch back to Record mode before checking the separate entry currency picker.
@@ -1109,7 +1113,9 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Savings entry currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedEntryFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
+      const entryCurrencyControl = pinPage.locator('div.flex.min-w-0.items-center.gap-2.rounded-md').filter({ has: entryCurrency });
+      const selectedEntryFlag = entryCurrencyControl.locator(':scope > svg[role="img"][aria-label="Flag of The Gambia"]');
+      assert.equal(await selectedEntryFlag.count(), 1, 'Savings entry currency control should contain one selected GMD flag');
       assert.ok(await selectedEntryFlag.isVisible(), 'Selected GMD flag should remain visible on the savings entry form');
     }
 
@@ -1176,7 +1182,9 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Ledger selector should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedLedgerFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
+      const ledgerCurrencyControl = pinPage.locator('div.flex.min-w-0.items-center.gap-2.rounded-md').filter({ has: ledgerCurrency });
+      const selectedLedgerFlag = ledgerCurrencyControl.locator(':scope > svg[role="img"][aria-label="Flag of The Gambia"]');
+      assert.equal(await selectedLedgerFlag.count(), 1, 'Ledger currency control should contain one selected GMD flag');
       assert.ok(await selectedLedgerFlag.isVisible(), 'Selected GMD flag should remain visible on the ledger form');
       // Verify comma-formatted amounts are submitted as their true numeric value.
       await pinPage.getByLabel('Amount in GMD').fill('100000');
