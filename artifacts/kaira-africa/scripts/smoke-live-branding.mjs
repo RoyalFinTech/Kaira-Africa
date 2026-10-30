@@ -848,12 +848,6 @@ try {
   assert.equal(pinLoginRequests[1].pin, '482951', 'Returning-user PIN sign-in submits the entered six-digit PIN');
   assert.equal(pinLoginRequests[1].phoneNumber, '+220871234567', 'Returning-user PIN sign-in reuses the saved phone number');
 
-  // A hard reload must discard the browser-held user token and return to the PIN gate.
-  await pinPage.reload({ waitUntil: 'domcontentloaded' });
-  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
-  assert.equal(new URL(pinPage.url()).pathname, '/login/pin', 'Refreshing a protected dashboard must return to the PIN gate');
-  assert.equal(await pinPage.getByLabel('Six-digit sign-in PIN').count(), 1, 'Returning-user refresh must expose the six-digit PIN field');
-  console.log('RETURNING-USER RELOAD LOCK VERIFIED: dashboard refresh returned to PIN sign-in.');
   const dashboardHero = pinPage.locator('img[src="/kaira-dashboard-hero.webp"]');
   await dashboardHero.waitFor({ state: 'visible', timeout: 10_000 });
   const dashboardHeroStats = await dashboardHero.evaluate(async (img) => {
@@ -1640,6 +1634,16 @@ try {
 
   assert.deepEqual(mobileErrors, [], `Authenticated mobile app generated runtime errors: ${mobileErrors.join(' | ')}`);
   await mobileContext.close();
+
+  // Re-open the protected dashboard and perform a true full-page reload after
+  // the dashboard/profile/CRM checks. The app must return to PIN, not render data.
+  await pinPage.goto(`${baseUrl}/dashboard?reload-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.locator('a[href="/profile"]').first().waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.reload({ waitUntil: 'domcontentloaded' });
+  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  assert.equal(new URL(pinPage.url()).pathname, '/login/pin', 'Refreshing a protected dashboard must return to the PIN gate');
+  assert.equal(await pinPage.getByLabel('Six-digit sign-in PIN').count(), 1, 'Returning-user refresh must expose the six-digit PIN field');
+  console.log('RETURNING-USER RELOAD LOCK VERIFIED: dashboard refresh returned to PIN sign-in.');
 
   assert.deepEqual(pageErrors, [], `Browser runtime reported errors: ${pageErrors.join(' | ')}`);
   console.log('LIVE BRANDING SMOKE TEST PASSED: splash logo, splash timing, onboarding logo, desktop login hero, flag, mobile branded banner, and direct-entry splash gate.');
