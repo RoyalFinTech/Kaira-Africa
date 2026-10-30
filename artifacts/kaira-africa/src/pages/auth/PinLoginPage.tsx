@@ -139,7 +139,8 @@ export default function PinLoginPage() {
       </section>
 
       <main className="flex w-full items-center justify-center">
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-md">
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-md rounded-[28px] border border-[#e3ebe5] bg-white px-5 py-7 shadow-[0_24px_80px_rgba(13,40,24,0.09)] sm:px-9 sm:py-9">
+          <div className="mb-7 flex justify-center sm:mb-8"><KairaLogo width={190} height={76} /></div>
           <div className="mb-5 flex items-center gap-2 text-sm text-muted-foreground sm:mb-7"><ShieldCheck className="h-4 w-4 text-primary" /> Secure returning-user sign-in</div>
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:mb-6 sm:h-12 sm:w-12"><KeyRound className="h-6 w-6" /></div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Welcome back</h1>
