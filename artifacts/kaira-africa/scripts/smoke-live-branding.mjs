@@ -165,7 +165,11 @@ const manifest = await manifestResponse.json();
 assert.equal(manifest.name, 'Kaira Africa', 'PWA manifest must use the Kaira Africa app name');
 assert.equal(manifest.display, 'standalone', 'PWA must request standalone app display');
 assert.equal(manifest.start_url, '/', 'PWA must launch at the Kaira splash route');
-assert.ok(Array.isArray(manifest.icons) && manifest.icons.some((icon) => icon.src === '/favicon.svg'), 'PWA manifest must include the Kaira brand icon');
+assert.ok(Array.isArray(manifest.icons) && manifest.icons.some((icon) => icon.src === '/favicon.svg'), 'PWA manifest must include the Kaira vector brand icon');
+assert.ok(manifest.icons.some((icon) => icon.src === '/kaira-logo.png'), 'PWA manifest must include the official Kaira logo for installed app identity');
+const installedLogoResponse = await fetch(`${baseUrl}/kaira-logo.png?pwa-icon-smoke=${Date.now()}`, { cache: 'no-store' });
+assert.equal(installedLogoResponse.status, 200, 'Installed-app Kaira logo must return HTTP 200');
+assert.match(installedLogoResponse.headers.get('content-type') || '', /image\/png/i, 'Installed-app Kaira logo must be PNG');
 const pwaIconResponse = await fetch(`${baseUrl}/favicon.svg?pwa-smoke=${Date.now()}`, { cache: 'no-store' });
 assert.equal(pwaIconResponse.status, 200, 'PWA Kaira icon must return HTTP 200');
 assert.match(pwaIconResponse.headers.get('content-type') || '', /image\/svg\+xml/i, 'PWA Kaira icon must be served as SVG');
@@ -210,15 +214,27 @@ try {
   const timingStartedAt = Number(startedAtText);
   assert.ok(Number.isFinite(timingStartedAt) && timingStartedAt > 0, 'Splash start timestamp must be valid');
 
-  // At 7 seconds after the splash actually mounted, it should still be active.
-  await page.waitForFunction((startedAt) => Date.now() - Number(startedAt) >= 7_000, startedAtText, { timeout: 8_000 });
-  assert.equal(new URL(page.url()).pathname, '/', 'Splash must remain visible at 7 seconds');
+  // New/unrecognized browsers retain the onboarding flow after the short brand splash.
   await page.waitForURL((url) => url.pathname === '/onboarding', { timeout: 6_000 });
   const totalSplashMs = Date.now() - timingStartedAt;
-  assert.ok(totalSplashMs >= 8_500 && totalSplashMs <= 13_000, `Splash timing must be around 9–10 seconds; observed ${totalSplashMs}ms`);
+  assert.ok(totalSplashMs >= 1_200 && totalSplashMs <= 5_000, `Splash timing must be around 1.5–2 seconds; observed ${totalSplashMs}ms`);
   console.log('SPLASH TIMING VERIFIED:', `${totalSplashMs}ms before onboarding`);
 
   await verifyLogo(page, 'FIRST ONBOARDING SCREEN', resolve(outputDir, 'onboarding-screen.png'));
+
+  // A browser that remembers a user must go to the PIN screen after splash,
+  // even if its onboarding marker is missing. The phone is shown masked.
+  await page.evaluate(() => {
+    localStorage.setItem('kaira_last_phone', '+220871234567');
+    localStorage.removeItem('kaira_onboarding_done');
+  });
+  await page.goto(`${baseUrl}/?returning-user-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.waitForURL((url) => url.pathname === '/login/pin', { timeout: 6_000 });
+  await page.getByRole('heading', { name: 'Your business is waiting.' }).waitFor({ state: 'visible', timeout: 10_000 });
+  await page.getByText('Account ending •••• 4567').waitFor({ state: 'visible', timeout: 10_000 });
+  await page.getByLabel('Six-digit sign-in PIN. Tap to enter digits.').waitFor({ state: 'visible', timeout: 10_000 });
+  console.log('RETURNING-USER SPLASH-TO-PIN ROUTE AND MASKED ACCOUNT VERIFIED.');
+  await page.evaluate(() => localStorage.removeItem('kaira_last_phone'));
 
   // Verify the actual login hero photo and the explicit Gambian flag rendering.
   const heroResponsePromise = page.waitForResponse(
@@ -800,7 +816,7 @@ try {
     }
   });
   await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.getByRole('heading', { name: 'Your business is waiting.', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
   await pinPage.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active), null, { timeout: 15_000 });
   console.log('PWA SERVICE WORKER REGISTRATION VERIFIED:', await pinPage.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.scope || ''));
   await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
@@ -840,7 +856,7 @@ try {
   await pinPage.getByRole('button', { name: 'Continue' }).click();
   await pinPage.waitForURL((url) => url.pathname === '/login/pin', { timeout: 10_000 });
   assert.equal(await pinPage.getByLabel('Seven digit phone number').count(), 0, 'Returning-user PIN screen should not require re-entering the phone number');
-  assert.equal(await pinPage.getByTestId('remembered-pin-phone').innerText(), '+220871234567', 'Returning-user PIN screen must show the remembered full phone number');
+  assert.equal(await pinPage.getByTestId('remembered-pin-phone').innerText(), 'Account ending •••• 4567', 'Returning-user PIN screen must mask the remembered phone number');
   assert.equal(await pinPage.getByRole('heading', { name: /verification code/i }).count(), 0, 'Returning user with PIN must skip the OTP screen');
   await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
@@ -1427,7 +1443,7 @@ try {
   // Check the dedicated PIN screen and authenticated dashboard on a 390px phone.
   await pinPage.setViewportSize({ width: 390, height: 844 });
   await pinPage.goto(baseUrl + '/login/pin?mobile-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByRole('heading', { name: 'Your business is waiting.', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
   const pinMobileLayout = await pinPage.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
     documentWidth: document.documentElement.scrollWidth,
@@ -1683,7 +1699,7 @@ try {
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 10_000 });
   await pinPage.locator('a[href="/profile"]').first().waitFor({ state: 'visible', timeout: 15_000 });
   await pinPage.reload({ waitUntil: 'domcontentloaded' });
-  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.getByRole('heading', { name: 'Your business is waiting.', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
   assert.equal(new URL(pinPage.url()).pathname, '/login/pin', 'Refreshing a protected dashboard must return to the PIN gate');
   assert.equal(await pinPage.getByLabel('Six-digit sign-in PIN').count(), 1, 'Returning-user refresh must expose the six-digit PIN field');
   console.log('RETURNING-USER RELOAD LOCK VERIFIED: dashboard refresh returned to PIN sign-in.');

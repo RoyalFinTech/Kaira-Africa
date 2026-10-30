@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaira-africa-shell-v1';
+const CACHE_NAME = 'kaira-africa-shell-v2';
 const scopeUrl = new URL(self.registration.scope);
 const APP_ROOT = scopeUrl.pathname;
 

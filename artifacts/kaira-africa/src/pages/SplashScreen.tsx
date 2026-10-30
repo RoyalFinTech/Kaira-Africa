@@ -3,9 +3,10 @@ import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { BRAND } from '@/lib/brand';
+import { hasRememberedUser } from '@/lib/api-client';
 
-const SPLASH_DURATION_MS = 9_000;
-const NAVIGATION_DELAY_MS = 9_400;
+const SPLASH_DURATION_MS = 1_400;
+const NAVIGATION_DELAY_MS = 1_700;
 
 export default function SplashScreen() {
   const [, setLocation] = useLocation();
@@ -23,9 +24,9 @@ export default function SplashScreen() {
       const elapsed = Date.now() - startedAt;
       setProgress(Math.min(100, (elapsed / SPLASH_DURATION_MS) * 100));
 
-      if (elapsed < 3_000) {
+      if (elapsed < 450) {
         setLoadingMessage('Preparing your workspace');
-      } else if (elapsed < 6_500) {
+      } else if (elapsed < 1_000) {
         setLoadingMessage('Loading your business tools');
       } else {
         setLoadingMessage('Almost ready');
@@ -36,15 +37,16 @@ export default function SplashScreen() {
       setProgress(100);
       const onboardingDone = localStorage.getItem('kaira_onboarding_done');
 
-      if (!onboardingDone) {
-        // Gate the onboarding route so a direct refresh on /onboarding
-        // returns through the splash rather than skipping the brand intro.
+      // A recognized browser belongs on the returning-user PIN gate even
+      // if its original onboarding flag is absent or was cleared. A remembered
+      // phone number is only a routing hint; the server still verifies the PIN
+      // and issues a fresh session before any protected page can render.
+      if (hasRememberedUser()) {
+        setLocation('/login/pin');
+      } else if (!onboardingDone) {
+        // New browsers complete onboarding before entering phone/SMS sign-in.
         sessionStorage.setItem('kaira_splash_complete', '1');
         setLocation('/onboarding');
-      } else if (localStorage.getItem('kaira_last_phone')) {
-        // A returning browser always lands on the PIN gate, never straight in
-        // the dashboard. The server issues a fresh session after verification.
-        setLocation('/login/pin');
       } else {
         setLocation('/login');
       }

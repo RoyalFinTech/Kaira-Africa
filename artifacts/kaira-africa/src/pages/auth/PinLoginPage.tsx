@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { KeyRound, ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff, CircleHelp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KairaLogo } from "@/components/common/KairaLogo";
 import { GambiaFlag } from "@/components/common/GambiaFlag";
@@ -139,14 +139,14 @@ export default function PinLoginPage() {
       </section>
 
       <main className="flex w-full items-center justify-center">
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-md rounded-[28px] border border-[#e3ebe5] bg-white px-5 py-7 shadow-[0_24px_80px_rgba(13,40,24,0.09)] sm:px-9 sm:py-9">
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-md rounded-[28px] border border-[#e3ebe5] bg-white px-5 py-7 text-center shadow-[0_24px_80px_rgba(13,40,24,0.09)] sm:px-9 sm:py-9">
           <div className="mb-7 flex justify-center sm:mb-8"><KairaLogo width={130} height={130} /></div>
-          <div className="mb-5 flex items-center gap-2 text-sm text-muted-foreground sm:mb-7"><ShieldCheck className="h-4 w-4 text-primary" /> Secure returning-user sign-in</div>
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:mb-6 sm:h-12 sm:w-12"><KeyRound className="h-6 w-6" /></div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Welcome back</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">{hasRememberedPhone ? "Enter your six-digit PIN to securely continue to your Kaira Africa dashboard." : "Enter your Gambian phone number and six-digit PIN to securely sign in."}</p>
+          <div className="mb-5 flex items-center justify-center gap-2 text-sm text-muted-foreground sm:mb-6"><ShieldCheck className="h-4 w-4 text-primary" /> Secure returning-user sign-in</div>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-3xl sm:mb-5" aria-hidden="true">👋</div>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Your business is waiting.</h1>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{hasRememberedPhone ? "Enter your six-digit PIN to securely continue to your Kaira Africa dashboard." : "Enter your Gambian phone number and six-digit PIN to securely sign in."}</p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-5 sm:mt-7">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5 text-left sm:mt-7">
             {showPhoneEditor ? (
               <fieldset disabled={submitting} className="space-y-2">
                 <legend className="text-sm font-semibold">Gambian phone number</legend>
@@ -172,7 +172,7 @@ export default function PinLoginPage() {
             ) : (
               <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Phone number confirmed</p>
-                <p className="mt-1 text-lg font-bold tracking-wide text-foreground" data-testid="remembered-pin-phone">{fullPhone}</p>
+                <p className="mt-1 text-lg font-bold tracking-wide text-foreground" data-testid="remembered-pin-phone">Account ending •••• {fullPhone.slice(-4)}</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">You only need your PIN on this device. Your phone number stays saved here for faster, simpler sign-in.</p>
                 <Button type="button" variant="link" size="sm" disabled={submitting} onClick={() => { setShowPhoneEditor(true); setPin(""); setError(null); }} className="mt-1 h-auto px-0">Use a different number</Button>
               </div>
