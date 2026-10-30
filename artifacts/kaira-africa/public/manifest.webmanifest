@@ -1,0 +1,30 @@
+{
+  "id": "/",
+  "name": "Kaira Africa",
+  "short_name": "Kaira",
+  "description": "Kaira Africa business management workspace",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#f7f8f5",
+  "theme_color": "#0d2818",
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

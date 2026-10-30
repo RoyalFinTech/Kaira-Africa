@@ -3,7 +3,6 @@ import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { BRAND } from '@/lib/brand';
-import { isUserToken } from '@/lib/api-client';
 
 const SPLASH_DURATION_MS = 9_000;
 const NAVIGATION_DELAY_MS = 9_400;
@@ -42,10 +41,12 @@ export default function SplashScreen() {
         // returns through the splash rather than skipping the brand intro.
         sessionStorage.setItem('kaira_splash_complete', '1');
         setLocation('/onboarding');
-      } else if (!isUserToken()) {
-        setLocation('/login');
+      } else if (localStorage.getItem('kaira_last_phone')) {
+        // A returning browser always lands on the PIN gate, never straight in
+        // the dashboard. The server issues a fresh session after verification.
+        setLocation('/login/pin');
       } else {
-        setLocation('/dashboard');
+        setLocation('/login');
       }
     }, NAVIGATION_DELAY_MS);
 
