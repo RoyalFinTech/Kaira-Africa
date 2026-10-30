@@ -40,7 +40,7 @@ function CurrencyFlag({ currency, className = "h-5 w-7" }: { currency: string; c
     case "NGN":
       return <svg {...common}><rect width="28" height="20" fill="#fff"/><rect width="9.34" height="20" x="0" fill="#008751"/><rect width="9.33" height="20" x="18.67" fill="#008751"/></svg>;
     case "USD":
-      return <svg {...common}><rect width="28" height="20" fill="#fff"/>{Array.from({length: 7}, (_, i) => <rect key={i} x="0" y={i * 20 / 7} width="28" height={20 / 13} fill="#B22234"/>)}<rect width="12" height="10.8" fill="#3C3B6E"/>{Array.from({length: 3}, (_, row) => Array.from({length: row % 2 ? 3 : 4}, (_, col) => <circle key={row + "-" + col} cx={1.4 + col * 3.1 + (row % 2 ? 1.5 : 0)} cy={1.5 + row * 3.3} r=".55" fill="#fff"/>))}</svg>;
+      return <svg {...common}><rect width="28" height="20" fill="#fff"/>{Array.from({length: 13}, (_, i) => <rect key={i} x="0" y={i * 20 / 13} width="28" height={20 / 13} fill={i % 2 === 0 ? "#B22234" : "#fff"}/>)}<rect width="12" height="10.8" fill="#3C3B6E"/>{Array.from({length: 3}, (_, row) => Array.from({length: row % 2 ? 3 : 4}, (_, col) => <circle key={row + "-" + col} cx={1.4 + col * 3.1 + (row % 2 ? 1.5 : 0)} cy={1.5 + row * 3.3} r=".55" fill="#fff"/>))}</svg>;
     case "EUR":
       return <svg {...common}><rect width="28" height="20" fill="#003399"/>{Array.from({length: 12}, (_, i) => { const angle = (i * Math.PI) / 6 - Math.PI / 2; return <circle key={i} cx={14 + Math.cos(angle) * 6} cy={10 + Math.sin(angle) * 6} r="1" fill="#FFCC00"/>; })}</svg>;
     case "GBP":
