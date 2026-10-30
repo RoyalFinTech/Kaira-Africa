@@ -1356,7 +1356,9 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Inventory currency should visibly display the ${code} flag`);
       }
       await pinPage.getByRole('option', { name: /NGN/ }).click();
-      const selectedInventoryFlag = pinPage.locator('svg[role="img"][aria-label="Flag of Nigeria"]:visible');
+      const inventoryCurrencyControl = pinPage.locator('div.flex.min-w-0.items-center.gap-2.rounded-md').filter({ has: inventoryCurrency });
+      const selectedInventoryFlag = inventoryCurrencyControl.locator(':scope > svg[role="img"][aria-label="Flag of Nigeria"]');
+      assert.equal(await selectedInventoryFlag.count(), 1, 'Inventory currency control should contain one selected NGN flag');
       assert.ok(await selectedInventoryFlag.isVisible(), 'Selected NGN flag should remain visible in inventory');
       await pinPage.getByLabel('Buying cost per unit').fill('7500000');
       assert.equal(await pinPage.getByLabel('Buying cost per unit').inputValue(), '7,500,000', 'Inventory buying cost should format millions with commas');
