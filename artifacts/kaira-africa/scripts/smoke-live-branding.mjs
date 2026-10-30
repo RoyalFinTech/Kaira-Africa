@@ -158,6 +158,25 @@ console.log('PUBLIC LOGO ASSET VERIFIED:', JSON.stringify({ status: assetRespons
 // Wait for Render to publish this specific commit before testing browser rendering.
 await waitForDeployedSplashBundle();
 
+// Verify the production PWA contract before opening the browser.
+const manifestResponse = await fetch(`${baseUrl}/manifest.webmanifest?pwa-smoke=${Date.now()}`, { cache: 'no-store' });
+assert.equal(manifestResponse.status, 200, 'PWA manifest must return HTTP 200');
+const manifest = await manifestResponse.json();
+assert.equal(manifest.name, 'Kaira Africa', 'PWA manifest must use the Kaira Africa app name');
+assert.equal(manifest.display, 'standalone', 'PWA must request standalone app display');
+assert.equal(manifest.start_url, '/', 'PWA must launch at the Kaira splash route');
+assert.ok(Array.isArray(manifest.icons) && manifest.icons.some((icon) => icon.src === '/favicon.svg'), 'PWA manifest must include the Kaira brand icon');
+const pwaIconResponse = await fetch(`${baseUrl}/favicon.svg?pwa-smoke=${Date.now()}`, { cache: 'no-store' });
+assert.equal(pwaIconResponse.status, 200, 'PWA Kaira icon must return HTTP 200');
+assert.match(pwaIconResponse.headers.get('content-type') || '', /image\/svg\+xml/i, 'PWA Kaira icon must be served as SVG');
+const workerResponse = await fetch(`${baseUrl}/sw.js?pwa-smoke=${Date.now()}`, { cache: 'no-store' });
+assert.equal(workerResponse.status, 200, 'PWA service worker must return HTTP 200');
+const workerSource = await workerResponse.text();
+assert.ok(workerSource.includes("url.pathname.includes('/api/')"), 'PWA worker must explicitly exclude API data from caching');
+assert.ok(workerSource.includes("request.mode === 'navigate'"), 'PWA worker must provide the offline navigation shell');
+console.log('PWA MANIFEST, BRAND ICON AND SERVICE WORKER VERIFIED:', JSON.stringify({ name: manifest.name, display: manifest.display, icon: manifest.icons[0].src }));
+
+
 // Verify the newly generated local hero assets are published with the app build.
 for (const heroPath of ['kaira-dashboard-hero.webp', 'kaira-pin-login-hero.webp']) {
   const response = await fetch(baseUrl + '/' + heroPath + '?asset-smoke=' + Date.now(), { cache: 'no-store' });
@@ -782,31 +801,23 @@ try {
   });
   await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active), null, { timeout: 15_000 });
+  console.log('PWA SERVICE WORKER REGISTRATION VERIFIED:', await pinPage.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.scope || ''));
   await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
-  const pinHero = pinPage.locator('img[src="/kaira-pin-login-hero.webp"]');
-  await pinHero.waitFor({ state: 'visible', timeout: 10_000 });
-  const pinHeroStats = await pinHero.evaluate(async (img) => {
-    const waitForImage = () => new Promise((resolve) => {
-      const finish = () => resolve({
-        complete: img.complete,
-        naturalWidth: img.naturalWidth,
-        naturalHeight: img.naturalHeight,
-        currentSrc: img.currentSrc,
-      });
-      img.addEventListener('load', finish, { once: true });
-      img.addEventListener('error', finish, { once: true });
-      window.setTimeout(finish, 5_000);
-    });
-    if (!img.complete) return await waitForImage();
-    return {
-      complete: img.complete,
-      naturalWidth: img.naturalWidth,
-      naturalHeight: img.naturalHeight,
-      currentSrc: img.currentSrc,
-    };
-  });
-  assert.ok(pinHeroStats.complete && pinHeroStats.naturalWidth > 0, 'PIN sign-in hero image must render in the browser: ' + JSON.stringify({ pinHeroStats, heroImageFailures }));
-  console.log('PIN LOGIN HERO RENDER VERIFIED:', JSON.stringify(pinHeroStats));
+  const pinLogo = pinPage.locator('main img[alt="Kaira Africa"]');
+  await pinLogo.waitFor({ state: 'visible', timeout: 10_000 });
+  const pinLogoStats = await pinLogo.evaluate((img) => ({
+    complete: img.complete,
+    naturalWidth: img.naturalWidth,
+    naturalHeight: img.naturalHeight,
+    currentSrc: img.currentSrc,
+    visibleWidth: Math.round(img.getBoundingClientRect().width),
+    visibleHeight: Math.round(img.getBoundingClientRect().height),
+  }));
+  assert.ok(pinLogoStats.complete && pinLogoStats.naturalWidth > 0, 'Centered PIN card must display the official Kaira logo: ' + JSON.stringify(pinLogoStats));
+  assert.ok(pinLogoStats.visibleWidth >= 100 && pinLogoStats.visibleHeight >= 40, 'Kaira logo must be clearly visible in the PIN card: ' + JSON.stringify(pinLogoStats));
+  await pinPage.getByLabel('Six-digit sign-in PIN').waitFor({ state: 'visible', timeout: 10_000 });
+  console.log('CENTERED PIN CARD AND SIX-DIGIT INPUT VERIFIED:', JSON.stringify(pinLogoStats));
   const networkSelector = pinPage.getByRole('combobox', { name: 'Mobile network' });
   await networkSelector.click();
   await pinPage.getByRole('option', { name: /Africell/ }).click();
@@ -823,7 +834,7 @@ try {
 
   // When an existing PIN-enabled number is submitted from the phone screen,
   // the app should skip OTP and take the remembered phone to the PIN screen.
-  await pinPage.goto(baseUrl + '/login?returning-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.goto(baseUrl + '/login?recovery=1&returning-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await pinPage.getByRole('heading', { name: 'Enter your phone number' }).waitFor({ state: 'visible', timeout: 10_000 });
   await pinPage.getByPlaceholder('*******').fill('1234567');
   await pinPage.getByRole('button', { name: 'Continue' }).click();
@@ -836,6 +847,13 @@ try {
   assert.equal(pinLoginRequests.length, 2, 'Returning-user PIN sign-in should call the login endpoint after digit six');
   assert.equal(pinLoginRequests[1].pin, '482951', 'Returning-user PIN sign-in submits the entered six-digit PIN');
   assert.equal(pinLoginRequests[1].phoneNumber, '+220871234567', 'Returning-user PIN sign-in reuses the saved phone number');
+
+  // A hard reload must discard the browser-held user token and return to the PIN gate.
+  await pinPage.reload({ waitUntil: 'domcontentloaded' });
+  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  assert.equal(new URL(pinPage.url()).pathname, '/login/pin', 'Refreshing a protected dashboard must return to the PIN gate');
+  assert.equal(await pinPage.getByLabel('Six-digit sign-in PIN').count(), 1, 'Returning-user refresh must expose the six-digit PIN field');
+  console.log('RETURNING-USER RELOAD LOCK VERIFIED: dashboard refresh returned to PIN sign-in.');
   const dashboardHero = pinPage.locator('img[src="/kaira-dashboard-hero.webp"]');
   await dashboardHero.waitFor({ state: 'visible', timeout: 10_000 });
   const dashboardHeroStats = await dashboardHero.evaluate(async (img) => {
