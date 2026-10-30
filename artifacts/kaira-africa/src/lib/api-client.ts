@@ -31,7 +31,7 @@ export function isPinUnlocked(): boolean {
 export function hasRememberedUser(): boolean {
   try {
     const phone = localStorage.getItem('kaira_last_phone') ?? '';
-    return /^\\+?220\\d{7,9}$/.test(phone.replace(/[\\s()-]/g, ''));
+    return /^\+?220\d{7,9}$/.test(phone.replace(/[\s()-]/g, ''));
   } catch {
     return false;
   }
