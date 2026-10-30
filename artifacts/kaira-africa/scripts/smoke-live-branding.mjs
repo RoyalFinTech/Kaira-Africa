@@ -1655,7 +1655,8 @@ try {
 
   // Verify the CSV download through the visible UI. The one-row fixture includes
   // commas and a quote in the customer name to exercise proper escaping.
-  await mobilePage.goto(`${baseUrl}/transactions?csv-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await bottomNav.getByRole('link', { name: 'Transactions' }).click();
+  await mobilePage.waitForURL((url) => url.pathname === '/transactions', { timeout: 10_000 });
   await mobilePage.getByRole('heading', { name: 'Transactions' }).waitFor({ state: 'visible', timeout: 10_000 });
   await mobilePage.getByText('KAI-CSV-001', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
   const exportButton = mobilePage.getByRole('button', { name: 'Export CSV' });
