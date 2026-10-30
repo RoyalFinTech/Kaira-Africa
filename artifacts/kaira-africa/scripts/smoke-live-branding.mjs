@@ -1397,7 +1397,8 @@ try {
       assert.equal(inventoryAdjustmentRequests[0].quantityDelta, 1, 'Stock receive button should add one unit');
 
       // Confirm the uploaded inventory photo is also shown when that product is selected for a sale.
-      await pinPage.goto(baseUrl + '/daily-ledger?inventory-photo-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+      await pinPage.locator('a[href="/daily-ledger"]').first().click();
+      await pinPage.waitForURL((url) => url.pathname === '/daily-ledger', { timeout: 10_000 });
       await pinPage.getByLabel('Ledger currency').waitFor({ state: 'visible', timeout: 10_000 });
       const saleCurrency = pinPage.getByLabel('Ledger currency');
       await saleCurrency.click();
@@ -1433,7 +1434,9 @@ try {
   }));
   assert.ok(pinMobileLayout.documentWidth <= pinMobileLayout.viewportWidth, 'PIN sign-in must not overflow on mobile: ' + JSON.stringify(pinMobileLayout));
 
-  await pinPage.goto(baseUrl + '/dashboard?mobile-dashboard-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
+  await pinPage.getByRole('button', { name: /Unlock Kaira|Unlock Kaira Africa|Unlock/i }).click();
+  await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
   await pinPage.locator('nav[aria-label="Primary mobile navigation"]').waitFor({ state: 'visible', timeout: 10_000 });
   const dashboardMobileLayout = await pinPage.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
