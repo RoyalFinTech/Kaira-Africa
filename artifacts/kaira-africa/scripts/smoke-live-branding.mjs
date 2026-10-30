@@ -168,7 +168,7 @@ assert.equal(manifest.start_url, '/', 'PWA must launch at the Kaira splash route
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.some((icon) => icon.src === '/favicon.svg'), 'PWA manifest must include the Kaira brand icon');
 const pwaIconResponse = await fetch(`${baseUrl}/favicon.svg?pwa-smoke=${Date.now()}`, { cache: 'no-store' });
 assert.equal(pwaIconResponse.status, 200, 'PWA Kaira icon must return HTTP 200');
-assert.match(pwaIconResponse.headers.get('content-type') || '', /image\\/svg\\+xml/i, 'PWA Kaira icon must be served as SVG');
+assert.match(pwaIconResponse.headers.get('content-type') || '', /image\/svg\+xml/i, 'PWA Kaira icon must be served as SVG');
 const workerResponse = await fetch(`${baseUrl}/sw.js?pwa-smoke=${Date.now()}`, { cache: 'no-store' });
 assert.equal(workerResponse.status, 200, 'PWA service worker must return HTTP 200');
 const workerSource = await workerResponse.text();
