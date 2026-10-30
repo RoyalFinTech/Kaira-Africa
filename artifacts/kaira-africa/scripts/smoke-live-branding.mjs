@@ -1127,8 +1127,9 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Transaction currency ${code} should display its flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedTransactionFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
-      assert.equal(await selectedTransactionFlag.count(), 1, 'Exactly one selected transaction SVG flag should be visible');
+      const transactionCurrencyControl = pinPage.locator('div.flex.min-w-0.items-center.gap-2.rounded-md').filter({ has: pinPage.getByLabel('Transaction currency') });
+      const selectedTransactionFlag = transactionCurrencyControl.locator('svg[role="img"][aria-label="Flag of The Gambia"]');
+      assert.equal(await selectedTransactionFlag.count(), 1, 'Transaction currency control should contain exactly one selected SVG flag');
       assert.ok(await selectedTransactionFlag.isVisible(), 'Selected transaction currency flag should remain visible after closing the dropdown');
       await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
