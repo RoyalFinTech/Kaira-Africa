@@ -7,7 +7,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { KairaFeedbackCard } from '@/components/common/KairaFeedbackCard';
 import { ApiError } from '@workspace/api-client-react';
-import { initApiClient, getToken, clearToken, isUserToken, isAdminToken } from '@/lib/api-client';
+import { initApiClient, getToken, clearToken, isUserToken, isAdminToken, isPinUnlocked, hasRememberedUser } from '@/lib/api-client';
 
 initApiClient();
 
@@ -169,7 +169,9 @@ function ProtectedRoute({ component: Component, redirectTo = '/login' }: {
   component: React.ComponentType;
   redirectTo?: string;
 }) {
-  if (!isAuthenticated()) return <Redirect to={redirectTo} />;
+  if (!isAuthenticated() || !isPinUnlocked()) {
+    return <Redirect to={hasRememberedUser() ? '/login/pin' : redirectTo} />;
+  }
   return (
     <AppShell>
       <Component />
@@ -266,6 +268,12 @@ const PageLoader = () => (
   </div>
 );
 
+function ReturningUserLoginGate() {
+  const recovery = new URLSearchParams(window.location.search).get('recovery') === '1';
+  if (!recovery && hasRememberedUser()) return <Redirect to="/login/pin" />;
+  return <PhoneAuthPage />;
+}
+
 function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -275,7 +283,7 @@ function Router() {
         <Route path="/onboarding" component={SplashGatedOnboarding} />
 
         {/* ── User Auth (Phone + OTP) ── */}
-        <Route path="/login" component={PhoneAuthPage} />
+        <Route path="/login" component={ReturningUserLoginGate} />
         <Route path="/login/pin" component={PinLoginPage} />
         <Route path="/login/otp" component={OTPPage} />
         <Route path="/login/name" component={FullNamePage} />
