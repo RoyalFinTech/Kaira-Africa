@@ -1676,6 +1676,20 @@ try {
   await bottomNav.waitFor({ state: 'visible', timeout: 15_000 });
   const dailyLedgerLink = bottomNav.getByRole('link', { name: 'Daily Ledger' });
   await dailyLedgerLink.waitFor({ state: 'visible', timeout: 10_000 });
+  const installPrompt = mobilePage.getByTestId('kaira-install-prompt');
+  if (await installPrompt.isVisible().catch(() => false)) {
+    const promptAndNav = await Promise.all([
+      installPrompt.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { top: rect.top, bottom: rect.bottom };
+      }),
+      bottomNav.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { top: rect.top, bottom: rect.bottom };
+      }),
+    ]);
+    assert.ok(promptAndNav[0].bottom <= promptAndNav[1].top, `Mobile install prompt must sit above bottom navigation: ${JSON.stringify(promptAndNav)}`);
+  }
   const bottomNavMetrics = await bottomNav.evaluate((nav) => ({
     navWidth: Math.round(nav.getBoundingClientRect().width),
     contentWidth: nav.scrollWidth,
