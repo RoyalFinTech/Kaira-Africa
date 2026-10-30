@@ -1063,7 +1063,7 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Investment currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedInvestmentFlag = investmentCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
+      const selectedInvestmentFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
       assert.ok(await selectedInvestmentFlag.isVisible(), 'Selected GMD flag should remain visible on the investment form');
     }
 
@@ -1081,7 +1081,7 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Savings goal currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedGoalFlag = goalCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
+      const selectedGoalFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
       assert.ok(await selectedGoalFlag.isVisible(), 'Selected GMD flag should remain visible on the savings goal form');
 
       // Switch back to Record mode before checking the separate entry currency picker.
@@ -1097,7 +1097,7 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Savings entry currency should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedEntryFlag = entryCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
+      const selectedEntryFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
       assert.ok(await selectedEntryFlag.isVisible(), 'Selected GMD flag should remain visible on the savings entry form');
     }
 
@@ -1115,8 +1115,8 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Transaction currency ${code} should display its flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedTransactionFlag = pinPage.getByLabel('Transaction currency').locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
-      assert.equal(await selectedTransactionFlag.count(), 1, 'Selected transaction currency should render one SVG flag');
+      const selectedTransactionFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
+      assert.equal(await selectedTransactionFlag.count(), 1, 'Exactly one selected transaction SVG flag should be visible');
       assert.ok(await selectedTransactionFlag.isVisible(), 'Selected transaction currency flag should remain visible after closing the dropdown');
       await pinPage.getByRole('combobox', { name: 'Transaction type', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
       await pinPage.getByLabel('Payment method').waitFor({ state: 'visible', timeout: 10_000 });
@@ -1163,7 +1163,7 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Ledger selector should visibly display the ${code} flag`);
       }
       await pinPage.keyboard.press('Escape');
-      const selectedLedgerFlag = ledgerCurrency.locator('..').getByRole('img', { name: 'Flag of The Gambia', exact: true });
+      const selectedLedgerFlag = pinPage.locator('svg[role="img"][aria-label="Flag of The Gambia"]:visible');
       assert.ok(await selectedLedgerFlag.isVisible(), 'Selected GMD flag should remain visible on the ledger form');
       // Verify comma-formatted amounts are submitted as their true numeric value.
       await pinPage.getByLabel('Amount in GMD').fill('100000');
@@ -1335,7 +1335,7 @@ try {
         assert.ok(await visibleFlag.isVisible(), `Inventory currency should visibly display the ${code} flag`);
       }
       await pinPage.getByRole('option', { name: /NGN/ }).click();
-      const selectedInventoryFlag = inventoryCurrency.locator('..').getByRole('img', { name: 'Flag of Nigeria', exact: true });
+      const selectedInventoryFlag = pinPage.locator('svg[role="img"][aria-label="Flag of Nigeria"]:visible');
       assert.ok(await selectedInventoryFlag.isVisible(), 'Selected NGN flag should remain visible in inventory');
       await pinPage.getByLabel('Buying cost per unit').fill('7500000');
       assert.equal(await pinPage.getByLabel('Buying cost per unit').inputValue(), '7,500,000', 'Inventory buying cost should format millions with commas');
