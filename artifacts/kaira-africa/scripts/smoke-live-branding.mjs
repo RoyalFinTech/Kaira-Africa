@@ -853,6 +853,12 @@ try {
   await mobileInstallPrompt.waitFor({ state: 'visible', timeout: 10_000 });
   const mobileBrandLogo = mobileInstallPrompt.locator('img[alt="Kaira Africa"]');
   await mobileBrandLogo.waitFor({ state: 'visible', timeout: 5_000 });
+  // Visibility can precede image decoding on a fresh mobile browser context.
+  // Wait for the actual PNG to finish loading before asserting its dimensions.
+  await mobileInstallPage.waitForFunction(() => {
+    const img = document.querySelector('[data-testid="kaira-install-prompt"] img[alt="Kaira Africa"]');
+    return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+  }, { timeout: 10_000 });
   const mobileLogoVisible = await mobileBrandLogo.evaluate((img) => img.complete && img.naturalWidth > 0);
   assert.ok(mobileLogoVisible, 'Mobile install prompt must display the real Kaira Africa logo');
   await mobileInstallPrompt.getByTestId('kaira-install-action').click();
