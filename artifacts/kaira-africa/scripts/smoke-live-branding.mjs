@@ -1637,7 +1637,8 @@ try {
 
   // Re-open the protected dashboard and perform a true full-page reload after
   // the dashboard/profile/CRM checks. The app must return to PIN, not render data.
-  await pinPage.goto(`${baseUrl}/dashboard?reload-smoke=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await pinPage.locator('a[href="/dashboard"]').first().click();
+  await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 10_000 });
   await pinPage.locator('a[href="/profile"]').first().waitFor({ state: 'visible', timeout: 15_000 });
   await pinPage.reload({ waitUntil: 'domcontentloaded' });
   await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
