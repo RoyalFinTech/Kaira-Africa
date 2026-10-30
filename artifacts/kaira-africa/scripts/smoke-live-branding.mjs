@@ -816,7 +816,7 @@ try {
     }
   });
   await pinPage.goto(baseUrl + '/login/pin?pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.getByRole('heading', { name: 'Your business is waiting.', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
   await pinPage.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active), null, { timeout: 15_000 });
   console.log('PWA SERVICE WORKER REGISTRATION VERIFIED:', await pinPage.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.scope || ''));
   await pinPage.screenshot({ path: resolve(outputDir, 'pin-login-screen.png'), fullPage: true });
@@ -856,7 +856,7 @@ try {
   await pinPage.getByRole('button', { name: 'Continue' }).click();
   await pinPage.waitForURL((url) => url.pathname === '/login/pin', { timeout: 10_000 });
   assert.equal(await pinPage.getByLabel('Seven digit phone number').count(), 0, 'Returning-user PIN screen should not require re-entering the phone number');
-  assert.equal(await pinPage.getByTestId('remembered-pin-phone').innerText(), '+220871234567', 'Returning-user PIN screen must show the remembered full phone number');
+  assert.equal(await pinPage.getByTestId('remembered-pin-phone').innerText(), 'Account ending •••• 4567', 'Returning-user PIN screen must mask the remembered phone number');
   assert.equal(await pinPage.getByRole('heading', { name: /verification code/i }).count(), 0, 'Returning user with PIN must skip the OTP screen');
   await pinPage.getByLabel('Six-digit sign-in PIN').fill('482951');
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 15_000 });
@@ -1443,7 +1443,7 @@ try {
   // Check the dedicated PIN screen and authenticated dashboard on a 390px phone.
   await pinPage.setViewportSize({ width: 390, height: 844 });
   await pinPage.goto(baseUrl + '/login/pin?mobile-pin-smoke=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+  await pinPage.getByRole('heading', { name: 'Your business is waiting.', exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
   const pinMobileLayout = await pinPage.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
     documentWidth: document.documentElement.scrollWidth,
@@ -1699,7 +1699,7 @@ try {
   await pinPage.waitForURL((url) => url.pathname === '/dashboard', { timeout: 10_000 });
   await pinPage.locator('a[href="/profile"]').first().waitFor({ state: 'visible', timeout: 15_000 });
   await pinPage.reload({ waitUntil: 'domcontentloaded' });
-  await pinPage.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
+  await pinPage.getByRole('heading', { name: 'Your business is waiting.', exact: true }).waitFor({ state: 'visible', timeout: 15_000 });
   assert.equal(new URL(pinPage.url()).pathname, '/login/pin', 'Refreshing a protected dashboard must return to the PIN gate');
   assert.equal(await pinPage.getByLabel('Six-digit sign-in PIN').count(), 1, 'Returning-user refresh must expose the six-digit PIN field');
   console.log('RETURNING-USER RELOAD LOCK VERIFIED: dashboard refresh returned to PIN sign-in.');
