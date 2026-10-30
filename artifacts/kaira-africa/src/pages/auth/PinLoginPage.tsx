@@ -218,7 +218,7 @@ export default function PinLoginPage() {
 
           <div className="mt-5 space-y-3 text-center text-sm">
             <p className="text-muted-foreground">Forgot your PIN? <Link href="/login?recovery=1" className="font-semibold text-primary underline-offset-4 hover:underline">Sign in with SMS verification</Link></p>
-            <p className="text-muted-foreground">New to Kaira Africa? <Link href="/login" className="font-semibold text-primary underline-offset-4 hover:underline">Create your account</Link></p>
+            <p className="text-muted-foreground">New to Kaira Africa? <Link href="/login?recovery=1" className="font-semibold text-primary underline-offset-4 hover:underline">Create your account</Link></p>
           </div>
           <div className="mt-6 rounded-xl border border-border bg-card p-4 text-sm sm:mt-8">
             <div className="flex items-start gap-2"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="font-semibold text-foreground">Need assistance?</p><p className="mt-1 text-muted-foreground">Our support team can help if you cannot access your account.</p><a href="https://wa.me/220874071510" target="_blank" rel="noreferrer" className="mt-3 inline-flex font-semibold text-primary underline-offset-4 hover:underline">WhatsApp +220 87 407 1510</a></div></div>
