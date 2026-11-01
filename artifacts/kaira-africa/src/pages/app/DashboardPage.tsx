@@ -464,12 +464,12 @@ export default function DashboardPage() {
                 </Button>
               </Link>
               <Link href="/team" className="min-w-0">
-                <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                <Button variant="outline" className="w-full min-w-0 justify-start gap-2 whitespace-normal break-words text-left h-auto py-3">
                   <UserPlus className="h-4 w-4" />
                   Add Team Member
                 </Button>
               </Link>
-              <Link href="/transactions">
+              <Link href="/transactions" className="min-w-0">
                 <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
                   <Plus className="h-4 w-4" />
                   New Transaction
