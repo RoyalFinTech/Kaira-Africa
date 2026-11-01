@@ -69,9 +69,9 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 sm:px-6">
+    <header className="flex h-16 items-center justify-between gap-1 border-b border-border bg-card px-2 sm:px-6">
       {/* Left: Mobile menu + Breadcrumb */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-1 sm:gap-3">
         {location !== '/dashboard' && location !== '/' && (
           <Button
             variant="ghost"
@@ -89,10 +89,10 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
           aria-label="Open Kaira Africa navigation"
           title="Open Kaira Africa navigation"
           onClick={onMenuClick}
-          className="flex min-w-0 items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          className="flex min-w-0 items-center gap-1 rounded-lg p-1 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
         >
           <Menu className="h-5 w-5 shrink-0" />
-          <KairaLogo width={112} height={36} />
+          <KairaLogo width={96} height={32} />
         </button>
         <Button
           variant="ghost"
@@ -108,8 +108,8 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
       </div>
 
       {/* Right: Search, Notifications, Avatar */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" aria-label="Find customers" title="Find customers" onClick={() => setLocation("/customers")}>
+      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+        <Button variant="ghost" size="icon" aria-label="Find customers" title="Find customers" onClick={() => setLocation("/customers")} className="max-[360px]:hidden">
           <Search className="h-5 w-5" />
         </Button>
 
