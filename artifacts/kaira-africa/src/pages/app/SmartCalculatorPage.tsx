@@ -225,13 +225,13 @@ export default function SmartCalculatorPage() {
       ) : (
         <div className="grid gap-5 lg:grid-cols-2">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><ArrowLeftRight className="h-5 w-5 text-primary" /> Profit & margin</CardTitle><CardDescription>Estimate gross profit, profit margin and markup from cost and selling price.</CardDescription></CardHeader>
+            <CardHeader className="min-w-0"><CardTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base sm:text-lg"><ArrowLeftRight className="h-5 w-5 shrink-0 text-primary" /> <span>Profit &amp; margin</span></CardTitle><CardDescription>Estimate gross profit, profit margin and markup from cost and selling price.</CardDescription></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="calc-cost">Cost price</Label><Input id="calc-cost" type="number" min="0" value={cost} onChange={e => setCost(e.target.value)} /></div><div className="space-y-2"><Label htmlFor="calc-selling">Selling price</Label><Input id="calc-selling" type="number" min="0" value={selling} onChange={e => setSelling(e.target.value)} /></div></div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
                 <div className="min-w-0 rounded-xl bg-muted/60 p-3 sm:p-4"><p className="text-xs text-muted-foreground">Profit</p><p className={`mt-1 min-w-0 break-words [overflow-wrap:anywhere] text-lg font-bold ${profit < 0 ? 'text-destructive' : 'text-primary'}`}>{formatNumber(profit)}</p></div>
-                <div className="min-w-0 rounded-xl bg-muted/60 p-3 sm:p-4"><p className="text-xs text-muted-foreground">Margin</p><p className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] text-lg font-bold">{formatNumber(margin)}%</p></div>
-                <div className="min-w-0 rounded-xl bg-muted/60 p-3 sm:p-4"><p className="text-xs text-muted-foreground">Markup</p><p className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] text-lg font-bold">{formatNumber(markup)}%</p></div>
+                <div className="min-w-0 rounded-xl bg-muted/60 p-3 sm:p-4"><p className="text-xs text-muted-foreground">Margin</p><p className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] text-base sm:text-lg font-bold tabular-nums">{formatNumber(margin)}%</p></div>
+                <div className="min-w-0 rounded-xl bg-muted/60 p-3 sm:p-4"><p className="text-xs text-muted-foreground">Markup</p><p className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] text-base sm:text-lg font-bold tabular-nums">{formatNumber(markup)}%</p></div>
               </div>
               <Button variant="outline" className="w-full" onClick={() => { setExpression(String(Number(profit.toPrecision(11)))); setMode('standard'); addResultToHistory('Profit: selling price − cost price', profit); }}>Use profit in calculator</Button>
             </CardContent>
