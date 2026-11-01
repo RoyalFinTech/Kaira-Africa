@@ -311,7 +311,7 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Recent Transactions</CardTitle>
-                <Link href="/transactions">
+                <Link href="/transactions" className="min-w-0">
                   <Button variant="ghost" size="sm">
                     View all <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -456,14 +456,14 @@ export default function DashboardPage() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <Link href="/customers">
-                <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 sm:gap-3">
+              <Link href="/customers" className="min-w-0">
+                <Button variant="outline" className="w-full min-w-0 justify-start gap-2 whitespace-normal break-words text-left h-auto py-3">
                   <Plus className="h-4 w-4" />
                   Add Customer
                 </Button>
               </Link>
-              <Link href="/team">
+              <Link href="/team" className="min-w-0">
                 <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
                   <UserPlus className="h-4 w-4" />
                   Add Team Member
@@ -475,7 +475,7 @@ export default function DashboardPage() {
                   New Transaction
                 </Button>
               </Link>
-              <Link href="/reports">
+              <Link href="/reports" className="min-w-0">
                 <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
                   <FileText className="h-4 w-4" />
                   View Reports
