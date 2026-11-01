@@ -55,16 +55,16 @@ export default function DashboardPage() {
     <PageTransition>
       <div className="space-y-6">
         {/* Welcome Section */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="mb-2 break-words font-display text-2xl font-bold text-foreground sm:text-3xl">
               {greeting}, {user?.firstName}.
             </h1>
-            <p className="text-muted-foreground">
+            <p className="break-words text-sm text-muted-foreground sm:text-base">
               Here's what's happening with {business?.name} today.
             </p>
           </div>
-          <div className="text-right text-sm text-muted-foreground">
+          <div className="min-w-0 break-words text-left text-xs text-muted-foreground sm:text-right sm:text-sm">
             {currentDate}
           </div>
         </div>
