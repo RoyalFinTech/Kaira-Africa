@@ -86,23 +86,14 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
         )}
         <button
           type="button"
-          aria-label="Open Kaira Africa menu"
-          title="Open Kaira Africa menu"
+          aria-label="Open Kaira Africa navigation"
+          title="Open Kaira Africa navigation"
           onClick={onMenuClick}
-          className="flex items-center rounded-lg p-1.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          className="flex min-w-0 items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
         >
+          <Menu className="h-5 w-5 shrink-0" />
           <KairaLogo width={112} height={36} />
         </button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Toggle navigation menu"
-          title="Toggle navigation menu"
-          className="lg:hidden"
-          onClick={onMenuClick}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
         <Button
           variant="ghost"
           size="icon"
