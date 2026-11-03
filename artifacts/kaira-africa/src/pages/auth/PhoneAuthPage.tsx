@@ -269,7 +269,7 @@ export default function PhoneAuthPage() {
                       </FormControl>
                       <FormMessage />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Select your network, then enter your 7-digit number. Gamcel keeps its existing 7-digit format.
+                        Select your network, then enter your 7-digit number. Gamtel uses its seven-digit number format.
                       </p>
                     </FormItem>
                   )}
