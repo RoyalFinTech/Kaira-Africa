@@ -170,6 +170,8 @@ export async function listTeamInvitations(businessId: string) {
     accessRole: teamInvitations.accessRole,
     expiresAt: teamInvitations.expiresAt,
     lastSentAt: teamInvitations.lastSentAt,
+    acceptedAt: teamInvitations.acceptedAt,
+    revokedAt: teamInvitations.revokedAt,
     emailDeliveryStatus: teamInvitations.emailDeliveryStatus,
   }).from(teamInvitations)
     .innerJoin(teamMembers, eq(teamMembers.id, teamInvitations.teamMemberId))

@@ -1432,9 +1432,13 @@ components:
           type: string
         lastSentAt:
           type: string
+        acceptedAt:
+          type: ["string", "null"]
+        revokedAt:
+          type: ["string", "null"]
         emailDeliveryStatus:
           type: string
-      required: [id, status, firstName, lastName, email, jobTitle, accessRole, expiresAt, lastSentAt, emailDeliveryStatus]
+      required: [id, status, firstName, lastName, email, jobTitle, accessRole, expiresAt, lastSentAt, acceptedAt, revokedAt, emailDeliveryStatus]
 
     TeamInvitationPreview:
       type: object

@@ -108,7 +108,15 @@ async function sendInvitationEmail(input: {
   let delivery: "sent" | "not_configured" | "failed" = "failed";
   const recipient = input.to;
   if (!recipient) {
-    await setTeamInvitationEmailDelivery(input.businessId, input.invitationId, "not_configured");
+    try {
+      await setTeamInvitationEmailDelivery(input.businessId, input.invitationId, "not_configured");
+    } catch (error) {
+      logger.warn({
+        businessId: input.businessId,
+        invitationId: input.invitationId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      }, "Could not persist optional invitation email delivery status");
+    }
     return "not_configured";
   }
   try {
@@ -130,7 +138,15 @@ async function sendInvitationEmail(input: {
       errorName: error instanceof Error ? error.name : "UnknownError",
     }, "Team invitation email delivery failed; manual sharing remains available");
   }
-  await setTeamInvitationEmailDelivery(input.businessId, input.invitationId, delivery);
+  try {
+    await setTeamInvitationEmailDelivery(input.businessId, input.invitationId, delivery);
+  } catch (error) {
+    logger.warn({
+      businessId: input.businessId,
+      invitationId: input.invitationId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    }, "Could not persist invitation email delivery status");
+  }
   return delivery;
 }
 
@@ -150,6 +166,8 @@ function invitationPayload(row: Awaited<ReturnType<typeof listTeamInvitations>>[
     accessRole: row.accessRole,
     expiresAt: row.expiresAt.toISOString(),
     lastSentAt: row.lastSentAt.toISOString(),
+    acceptedAt: row.acceptedAt?.toISOString() ?? null,
+    revokedAt: row.revokedAt?.toISOString() ?? null,
     emailDeliveryStatus: row.emailDeliveryStatus,
   };
 }

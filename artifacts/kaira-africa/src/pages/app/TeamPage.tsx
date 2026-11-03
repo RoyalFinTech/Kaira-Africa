@@ -45,6 +45,8 @@ interface InvitationRow {
   accessRole: "manager" | "staff";
   expiresAt: string;
   lastSentAt: string;
+  acceptedAt?: string | null;
+  revokedAt?: string | null;
   emailDeliveryStatus: "pending" | "sent" | "not_configured" | "failed";
 }
 
@@ -178,7 +180,7 @@ function InviteMemberDialog({
               <SelectTrigger><SelectValue placeholder="Choose access level" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="staff">Staff — everyday team access</SelectItem>
-                <SelectItem value="manager">Manager — team management tools</SelectItem>
+                <SelectItem value="manager">Manager — expanded workspace access</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">Owner and administrator access cannot be granted through an invitation.</p>
@@ -351,7 +353,13 @@ export default function TeamPage() {
                     <p className="mt-1 text-xs text-muted-foreground">{invite.jobTitle} · {invite.accessRole} · {invite.department || "No department"}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {invite.status === "pending" ? "Expires " : invite.status === "expired" ? "Expired " : invite.status === "accepted" ? "Accepted " : "Revoked "}
-                      {new Date(invite.status === "accepted" ? invite.lastSentAt : invite.expiresAt).toLocaleString()}
+                      {new Date(
+                        invite.status === "accepted"
+                          ? (invite.acceptedAt ?? invite.lastSentAt)
+                          : invite.status === "revoked"
+                            ? (invite.revokedAt ?? invite.lastSentAt)
+                            : invite.expiresAt
+                      ).toLocaleString()}
                       {" · Email: "}{invite.emailDeliveryStatus.replace("_", " ")}
                     </p>
                   </div>
