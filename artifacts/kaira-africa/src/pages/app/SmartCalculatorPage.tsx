@@ -233,7 +233,7 @@ export default function SmartCalculatorPage() {
                 <div className="min-w-0 rounded-xl bg-muted/60 p-3 sm:p-4"><p className="text-xs text-muted-foreground">Margin</p><p className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] text-base sm:text-lg font-bold tabular-nums">{formatNumber(margin)}%</p></div>
                 <div className="min-w-0 rounded-xl bg-muted/60 p-3 sm:p-4"><p className="text-xs text-muted-foreground">Markup</p><p className="mt-1 min-w-0 break-words [overflow-wrap:anywhere] text-base sm:text-lg font-bold tabular-nums">{formatNumber(markup)}%</p></div>
               </div>
-              <Button variant="outline" className="w-full" onClick={() => { setExpression(String(Number(profit.toPrecision(11)))); setMode('standard'); addResultToHistory('Profit: selling price − cost price', profit); }}>Use profit in calculator</Button>
+              <Button variant="outline" className="h-auto min-h-10 w-full whitespace-normal break-words text-center leading-snug" onClick={() => { setExpression(String(Number(profit.toPrecision(11)))); setMode('standard'); addResultToHistory('Profit: selling price − cost price', profit); }}>Use profit in calculator</Button>
             </CardContent>
           </Card>
           <Card>
