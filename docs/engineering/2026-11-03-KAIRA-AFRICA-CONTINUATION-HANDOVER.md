@@ -25,12 +25,9 @@ This is the current continuation record for the next engineering chat. Read this
 
 PR: https://github.com/RoyalFinTech/Kaira-Africa/pull/174
 Branch: feat/business-referral-links
-Head at this handover: f5d9563b0cb9ec9b5ab7012d8487b74a8dd1854d
+Head at this handover: 4a9172820054f63342907cce2dd394d6d29cb082
 State: OPEN, NOT MERGED, NOT DEPLOYED.
-Latest required GitHub workflows after the focused OpenAPI correction:
-- Work Management Build Checks: 41712804649.
-- Backend CI: 41712804625.
-Check their current status and ensure they match the exact current PR head. Earlier runs for head 069cae3bba1c2a74c83a337c959098b2dc22a0f3 are superseded and cannot be used as the merge gate.
+Earlier required CI runs 41712804649 (Work Management Build Checks) and 41712804625 (Backend CI) were for a PR revision before the static-route correction. They are superseded. Re-check the latest runs for the exact current PR head before using any result; add the /referrals static-entry build to acceptance.
 
 ### Required referral behavior
 
@@ -52,7 +49,7 @@ This is a separate business-to-business referral system, not team invitation:
 - New-business creation accepts an optional x-kaira-referral-code header, validates the code and resolves the referring business inside the same transaction as business creation. Self-referral is blocked.
 - App captures first valid ?ref=... code in sessionStorage and passes it only when an authenticated user creates a new business workspace.
 - Onboarding has an explicit “Continue without the referral link” path if an incoming code is invalid/unrecognized.
-- Sidebar/hamburger adds an owner-only “Refer a Business” item under GROWTH. Route is /referrals.
+- Sidebar/hamburger adds an owner-only “Refer a Business” item under GROWTH. Route is /referrals. The explicit Render static SPA entry generator also includes /referrals for direct loads and browser refresh.
 - Page uses actual KairaLogo, green/gold brand system, permanent link, copy action, prefilled WhatsApp share, business count and a clear statement that it is for independent businesses and not team access.
 - No reward engine, payouts, commissions, paid feature entitlements or automatic bonuses.
 
@@ -173,3 +170,7 @@ Then proceed through the complete remaining feature roadmap in this handover and
 Use branch-first PRs, green CI and exact deploy verification. Avoid destructive Git operations, avoid production test data, never alter existing PINs, and keep the engineering handover and audit current. Be honest about anything that cannot be physically or interactively tested.
 
 End of prompt.
+
+### Direct static route correction (2026-11-03)
+
+The static-site build uses an explicit SPA entry list; adding a Wouter route alone is not sufficient for a reliable direct URL or page refresh. Commit 4a9172820054f63342907cce2dd394d6d29cb082 adds referrals to artifacts/kaira-africa/scripts/generate-spa-routes.mjs. Verify the next frontend build log reports one additional SPA route entry and test /referrals refresh after deployment. This commit supersedes all earlier PR #174 CI runs.
