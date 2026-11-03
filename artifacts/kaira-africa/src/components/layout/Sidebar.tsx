@@ -26,6 +26,7 @@ import {
   LogOut,
   User,
   Calculator,
+  Link2,
 } from 'lucide-react';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
@@ -63,6 +64,12 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { label: 'Savings Tracker', href: '/savings', icon: Wallet },
       { label: 'Receipt Branding', href: '/receipt-branding', icon: ReceiptText },
       { label: 'Billing & Plan', href: '/billing', icon: CreditCard },
+    ],
+  },
+  {
+    section: 'GROWTH',
+    items: [
+      { label: 'Refer a Business', href: '/referrals', icon: Link2 },
     ],
   },
   {
@@ -160,7 +167,7 @@ export function Sidebar({ collapsed = false, onLogoClick, onNavigate }: SidebarP
 
       {/* Navigation */}
       <nav aria-label="Application navigation" className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-2 space-y-3" : "px-3 space-y-6")}>
-        {navigation.map((group) => (
+        {navigation.filter((group) => group.section !== 'GROWTH' || user?.role === 'owner').map((group) => (
           <div key={group.section}>
             {!collapsed && <h3 className="px-3 mb-2 text-xs font-semibold text-emerald-100/65 tracking-wider">
               {group.section}

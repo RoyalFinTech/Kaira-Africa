@@ -296,6 +296,3847 @@ paths:
       operationId: createBusiness
       tags: [businesses]
       summary: Create a business during onboarding and become its owner
+      parameters:
+        - name: x-kaira-referral-code
+          in: header
+          required: false
+          description: Optional business-to-business referral code captured from a shared Kaira Africa referral link. This is unrelated to team invitations.
+          schema:
+            type: string
+            pattern: '^KAI-[A-F0-9]{16}
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessInput"
+      responses:
+        "201":
+          description: Business created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+        "409":
+          description: The current user already belongs to a business
+
+  /businesses/me/referral:
+    get:
+      operationId: getBusinessReferral
+      tags: [businesses]
+      summary: Get the current business's unique referral link details
+      description: Owner-only. Returns the current business referral code and count of businesses attributed to it. Does not grant team access or activate rewards.
+      responses:
+        "200":
+          description: Business referral information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessReferralSummary"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Business owner role required
+
+  /businesses/me:
+    get:
+      operationId: getMyBusiness
+      tags: [businesses]
+      summary: Get current user's business
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+    patch:
+      operationId: updateBusiness
+      tags: [businesses]
+      summary: Update business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessInput"
+      responses:
+        "200":
+          description: Updated business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+
+  /businesses/me/stats:
+    get:
+      operationId: getBusinessStats
+      tags: [businesses]
+      summary: Get business KPI stats
+      responses:
+        "200":
+          description: Business statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessStats"
+
+  /team:
+    get:
+      operationId: listTeamMembers
+      tags: [team]
+      summary: List all team members
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, pending]
+        - name: role
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+    post:
+      operationId: createTeamMember
+      tags: [team]
+      summary: Legacy roster-only entry (does not deliver an invitation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberInput"
+      responses:
+        "201":
+          description: Created team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+
+  /team/invitations:
+    get:
+      operationId: listTeamInvitations
+      tags: [team]
+      summary: List invitations for the current business
+      responses:
+        "200":
+          description: Invitation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamInvitationSummary"
+    post:
+      operationId: createTeamInvitation
+      tags: [team]
+      summary: Create a secure team invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationCreateInput"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationCreateResponse"
+
+  /team/invitations/preview:
+    post:
+      operationId: previewTeamInvitation
+      tags: [team]
+      summary: Preview an invitation without accepting it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationTokenInput"
+      responses:
+        "200":
+          description: Invitation preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationPreview"
+
+  /team/invitations/accept:
+    post:
+      operationId: acceptTeamInvitation
+      tags: [team]
+      summary: Accept an invitation after phone-verified sign-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationTokenInput"
+      responses:
+        "200":
+          description: Invitation accepted and account linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationAcceptResponse"
+
+  /team/invitations/{id}/resend:
+    post:
+      operationId: resendTeamInvitation
+      tags: [team]
+      summary: Rotate and resend an invitation link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: New invitation link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationCreateResponse"
+
+  /team/invitations/{id}:
+    delete:
+      operationId: revokeTeamInvitation
+      tags: [team]
+      summary: Revoke a team invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation revoked
+  /team/{id}:
+    get:
+      operationId: getTeamMember
+      tags: [team]
+      summary: Get a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+    patch:
+      operationId: updateTeamMember
+      tags: [team]
+      summary: Update a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberInput"
+      responses:
+        "200":
+          description: Updated team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+    delete:
+      operationId: deleteTeamMember
+      tags: [team]
+      summary: Remove a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List all customers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive]
+        - name: page
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerList"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Created customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: List all transactions
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [completed, pending, failed, cancelled]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [payment, refund, transfer, withdrawal, deposit]
+        - name: customerId
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionList"
+    post:
+      operationId: createTransaction
+      tags: [transactions]
+      summary: Create a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Created transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [transactions]
+      summary: Get a transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    patch:
+      operationId: updateTransaction
+      tags: [transactions]
+      summary: Update transaction status, notes or payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionUpdateInput"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/{id}/attachment:
+    post:
+      operationId: uploadTransactionAttachment
+      tags: [transactions]
+      summary: Upload a private transaction receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dataUrl:
+                  type: string
+              required: [dataUrl]
+      responses:
+        "200":
+          description: Transaction with signed attachment URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    delete:
+      operationId: removeTransactionAttachment
+      tags: [transactions]
+      summary: Remove a transaction receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction with receipt removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /activity:
+    get:
+      operationId: listActivity
+      tags: [activity]
+      summary: List activity logs
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLog"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "204":
+          description: All marked as read
+
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /analytics/revenue:
+    get:
+      operationId: getRevenueAnalytics
+      tags: [analytics]
+      summary: Get revenue analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+      responses:
+        "200":
+          description: Revenue analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueAnalytics"
+
+  /analytics/customers:
+    get:
+      operationId: getCustomerAnalytics
+      tags: [analytics]
+      summary: Get customer growth analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+      responses:
+        "200":
+          description: Customer analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAnalytics"
+
+  /analytics/transactions:
+    get:
+      operationId: getTransactionAnalytics
+      tags: [analytics]
+      summary: Get transaction volume analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+      responses:
+        "200":
+          description: Transaction analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionAnalytics"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List available reports
+      responses:
+        "200":
+          description: Report list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+
+  /reports/generate:
+    post:
+      operationId: generateReport
+      tags: [reports]
+      summary: Generate a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+      responses:
+        "201":
+          description: Generated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    RequestOtpInput:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+          description: Gambian phone number, with or without +220 prefix
+      required:
+        - phoneNumber
+
+    OtpRequestResult:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+        expiresInSeconds:
+          type: number
+        devOtp:
+          type: ["string", "null"]
+          description: Only populated outside production, for testing without a live SMS provider
+      required:
+        - phoneNumber
+        - expiresInSeconds
+
+    VerifyOtpInput:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+        code:
+          type: string
+      required:
+        - phoneNumber
+        - code
+
+    OtpVerificationResult:
+      type: object
+      properties:
+        token:
+          type: string
+        isNewUser:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/UserProfile"
+      required:
+        - token
+        - isNewUser
+        - user
+
+    PinStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required:
+        - enabled
+
+    SetPinInput:
+      type: object
+      properties:
+        pin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+          description: Six-digit PIN; repeated or sequential patterns are rejected by the server.
+        currentPin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+          description: Required when changing a PIN that is already configured; omitted for first-time setup.
+      required:
+        - pin
+
+    PinLoginInput:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+          description: Gambian phone number, with or without +220 prefix
+        pin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+      required:
+        - phoneNumber
+        - pin
+
+    AdminLoginInput:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AdminAuthResult:
+      type: object
+      properties:
+        token:
+          type: string
+        admin:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            role:
+              type: string
+          required:
+            - id
+            - email
+            - firstName
+            - lastName
+            - role
+      required:
+        - token
+        - admin
+
+    ChangePasswordInput:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - currentPassword
+        - newPassword
+
+    RequestPasswordResetInput:
+      type: object
+      properties:
+        email:
+          type: string
+      required:
+        - email
+
+    PasswordResetRequestResult:
+      type: object
+      properties:
+        sent:
+          type: boolean
+        devResetToken:
+          type: ["string", "null"]
+          description: Only populated outside production, for testing without a live email provider
+      required:
+        - sent
+
+    ResetPasswordInput:
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - token
+        - newPassword
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+        businessId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        lastLoginAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - role
+        - createdAt
+
+    UserProfileInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: string
+
+    Business:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        industry:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        teamSize:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - industry
+        - country
+        - city
+        - status
+        - createdAt
+
+    BusinessInput:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        industry:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+        address:
+          type: string
+        teamSize:
+          type: string
+
+    BusinessReferralSummary:
+      type: object
+      properties:
+        businessName:
+          type: string
+        referralCode:
+          type: string
+          pattern: '^KAI-[A-F0-9]{16}
+      properties:
+        totalRevenue:
+          type: number
+        revenueChange:
+          type: number
+        totalTransactions:
+          type: number
+        transactionsChange:
+          type: number
+        totalCustomers:
+          type: number
+        customersChange:
+          type: number
+        teamMembers:
+          type: number
+        teamChange:
+          type: number
+        recentTransactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityLog"
+      required:
+        - totalRevenue
+        - revenueChange
+        - totalTransactions
+        - transactionsChange
+        - totalCustomers
+        - customersChange
+        - teamMembers
+        - teamChange
+        - recentTransactions
+        - recentActivity
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+        accessRole:
+          type: string
+          enum: [owner, admin, manager, staff]
+        department:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive, pending]
+        lastActiveAt:
+          type: ["string", "null"]
+        joinedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - role
+        - accessRole
+        - status
+        - joinedAt
+
+    TeamInvitationTokenInput:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    TeamInvitationCreateInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [firstName, lastName, phone, jobTitle, accessRole]
+
+    TeamInvitationCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        inviteUrl:
+          type: string
+        expiresAt:
+          type: string
+        emailDeliveryStatus:
+          type: string
+          enum: [sent, not_configured, failed]
+        inviteeFirstName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [id, inviteUrl, expiresAt, emailDeliveryStatus, inviteeFirstName, businessName, jobTitle, accessRole]
+
+    TeamInvitationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        expiresAt:
+          type: string
+        lastSentAt:
+          type: string
+        acceptedAt:
+          type: ["string", "null"]
+        revokedAt:
+          type: ["string", "null"]
+        emailDeliveryStatus:
+          type: string
+      required: [id, status, firstName, lastName, email, jobTitle, accessRole, expiresAt, lastSentAt, acceptedAt, revokedAt, emailDeliveryStatus]
+
+    TeamInvitationPreview:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        phone:
+          type: string
+        expiresAt:
+          type: string
+      required: [status, firstName, lastName, businessName, jobTitle, accessRole, phone, expiresAt]
+
+    TeamInvitationAcceptResponse:
+      type: object
+      properties:
+        teamMemberId:
+          type: string
+        businessName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [teamMemberId, businessName, firstName, lastName, accessRole]
+    TeamMemberInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        department:
+          type: string
+      required:
+        - firstName
+        - lastName
+        - email
+        - role
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive]
+        totalSpend:
+          type: number
+        transactionCount:
+          type: number
+        createdAt:
+          type: string
+        lastTransactionAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - totalSpend
+        - transactionCount
+        - createdAt
+
+    CustomerList:
+      type: object
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+      required:
+        - customers
+        - total
+        - page
+        - limit
+
+    CustomerInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+      required:
+        - firstName
+        - lastName
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+        type:
+          type: string
+          enum: [payment, refund, transfer, withdrawal, deposit]
+        status:
+          type: string
+          enum: [completed, pending, failed, cancelled]
+        customerId:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+        attachmentUrl:
+          type: ["string", "null"]
+          description: Short-lived signed URL for a private transaction receipt.
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+      required:
+        - id
+        - reference
+        - amount
+        - currency
+        - type
+        - status
+        - createdAt
+
+    TransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+      required:
+        - transactions
+        - total
+        - page
+        - limit
+
+    TransactionInput:
+      type: object
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+        type:
+          type: string
+          enum: [payment, refund, transfer, withdrawal, deposit]
+        customerId:
+          type: string
+        description:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other]
+          default: manual_entry
+        notes:
+          type: string
+          maxLength: 4000
+      required:
+        - amount
+        - currency
+        - type
+
+    TransactionUpdateInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [completed, pending, failed, cancelled]
+        description:
+          type: ["string", "null"]
+          maxLength: 500
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+          maxLength: 4000
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: ["string", "null"]
+        userName:
+          type: string
+        userAvatarUrl:
+          type: ["string", "null"]
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: ["string", "null"]
+        entityName:
+          type: ["string", "null"]
+        description:
+          type: string
+        status:
+          type: string
+          enum: [success, warning, error, info]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - userName
+        - action
+        - entityType
+        - description
+        - status
+        - createdAt
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum: [transaction, team, customer, system, security, report]
+        isRead:
+          type: boolean
+        actionUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - message
+        - type
+        - isRead
+        - createdAt
+
+    ChartDataPoint:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: number
+        previousValue:
+          type: ["number", "null"]
+      required:
+        - label
+        - value
+
+    RevenueAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        topCustomers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+      required:
+        - total
+        - change
+        - changePercent
+        - data
+        - topCustomers
+
+    CustomerAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byCountry:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required:
+        - total
+        - change
+        - changePercent
+        - data
+        - byCountry
+
+    TransactionAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        volume:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required:
+        - total
+        - volume
+        - change
+        - changePercent
+        - data
+        - byStatus
+        - byType
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [revenue, transaction, customer, activity, team]
+        status:
+          type: string
+          enum: [available, generating, failed]
+        period:
+          type: ["string", "null"]
+        generatedAt:
+          type: ["string", "null"]
+        downloadUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - type
+        - status
+        - createdAt
+
+    ReportRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [revenue, transaction, customer, activity, team]
+        period:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+      required:
+        - type
+        - period
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessInput"
+      responses:
+        "201":
+          description: Business created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+        "409":
+          description: The current user already belongs to a business
+
+  /businesses/me:
+    get:
+      operationId: getMyBusiness
+      tags: [businesses]
+      summary: Get current user's business
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+    patch:
+      operationId: updateBusiness
+      tags: [businesses]
+      summary: Update business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessInput"
+      responses:
+        "200":
+          description: Updated business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+
+  /businesses/me/stats:
+    get:
+      operationId: getBusinessStats
+      tags: [businesses]
+      summary: Get business KPI stats
+      responses:
+        "200":
+          description: Business statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessStats"
+
+  /team:
+    get:
+      operationId: listTeamMembers
+      tags: [team]
+      summary: List all team members
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, pending]
+        - name: role
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+    post:
+      operationId: createTeamMember
+      tags: [team]
+      summary: Legacy roster-only entry (does not deliver an invitation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberInput"
+      responses:
+        "201":
+          description: Created team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+
+  /team/invitations:
+    get:
+      operationId: listTeamInvitations
+      tags: [team]
+      summary: List invitations for the current business
+      responses:
+        "200":
+          description: Invitation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamInvitationSummary"
+    post:
+      operationId: createTeamInvitation
+      tags: [team]
+      summary: Create a secure team invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationCreateInput"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationCreateResponse"
+
+  /team/invitations/preview:
+    post:
+      operationId: previewTeamInvitation
+      tags: [team]
+      summary: Preview an invitation without accepting it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationTokenInput"
+      responses:
+        "200":
+          description: Invitation preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationPreview"
+
+  /team/invitations/accept:
+    post:
+      operationId: acceptTeamInvitation
+      tags: [team]
+      summary: Accept an invitation after phone-verified sign-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationTokenInput"
+      responses:
+        "200":
+          description: Invitation accepted and account linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationAcceptResponse"
+
+  /team/invitations/{id}/resend:
+    post:
+      operationId: resendTeamInvitation
+      tags: [team]
+      summary: Rotate and resend an invitation link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: New invitation link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationCreateResponse"
+
+  /team/invitations/{id}:
+    delete:
+      operationId: revokeTeamInvitation
+      tags: [team]
+      summary: Revoke a team invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation revoked
+  /team/{id}:
+    get:
+      operationId: getTeamMember
+      tags: [team]
+      summary: Get a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+    patch:
+      operationId: updateTeamMember
+      tags: [team]
+      summary: Update a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberInput"
+      responses:
+        "200":
+          description: Updated team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+    delete:
+      operationId: deleteTeamMember
+      tags: [team]
+      summary: Remove a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List all customers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive]
+        - name: page
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerList"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Created customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: List all transactions
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [completed, pending, failed, cancelled]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [payment, refund, transfer, withdrawal, deposit]
+        - name: customerId
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionList"
+    post:
+      operationId: createTransaction
+      tags: [transactions]
+      summary: Create a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Created transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [transactions]
+      summary: Get a transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    patch:
+      operationId: updateTransaction
+      tags: [transactions]
+      summary: Update transaction status, notes or payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionUpdateInput"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/{id}/attachment:
+    post:
+      operationId: uploadTransactionAttachment
+      tags: [transactions]
+      summary: Upload a private transaction receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dataUrl:
+                  type: string
+              required: [dataUrl]
+      responses:
+        "200":
+          description: Transaction with signed attachment URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    delete:
+      operationId: removeTransactionAttachment
+      tags: [transactions]
+      summary: Remove a transaction receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction with receipt removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /activity:
+    get:
+      operationId: listActivity
+      tags: [activity]
+      summary: List activity logs
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLog"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "204":
+          description: All marked as read
+
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /analytics/revenue:
+    get:
+      operationId: getRevenueAnalytics
+      tags: [analytics]
+      summary: Get revenue analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+      responses:
+        "200":
+          description: Revenue analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueAnalytics"
+
+  /analytics/customers:
+    get:
+      operationId: getCustomerAnalytics
+      tags: [analytics]
+      summary: Get customer growth analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+      responses:
+        "200":
+          description: Customer analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAnalytics"
+
+  /analytics/transactions:
+    get:
+      operationId: getTransactionAnalytics
+      tags: [analytics]
+      summary: Get transaction volume analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+      responses:
+        "200":
+          description: Transaction analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionAnalytics"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List available reports
+      responses:
+        "200":
+          description: Report list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+
+  /reports/generate:
+    post:
+      operationId: generateReport
+      tags: [reports]
+      summary: Generate a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+      responses:
+        "201":
+          description: Generated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    RequestOtpInput:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+          description: Gambian phone number, with or without +220 prefix
+      required:
+        - phoneNumber
+
+    OtpRequestResult:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+        expiresInSeconds:
+          type: number
+        devOtp:
+          type: ["string", "null"]
+          description: Only populated outside production, for testing without a live SMS provider
+      required:
+        - phoneNumber
+        - expiresInSeconds
+
+    VerifyOtpInput:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+        code:
+          type: string
+      required:
+        - phoneNumber
+        - code
+
+    OtpVerificationResult:
+      type: object
+      properties:
+        token:
+          type: string
+        isNewUser:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/UserProfile"
+      required:
+        - token
+        - isNewUser
+        - user
+
+    PinStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required:
+        - enabled
+
+    SetPinInput:
+      type: object
+      properties:
+        pin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+          description: Six-digit PIN; repeated or sequential patterns are rejected by the server.
+        currentPin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+          description: Required when changing a PIN that is already configured; omitted for first-time setup.
+      required:
+        - pin
+
+    PinLoginInput:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+          description: Gambian phone number, with or without +220 prefix
+        pin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9]{6}$"
+      required:
+        - phoneNumber
+        - pin
+
+    AdminLoginInput:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AdminAuthResult:
+      type: object
+      properties:
+        token:
+          type: string
+        admin:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            role:
+              type: string
+          required:
+            - id
+            - email
+            - firstName
+            - lastName
+            - role
+      required:
+        - token
+        - admin
+
+    ChangePasswordInput:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - currentPassword
+        - newPassword
+
+    RequestPasswordResetInput:
+      type: object
+      properties:
+        email:
+          type: string
+      required:
+        - email
+
+    PasswordResetRequestResult:
+      type: object
+      properties:
+        sent:
+          type: boolean
+        devResetToken:
+          type: ["string", "null"]
+          description: Only populated outside production, for testing without a live email provider
+      required:
+        - sent
+
+    ResetPasswordInput:
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - token
+        - newPassword
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+        businessId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        lastLoginAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - role
+        - createdAt
+
+    UserProfileInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: string
+
+    Business:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        industry:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        teamSize:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - industry
+        - country
+        - city
+        - status
+        - createdAt
+
+    BusinessInput:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        industry:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+        address:
+          type: string
+        teamSize:
+          type: string
+
+    BusinessStats:
+      type: object
+      properties:
+        totalRevenue:
+          type: number
+        revenueChange:
+          type: number
+        totalTransactions:
+          type: number
+        transactionsChange:
+          type: number
+        totalCustomers:
+          type: number
+        customersChange:
+          type: number
+        teamMembers:
+          type: number
+        teamChange:
+          type: number
+        recentTransactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityLog"
+      required:
+        - totalRevenue
+        - revenueChange
+        - totalTransactions
+        - transactionsChange
+        - totalCustomers
+        - customersChange
+        - teamMembers
+        - teamChange
+        - recentTransactions
+        - recentActivity
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+        accessRole:
+          type: string
+          enum: [owner, admin, manager, staff]
+        department:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive, pending]
+        lastActiveAt:
+          type: ["string", "null"]
+        joinedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - role
+        - accessRole
+        - status
+        - joinedAt
+
+    TeamInvitationTokenInput:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    TeamInvitationCreateInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [firstName, lastName, phone, jobTitle, accessRole]
+
+    TeamInvitationCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        inviteUrl:
+          type: string
+        expiresAt:
+          type: string
+        emailDeliveryStatus:
+          type: string
+          enum: [sent, not_configured, failed]
+        inviteeFirstName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [id, inviteUrl, expiresAt, emailDeliveryStatus, inviteeFirstName, businessName, jobTitle, accessRole]
+
+    TeamInvitationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        expiresAt:
+          type: string
+        lastSentAt:
+          type: string
+        acceptedAt:
+          type: ["string", "null"]
+        revokedAt:
+          type: ["string", "null"]
+        emailDeliveryStatus:
+          type: string
+      required: [id, status, firstName, lastName, email, jobTitle, accessRole, expiresAt, lastSentAt, acceptedAt, revokedAt, emailDeliveryStatus]
+
+    TeamInvitationPreview:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        phone:
+          type: string
+        expiresAt:
+          type: string
+      required: [status, firstName, lastName, businessName, jobTitle, accessRole, phone, expiresAt]
+
+    TeamInvitationAcceptResponse:
+      type: object
+      properties:
+        teamMemberId:
+          type: string
+        businessName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [teamMemberId, businessName, firstName, lastName, accessRole]
+    TeamMemberInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        department:
+          type: string
+      required:
+        - firstName
+        - lastName
+        - email
+        - role
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive]
+        totalSpend:
+          type: number
+        transactionCount:
+          type: number
+        createdAt:
+          type: string
+        lastTransactionAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - totalSpend
+        - transactionCount
+        - createdAt
+
+    CustomerList:
+      type: object
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+      required:
+        - customers
+        - total
+        - page
+        - limit
+
+    CustomerInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+      required:
+        - firstName
+        - lastName
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+        type:
+          type: string
+          enum: [payment, refund, transfer, withdrawal, deposit]
+        status:
+          type: string
+          enum: [completed, pending, failed, cancelled]
+        customerId:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+        attachmentUrl:
+          type: ["string", "null"]
+          description: Short-lived signed URL for a private transaction receipt.
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+      required:
+        - id
+        - reference
+        - amount
+        - currency
+        - type
+        - status
+        - createdAt
+
+    TransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+      required:
+        - transactions
+        - total
+        - page
+        - limit
+
+    TransactionInput:
+      type: object
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+        type:
+          type: string
+          enum: [payment, refund, transfer, withdrawal, deposit]
+        customerId:
+          type: string
+        description:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other]
+          default: manual_entry
+        notes:
+          type: string
+          maxLength: 4000
+      required:
+        - amount
+        - currency
+        - type
+
+    TransactionUpdateInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [completed, pending, failed, cancelled]
+        description:
+          type: ["string", "null"]
+          maxLength: 500
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+          maxLength: 4000
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: ["string", "null"]
+        userName:
+          type: string
+        userAvatarUrl:
+          type: ["string", "null"]
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: ["string", "null"]
+        entityName:
+          type: ["string", "null"]
+        description:
+          type: string
+        status:
+          type: string
+          enum: [success, warning, error, info]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - userName
+        - action
+        - entityType
+        - description
+        - status
+        - createdAt
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum: [transaction, team, customer, system, security, report]
+        isRead:
+          type: boolean
+        actionUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - message
+        - type
+        - isRead
+        - createdAt
+
+    ChartDataPoint:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: number
+        previousValue:
+          type: ["number", "null"]
+      required:
+        - label
+        - value
+
+    RevenueAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        topCustomers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+      required:
+        - total
+        - change
+        - changePercent
+        - data
+        - topCustomers
+
+    CustomerAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byCountry:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required:
+        - total
+        - change
+        - changePercent
+        - data
+        - byCountry
+
+    TransactionAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        volume:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required:
+        - total
+        - volume
+        - change
+        - changePercent
+        - data
+        - byStatus
+        - byType
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [revenue, transaction, customer, activity, team]
+        status:
+          type: string
+          enum: [available, generating, failed]
+        period:
+          type: ["string", "null"]
+        generatedAt:
+          type: ["string", "null"]
+        downloadUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - type
+        - status
+        - createdAt
+
+    ReportRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [revenue, transaction, customer, activity, team]
+        period:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+      required:
+        - type
+        - period
+
+        referredBusinessCount:
+          type: integer
+          minimum: 0
+      required: [businessName, referralCode, referredBusinessCount]
+
+    BusinessStats:
+      type: object
+      properties:
+        totalRevenue:
+          type: number
+        revenueChange:
+          type: number
+        totalTransactions:
+          type: number
+        transactionsChange:
+          type: number
+        totalCustomers:
+          type: number
+        customersChange:
+          type: number
+        teamMembers:
+          type: number
+        teamChange:
+          type: number
+        recentTransactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityLog"
+      required:
+        - totalRevenue
+        - revenueChange
+        - totalTransactions
+        - transactionsChange
+        - totalCustomers
+        - customersChange
+        - teamMembers
+        - teamChange
+        - recentTransactions
+        - recentActivity
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+        accessRole:
+          type: string
+          enum: [owner, admin, manager, staff]
+        department:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive, pending]
+        lastActiveAt:
+          type: ["string", "null"]
+        joinedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - role
+        - accessRole
+        - status
+        - joinedAt
+
+    TeamInvitationTokenInput:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    TeamInvitationCreateInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [firstName, lastName, phone, jobTitle, accessRole]
+
+    TeamInvitationCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        inviteUrl:
+          type: string
+        expiresAt:
+          type: string
+        emailDeliveryStatus:
+          type: string
+          enum: [sent, not_configured, failed]
+        inviteeFirstName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [id, inviteUrl, expiresAt, emailDeliveryStatus, inviteeFirstName, businessName, jobTitle, accessRole]
+
+    TeamInvitationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        expiresAt:
+          type: string
+        lastSentAt:
+          type: string
+        acceptedAt:
+          type: ["string", "null"]
+        revokedAt:
+          type: ["string", "null"]
+        emailDeliveryStatus:
+          type: string
+      required: [id, status, firstName, lastName, email, jobTitle, accessRole, expiresAt, lastSentAt, acceptedAt, revokedAt, emailDeliveryStatus]
+
+    TeamInvitationPreview:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        phone:
+          type: string
+        expiresAt:
+          type: string
+      required: [status, firstName, lastName, businessName, jobTitle, accessRole, phone, expiresAt]
+
+    TeamInvitationAcceptResponse:
+      type: object
+      properties:
+        teamMemberId:
+          type: string
+        businessName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [teamMemberId, businessName, firstName, lastName, accessRole]
+    TeamMemberInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        department:
+          type: string
+      required:
+        - firstName
+        - lastName
+        - email
+        - role
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive]
+        totalSpend:
+          type: number
+        transactionCount:
+          type: number
+        createdAt:
+          type: string
+        lastTransactionAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - firstName
+        - lastName
+        - status
+        - totalSpend
+        - transactionCount
+        - createdAt
+
+    CustomerList:
+      type: object
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+      required:
+        - customers
+        - total
+        - page
+        - limit
+
+    CustomerInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+      required:
+        - firstName
+        - lastName
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+        type:
+          type: string
+          enum: [payment, refund, transfer, withdrawal, deposit]
+        status:
+          type: string
+          enum: [completed, pending, failed, cancelled]
+        customerId:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+        attachmentUrl:
+          type: ["string", "null"]
+          description: Short-lived signed URL for a private transaction receipt.
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+      required:
+        - id
+        - reference
+        - amount
+        - currency
+        - type
+        - status
+        - createdAt
+
+    TransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+      required:
+        - transactions
+        - total
+        - page
+        - limit
+
+    TransactionInput:
+      type: object
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+        type:
+          type: string
+          enum: [payment, refund, transfer, withdrawal, deposit]
+        customerId:
+          type: string
+        description:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other]
+          default: manual_entry
+        notes:
+          type: string
+          maxLength: 4000
+      required:
+        - amount
+        - currency
+        - type
+
+    TransactionUpdateInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [completed, pending, failed, cancelled]
+        description:
+          type: ["string", "null"]
+          maxLength: 500
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [manual_entry, cash, bank_transfer, mobile_money, card, paypal, cheque, other, null]
+        notes:
+          type: ["string", "null"]
+          maxLength: 4000
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: ["string", "null"]
+        userName:
+          type: string
+        userAvatarUrl:
+          type: ["string", "null"]
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: ["string", "null"]
+        entityName:
+          type: ["string", "null"]
+        description:
+          type: string
+        status:
+          type: string
+          enum: [success, warning, error, info]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - userName
+        - action
+        - entityType
+        - description
+        - status
+        - createdAt
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum: [transaction, team, customer, system, security, report]
+        isRead:
+          type: boolean
+        actionUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - message
+        - type
+        - isRead
+        - createdAt
+
+    ChartDataPoint:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: number
+        previousValue:
+          type: ["number", "null"]
+      required:
+        - label
+        - value
+
+    RevenueAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        topCustomers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+      required:
+        - total
+        - change
+        - changePercent
+        - data
+        - topCustomers
+
+    CustomerAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byCountry:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required:
+        - total
+        - change
+        - changePercent
+        - data
+        - byCountry
+
+    TransactionAnalytics:
+      type: object
+      properties:
+        total:
+          type: number
+        volume:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartDataPoint"
+      required:
+        - total
+        - volume
+        - change
+        - changePercent
+        - data
+        - byStatus
+        - byType
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [revenue, transaction, customer, activity, team]
+        status:
+          type: string
+          enum: [available, generating, failed]
+        period:
+          type: ["string", "null"]
+        generatedAt:
+          type: ["string", "null"]
+        downloadUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - type
+        - status
+        - createdAt
+
+    ReportRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [revenue, transaction, customer, activity, team]
+        period:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+      required:
+        - type
+        - period
+
       requestBody:
         required: true
         content:

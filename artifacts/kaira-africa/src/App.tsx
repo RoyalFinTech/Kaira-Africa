@@ -10,6 +10,22 @@ import { KairaFeedbackCard } from '@/components/common/KairaFeedbackCard';
 import { ApiError } from '@workspace/api-client-react';
 import { initApiClient, getToken, clearToken, isUserToken, isAdminToken, isPinUnlocked, hasRememberedUser } from '@/lib/api-client';
 
+function captureIncomingBusinessReferralCode() {
+  if (typeof window === "undefined") return;
+  try {
+    const incoming = new URLSearchParams(window.location.search).get("ref");
+    if (!incoming || !/^KAI-[A-F0-9]{16}$/i.test(incoming.trim())) return;
+    // First valid business referral seen in this tab wins for this onboarding session.
+    if (!sessionStorage.getItem("kaira_business_referral_code")) {
+      sessionStorage.setItem("kaira_business_referral_code", incoming.trim().toUpperCase());
+    }
+  } catch {
+    // Referral attribution is optional; storage restrictions must never block signup.
+  }
+}
+
+captureIncomingBusinessReferralCode();
+
 initApiClient();
 
 // ─── Lazy-loaded pages ──────────────────────────────────────────────────────
@@ -57,6 +73,7 @@ const WorkTimePage = lazy(() => import('@/pages/app/WorkTimePage'));
 const TutorialsPage = lazy(() => import('@/pages/app/TutorialsPage'));
 const ReceiptBrandingPage = lazy(() => import('@/pages/app/ReceiptBrandingPage'));
 const BillingPage = lazy(() => import('@/pages/app/BillingPage'));
+const ReferralsPage = lazy(() => import('@/pages/app/ReferralsPage'));
 const LegalPage          = lazy(() => import('@/pages/LegalPage'));
 
 const AdminAnalyticsPage = lazy(() => import('@/pages/admin/AdminAnalyticsPage'));
@@ -392,6 +409,9 @@ function Router() {
         </Route>
         <Route path="/billing">
           {() => <ProtectedRoute component={BillingPage} />}
+        </Route>
+        <Route path="/referrals">
+          {() => <ProtectedRoute component={ReferralsPage} />}
         </Route>
         <Route path="/legal/terms">
           {() => <LegalPage type="terms" />}

@@ -158,7 +158,8 @@ router.post(
   requireUser,
   validate({ body: CreateBusinessBody }),
   async (req, res) => {
-    const business = await createBusinessForUser(req.user!.id, req.body);
+    const referralCode = req.header("x-kaira-referral-code");
+    const business = await createBusinessForUser(req.user!.id, req.body, referralCode);
     res.status(201).json(CreateBusinessResponse.parse(serializeBusiness(business)));
   },
 );
@@ -168,6 +169,25 @@ router.get("/businesses/me", requireUser, async (req, res) => {
   const business = await getBusinessById(businessId);
   if (!business) throw new NotFoundError("Business not found");
   res.json(GetMyBusinessResponse.parse(serializeBusiness(business)));
+});
+
+router.get("/businesses/me/referral", requireUser, requireRole("owner"), async (req, res) => {
+  const businessId = requireBusiness(req);
+  const [business] = await db.select({
+    name: businesses.name,
+    referralCode: businesses.referralCode,
+  }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+  if (!business) throw new NotFoundError("Business not found");
+
+  const [referralCount] = await db.select({ value: count() })
+    .from(businesses)
+    .where(eq(businesses.referredByBusinessId, businessId));
+
+  res.json({
+    businessName: business.name,
+    referralCode: business.referralCode,
+    referredBusinessCount: Number(referralCount?.value ?? 0),
+  });
 });
 
 router.patch(

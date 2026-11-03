@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, businesses, users, type Business, type InsertBusiness } from "@workspace/db";
-import { ConflictError } from "../lib/http-errors";
+import { BadRequestError, ConflictError } from "../lib/http-errors";
+import { createBusinessReferralCode, normalizeBusinessReferralCode } from "../lib/business-referral";
 
 export async function getBusinessById(
   businessId: string,
@@ -23,8 +24,17 @@ export async function getBusinessById(
  */
 export async function createBusinessForUser(
   userId: string,
-  data: Omit<InsertBusiness, "ownerId">,
+  data: Omit<InsertBusiness, "ownerId" | "referralCode" | "referredByBusinessId">,
+  referralCodeInput?: string | null,
 ): Promise<Business> {
+  const hasReferralInput = Boolean(referralCodeInput?.trim());
+  const normalizedReferralCode = hasReferralInput
+    ? normalizeBusinessReferralCode(referralCodeInput)
+    : null;
+  if (hasReferralInput && !normalizedReferralCode) {
+    throw new BadRequestError("The Kaira business referral link is invalid. Remove the referral link to continue without referral attribution.");
+  }
+
   return db.transaction(async (tx) => {
     const [existingUser] = await tx
       .select({ businessId: users.businessId })
@@ -36,9 +46,30 @@ export async function createBusinessForUser(
       throw new ConflictError("You already belong to a business");
     }
 
+    let referredByBusinessId: string | null = null;
+    if (normalizedReferralCode) {
+      const [referrer] = await tx
+        .select({ id: businesses.id, ownerId: businesses.ownerId })
+        .from(businesses)
+        .where(eq(businesses.referralCode, normalizedReferralCode))
+        .limit(1);
+      if (!referrer) {
+        throw new BadRequestError("This Kaira business referral link is not recognised. Remove the referral link to continue without referral attribution.");
+      }
+      if (referrer.ownerId === userId) {
+        throw new BadRequestError("You cannot use your own business referral link.");
+      }
+      referredByBusinessId = referrer.id;
+    }
+
     const [business] = await tx
       .insert(businesses)
-      .values({ ...data, ownerId: userId })
+      .values({
+        ...data,
+        ownerId: userId,
+        referralCode: createBusinessReferralCode(),
+        referredByBusinessId,
+      })
       .returning();
 
     await tx

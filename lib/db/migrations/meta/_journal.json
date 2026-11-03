@@ -176,6 +176,13 @@
       "when": 1793710000000,
       "tag": "0024_team_member_joined_at_no_default",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793737328995,
+      "tag": "0025_business_referrals",
+      "breakpoints": true
     }
   ]
 }

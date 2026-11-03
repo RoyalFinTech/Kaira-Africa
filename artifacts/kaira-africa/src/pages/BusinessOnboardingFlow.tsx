@@ -26,7 +26,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { GambiaFlag } from '@/components/common/GambiaFlag';
-import { useCreateBusiness, ApiError } from '@workspace/api-client-react';
+import { apiRequestJson } from '@/lib/api-client';
 
 const businessTypeDescriptions: Record<string, string> = {
   'Sole Proprietor': 'Owned and run by one person. Suitable for a shop, market stall, salon, tailor, food seller, tradesperson or one-person service business. The owner makes the decisions and is personally responsible for the business.',
@@ -82,6 +82,7 @@ export default function BusinessOnboardingFlow() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<any>({});
   const [completeError, setCompleteError] = useState<string | null>(null);
+  const [isCreatingBusiness, setIsCreatingBusiness] = useState(false);
 
   const form1 = useForm({ resolver: zodResolver(step1Schema), defaultValues: { businessName: '', businessType: '', industry: '', country: 'The Gambia', city: '', phone: '', email: '' } });
   const form2 = useForm({ resolver: zodResolver(step2Schema), defaultValues: { description: '', website: '', address: '' } });
@@ -104,42 +105,47 @@ export default function BusinessOnboardingFlow() {
     setCurrentStep(4);
   };
 
-  const createBusiness = useCreateBusiness({
-    mutation: {
-      onSuccess: () => setLocation('/dashboard'),
-      onError: (error) => {
-        // 409 = this user already belongs to a business (see the
-        // backend's createBusinessForUser) — not really a failure
-        // from the person's point of view, just means onboarding was
-        // already completed (e.g. they hit back/refresh mid-flow).
-        // Treat it as success rather than showing an error for
-        // something that isn't actually wrong.
-        if (error instanceof ApiError && error.status === 409) {
-          setLocation('/dashboard');
-          return;
-        }
-        setCompleteError(error.message);
-      },
-    },
-  });
-
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setCompleteError(null);
-    createBusiness.mutate({
-      data: {
-        name: formData.businessName,
-        type: formData.businessType,
-        industry: formData.industry,
-        country: formData.country,
-        city: formData.city,
-        phone: formData.phone,
-        email: formData.email,
-        description: formData.description || undefined,
-        website: formData.website || undefined,
-        address: formData.address || undefined,
-        teamSize: formData.teamSize,
-      },
-    });
+    setIsCreatingBusiness(true);
+    const referralCode = (() => {
+      try { return sessionStorage.getItem("kaira_business_referral_code"); }
+      catch { return null; }
+    })();
+    const headers = referralCode ? { "x-kaira-referral-code": referralCode } : undefined;
+
+    try {
+      await apiRequestJson("/businesses", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: formData.businessName,
+          type: formData.businessType,
+          industry: formData.industry,
+          country: formData.country,
+          city: formData.city,
+          phone: formData.phone,
+          email: formData.email,
+          description: formData.description || undefined,
+          website: formData.website || undefined,
+          address: formData.address || undefined,
+          teamSize: formData.teamSize,
+        }),
+      });
+      try { sessionStorage.removeItem("kaira_business_referral_code"); } catch {}
+      setLocation('/dashboard');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Kaira Africa could not create your business workspace.";
+      // An existing account may have completed onboarding in another tab.
+      if (/already belong to a business/i.test(message)) {
+        try { sessionStorage.removeItem("kaira_business_referral_code"); } catch {}
+        setLocation('/dashboard');
+        return;
+      }
+      setCompleteError(message);
+    } finally {
+      setIsCreatingBusiness(false);
+    }
   };
 
   return (
@@ -429,8 +435,22 @@ export default function BusinessOnboardingFlow() {
                   <span>{completeError}</span>
                 </div>
               )}
-              <Button onClick={handleComplete} size="lg" className="px-8" disabled={createBusiness.isPending}>
-                {createBusiness.isPending ? (
+              {completeError?.toLowerCase().includes("referral") && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mb-4"
+                  onClick={() => {
+                    try { sessionStorage.removeItem("kaira_business_referral_code"); } catch {}
+                    setCompleteError(null);
+                  }}
+                >
+                  Continue without the referral link
+                </Button>
+              )}
+              <Button onClick={handleComplete} size="lg" className="px-8" disabled={isCreatingBusiness}>
+                {isCreatingBusiness ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                     Setting up your workspace…
