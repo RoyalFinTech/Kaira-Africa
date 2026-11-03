@@ -18,6 +18,8 @@ const routes = [...new Set([
   'admin/daily-ledger',
   'admin/records',
   'business-onboarding',
+  'invite',
+  'invite/accept',
   'dashboard',
   'team',
   'customers',

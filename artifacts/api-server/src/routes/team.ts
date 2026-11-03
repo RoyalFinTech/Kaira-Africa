@@ -91,7 +91,9 @@ function invitationUrl(token: string): string {
   const baseUrl = env.FRONTEND_URL ?? (isProd
     ? "https://kaira-africa-frontend.onrender.com"
     : env.WEB_BASE_URL);
-  return new URL("/invite/" + token, baseUrl).toString();
+  const url = new URL("/invite", baseUrl);
+  url.searchParams.set("token", token);
+  return url.toString();
 }
 
 async function sendInvitationEmail(input: {

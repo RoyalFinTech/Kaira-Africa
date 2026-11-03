@@ -47,9 +47,9 @@ function InvitationStatus({ status }: { status: InvitationPreview["status"] }) {
   return <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{details[status]}</p>;
 }
 
-export default function TeamInvitationPage({ params }: { params: { token: string } }) {
+export default function TeamInvitationPage() {
   const [, setLocation] = useLocation();
-  const token = params.token;
+  const token = new URLSearchParams(window.location.search).get("token") ?? "";
   const [preview, setPreview] = useState<InvitationPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -58,6 +58,13 @@ export default function TeamInvitationPage({ params }: { params: { token: string
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setError(null);
+    setPreview(null);
+    if (!token) {
+      setError("This invitation link is missing its secure token. Ask the inviter to share a fresh link.");
+      setLoading(false);
+      return () => { active = false; };
+    }
     apiRequestJson<InvitationPreview>("/team/invitations/preview", {
       method: "POST",
       body: JSON.stringify({ token }),

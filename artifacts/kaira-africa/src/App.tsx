@@ -295,7 +295,7 @@ function Router() {
 
         {/* ── Public team invitation and secure acceptance ── */}
         <Route path="/invite/accept" component={TeamInvitationAcceptPage} />
-        <Route path="/invite/:token" component={TeamInvitationPage} />
+        <Route path="/invite" component={TeamInvitationPage} />
 
         {/* ── Business Onboarding ── */}
         <Route path="/business-onboarding">
