@@ -273,7 +273,11 @@ const PageLoader = () => (
 
 function ReturningUserLoginGate() {
   const recovery = new URLSearchParams(window.location.search).get('recovery') === '1';
-  if (!recovery && hasRememberedUser()) return <Redirect to="/login/pin" />;
+  const hasPendingInvitation = Boolean(sessionStorage.getItem("kaira_pending_invitation_token"));
+  // Invitation links may belong to a different phone number than the one
+  // previously remembered on this device. Let the invitee enter the exact
+  // number first; the PIN page will use that newly verified pending number.
+  if (!hasPendingInvitation && !recovery && hasRememberedUser()) return <Redirect to="/login/pin" />;
   return <PhoneAuthPage />;
 }
 
