@@ -87,7 +87,7 @@ This is a separate business-to-business referral system, not team invitation:
 - CurrencyPicker uses built-in SVG flags for GMD, NGN, USD, EUR and GBP.
 - Inventory private bucket inventory-images is JPEG-only, max 204800 bytes. Current production inventory product count and image object count were both zero at last check; don't claim real authenticated photo flow tested.
 - PWA has service worker, manifest and install prompt. Mobile prompt appears near bottom above nav; desktop prompt is at right edge only when browser supports beforeinstallprompt. Test Android Chrome, iOS Safari Add to Home Screen, desktop supported browsers, dismissal/standalone detection and service worker on real devices.
-- Returning-user PIN is memory-only, not stored. Check source mismatch where PinLoginPage had Gamcel label but PhoneAuthPage had Gamtel. Agreed networks: Africell, QCell, Comium, Gamtel (not Gamcel). Correct consistently without changing live PIN data.
+- Returning-user PIN is memory-only, not stored. Carrier consistency was rechecked in current main: both PinLoginPage and PhoneAuthPage list Africell, QCell, Comium and Gamtel; Gamtel uses its seven-digit format without a network prefix. The earlier Gamcel label mismatch is already resolved. Preserve this list and do not change live PIN data.
 
 ## D. Full outstanding product scope — preserve and work through it
 
