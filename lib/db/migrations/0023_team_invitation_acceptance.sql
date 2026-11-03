@@ -67,7 +67,7 @@ ALTER TABLE public.team_invitations ENABLE ROW LEVEL SECURITY;
 -- not present in a vanilla PostgreSQL database used by CI.
 REVOKE ALL PRIVILEGES ON TABLE public.team_invitations FROM PUBLIC;
 
-DO $
+DO $revoke$
 DECLARE
   revoke_roles text[] := ARRAY[]::text[];
   role_list text;
@@ -90,4 +90,4 @@ BEGIN
     );
   END IF;
 END
-$;
+$revoke$;
