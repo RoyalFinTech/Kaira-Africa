@@ -4,10 +4,13 @@ import {
   text,
   timestamp,
   index,
+  uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { teamMemberStatusEnum } from "./enums";
+import { teamMemberStatusEnum, userRoleEnum } from "./enums";
 import { businesses } from "./businesses";
 import { users } from "./users";
 
@@ -33,10 +36,11 @@ export const teamMembers = pgTable(
 
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
-    email: text("email").notNull(),
+    email: text("email"),
     phone: text("phone"),
 
     role: text("role").notNull(),
+    accessRole: userRoleEnum("access_role").notNull().default("staff"),
     department: text("department"),
     avatarUrl: text("avatar_url"),
 
@@ -45,14 +49,15 @@ export const teamMembers = pgTable(
     invitedAt: timestamp("invited_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    joinedAt: timestamp("joined_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow(),
     lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
   },
   (table) => [
     index("team_members_business_idx").on(table.businessId),
     index("team_members_email_idx").on(table.businessId, table.email),
+    uniqueIndex("team_members_business_user_unique").on(table.businessId, table.userId).where(sql`${table.userId} IS NOT NULL`),
+    uniqueIndex("team_members_business_phone_pending_unique").on(table.businessId, table.phone).where(sql`${table.phone} IS NOT NULL AND ${table.status} = 'pending'`),
+    check("team_members_access_role_not_owner", sql`${table.accessRole} <> 'owner'`),
   ],
 );
 

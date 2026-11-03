@@ -68,7 +68,9 @@ export default function OTPPage() {
           // prefill it next time. The PIN itself is never stored client-side.
           localStorage.setItem('kaira_last_phone', phone);
           setTimeout(() => {
-            if (!result.user.firstName) {
+            if (sessionStorage.getItem("kaira_pending_invitation_token")) {
+              setLocation("/invite/accept");
+            } else if (!result.user.firstName) {
               // New user, or an existing one who never finished
               // naming themselves — Full Name screen.
               setLocation('/login/name');

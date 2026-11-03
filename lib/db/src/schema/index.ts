@@ -5,6 +5,7 @@ export * from "./admin-users";
 export * from "./auth";
 export * from "./businesses";
 export * from "./team-members";
+export * from "./team-invitations";
 export * from "./customers";
 export * from "./transactions";
 export * from "./activity-logs";

@@ -313,14 +313,15 @@ export const ListTeamMembersResponseItem = zod.object({
   "id": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
   "phone": zod.string().nullish(),
   "role": zod.string(),
+  "accessRole": zod.enum(['owner', 'admin', 'manager', 'staff']),
   "department": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.enum(['active', 'inactive', 'pending']),
   "lastActiveAt": zod.string().nullish(),
-  "joinedAt": zod.string()
+  "joinedAt": zod.string().nullable()
 })
 export const ListTeamMembersResponse = zod.array(ListTeamMembersResponseItem)
 
@@ -341,14 +342,15 @@ export const CreateTeamMemberResponse = zod.object({
   "id": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
   "phone": zod.string().nullish(),
   "role": zod.string(),
+  "accessRole": zod.enum(['owner', 'admin', 'manager', 'staff']),
   "department": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.enum(['active', 'inactive', 'pending']),
   "lastActiveAt": zod.string().nullish(),
-  "joinedAt": zod.string()
+  "joinedAt": zod.string().nullable()
 })
 
 
@@ -363,14 +365,15 @@ export const GetTeamMemberResponse = zod.object({
   "id": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
   "phone": zod.string().nullish(),
   "role": zod.string(),
+  "accessRole": zod.enum(['owner', 'admin', 'manager', 'staff']),
   "department": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.enum(['active', 'inactive', 'pending']),
   "lastActiveAt": zod.string().nullish(),
-  "joinedAt": zod.string()
+  "joinedAt": zod.string().nullable()
 })
 
 
@@ -394,14 +397,15 @@ export const UpdateTeamMemberResponse = zod.object({
   "id": zod.string(),
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
   "phone": zod.string().nullish(),
   "role": zod.string(),
+  "accessRole": zod.enum(['owner', 'admin', 'manager', 'staff']),
   "department": zod.string().nullish(),
   "avatarUrl": zod.string().nullish(),
   "status": zod.enum(['active', 'inactive', 'pending']),
   "lastActiveAt": zod.string().nullish(),
-  "joinedAt": zod.string()
+  "joinedAt": zod.string().nullable()
 })
 
 

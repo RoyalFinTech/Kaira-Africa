@@ -48,6 +48,13 @@ export const teamMemberStatusEnum = pgEnum("team_member_status", [
   "pending",
 ]);
 
+export const teamInvitationStatusEnum = pgEnum("team_invitation_status", [
+  "pending",
+  "accepted",
+  "revoked",
+  "expired",
+]);
+
 // ─── Customers ───────────────────────────────────────────────────────────────
 export const customerStatusEnum = pgEnum("customer_status", [
   "active",

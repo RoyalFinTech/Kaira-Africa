@@ -2,6 +2,7 @@ import { and, desc, eq, ilike, or } from "drizzle-orm";
 import {
   db,
   teamMembers,
+  users,
   type TeamMember,
   type InsertTeamMember,
 } from "@workspace/db";
@@ -60,7 +61,12 @@ export async function createTeamMember(
 ): Promise<TeamMember> {
   const [row] = await db
     .insert(teamMembers)
-    .values({ ...data, businessId, status: data.status ?? "pending" })
+    .values({
+      ...data,
+      businessId,
+      status: data.status ?? "pending",
+      joinedAt: data.status === "active" ? (data.joinedAt ?? new Date()) : null,
+    })
     .returning();
   return row;
 }
@@ -81,10 +87,30 @@ export async function updateTeamMember(
 export async function deleteTeamMember(
   businessId: string,
   id: string,
-): Promise<boolean> {
-  const deleted = await db
-    .delete(teamMembers)
-    .where(and(eq(teamMembers.businessId, businessId), eq(teamMembers.id, id)))
-    .returning({ id: teamMembers.id });
-  return deleted.length > 0;
+): Promise<{ deleted: boolean; userId: string | null }> {
+  return db.transaction(async (tx) => {
+    const [member] = await tx.select().from(teamMembers)
+      .where(and(eq(teamMembers.businessId, businessId), eq(teamMembers.id, id)))
+      .limit(1)
+      .for("update");
+    if (!member) return { deleted: false, userId: null };
+
+    if (member.userId) {
+      // Removing an accepted member also removes the business association.
+      // The route revokes all their existing sessions after this transaction.
+      await tx.update(users).set({
+        businessId: null,
+        role: "owner",
+        updatedAt: new Date(),
+      }).where(and(
+        eq(users.id, member.userId),
+        eq(users.businessId, businessId),
+      ));
+    }
+
+    const deleted = await tx.delete(teamMembers)
+      .where(and(eq(teamMembers.businessId, businessId), eq(teamMembers.id, id)))
+      .returning({ id: teamMembers.id });
+    return { deleted: deleted.length === 1, userId: member.userId };
+  });
 }

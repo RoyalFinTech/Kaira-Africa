@@ -49,6 +49,7 @@ function isPinLoginRequired(error: unknown): boolean {
 export default function PhoneAuthPage() {
   const [, setLocation] = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
+  const isInvitationSignIn = Boolean(sessionStorage.getItem("kaira_pending_invitation_token"));
   const [networkPrefix, setNetworkPrefix] = useState('87');
   const networks = [
     { prefix: '87', name: 'Africell' },
@@ -227,6 +228,11 @@ export default function PhoneAuthPage() {
               <p className="text-muted-foreground text-sm">
                 We'll send a verification code to confirm your identity.
               </p>
+              {isInvitationSignIn && (
+                <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-primary" role="status">
+                  You are signing in to accept a team invitation. Use the Gambian phone number the invitation was sent to.
+                </p>
+              )}
             </div>
 
             <Form {...form}>
