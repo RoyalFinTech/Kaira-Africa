@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, jsonb, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, index, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { businessStatusEnum } from "./enums";
@@ -28,6 +28,13 @@ export const businesses = pgTable("businesses", {
     .references((): AnyPgColumn => users.id, { onDelete: "restrict" }),
 
   name: text("name").notNull(),
+  // Generated once for the business; never editable through the business profile API.
+  referralCode: text("referral_code").notNull(),
+  // The business whose referral link was used at first business creation.
+  referredByBusinessId: uuid("referred_by_business_id").references(
+    (): AnyPgColumn => businesses.id,
+    { onDelete: "set null" },
+  ),
   type: text("type").notNull(),
   industry: text("industry").notNull(),
   country: text("country").notNull().default("The Gambia"),
@@ -55,12 +62,17 @@ export const businesses = pgTable("businesses", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("businesses_referral_code_unique").on(table.referralCode),
+  index("businesses_referred_by_business_idx").on(table.referredByBusinessId),
+]);
 
 export const insertBusinessSchema = createInsertSchema(businesses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  referralCode: true,
+  referredByBusinessId: true,
 });
 export const selectBusinessSchema = createSelectSchema(businesses);
 export type InsertBusiness = z.infer<typeof insertBusinessSchema>;

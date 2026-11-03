@@ -296,6 +296,15 @@ paths:
       operationId: createBusiness
       tags: [businesses]
       summary: Create a business during onboarding and become its owner
+      parameters:
+        - name: x-kaira-referral-code
+          in: header
+          required: false
+          description: Optional business-to-business referral code from a Kaira Africa share link. This is not a team invitation.
+          schema:
+            type: string
+            pattern: '^KAI-[A-F0-9]{16}$'
+      requestBody:      summary: Create a business during onboarding and become its owner
       requestBody:
         required: true
         content:
@@ -311,6 +320,24 @@ paths:
                 $ref: "#/components/schemas/Business"
         "409":
           description: The current user already belongs to a business
+
+  /businesses/me/referral:
+    get:
+      operationId: getBusinessReferral
+      tags: [businesses]
+      summary: Get the current business's unique referral link details
+      description: Owner-only. Returns the current business referral code and count of businesses attributed to it. Does not grant team access or activate rewards.
+      responses:
+        "200":
+          description: Business referral information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessReferralSummary"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Business owner role required
 
   /businesses/me:
     get:
@@ -1275,6 +1302,19 @@ components:
           type: string
         teamSize:
           type: string
+
+    BusinessReferralSummary:
+      type: object
+      properties:
+        businessName:
+          type: string
+        referralCode:
+          type: string
+          pattern: '^KAI-[A-F0-9]{16}$'
+        referredBusinessCount:
+          type: integer
+          minimum: 0
+      required: [businessName, referralCode, referredBusinessCount]
 
     BusinessStats:
       type: object
