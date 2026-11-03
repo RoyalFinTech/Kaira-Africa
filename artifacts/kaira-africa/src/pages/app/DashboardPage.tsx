@@ -55,16 +55,16 @@ export default function DashboardPage() {
     <PageTransition>
       <div className="space-y-6">
         {/* Welcome Section */}
-        <div className="flex items-start justify-between">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+            <h1 className="mb-2 break-words font-display text-2xl font-bold text-foreground sm:text-3xl">
               {greeting}, {user?.firstName}.
             </h1>
-            <p className="text-muted-foreground">
+            <p className="break-words text-sm text-muted-foreground sm:text-base">
               Here's what's happening with {business?.name} today.
             </p>
           </div>
-          <div className="text-right text-sm text-muted-foreground">
+          <div className="min-w-0 break-words text-left text-xs text-muted-foreground sm:text-right sm:text-sm">
             {currentDate}
           </div>
         </div>
@@ -311,7 +311,7 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Recent Transactions</CardTitle>
-                <Link href="/transactions">
+                <Link href="/transactions" className="min-w-0">
                   <Button variant="ghost" size="sm">
                     View all <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -456,27 +456,27 @@ export default function DashboardPage() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <Link href="/customers">
-                <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 sm:gap-3">
+              <Link href="/customers" className="min-w-0">
+                <Button variant="outline" className="w-full min-w-0 justify-start gap-2 whitespace-normal break-words text-left h-auto py-3">
                   <Plus className="h-4 w-4" />
                   Add Customer
                 </Button>
               </Link>
-              <Link href="/team">
-                <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+              <Link href="/team" className="min-w-0">
+                <Button variant="outline" className="w-full min-w-0 justify-start gap-2 whitespace-normal break-words text-left h-auto py-3">
                   <UserPlus className="h-4 w-4" />
                   Add Team Member
                 </Button>
               </Link>
-              <Link href="/transactions">
-                <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+              <Link href="/transactions" className="min-w-0">
+                <Button variant="outline" className="w-full min-w-0 justify-start gap-2 whitespace-normal break-words text-left h-auto py-3">
                   <Plus className="h-4 w-4" />
                   New Transaction
                 </Button>
               </Link>
-              <Link href="/reports">
-                <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+              <Link href="/reports" className="min-w-0">
+                <Button variant="outline" className="w-full min-w-0 justify-start gap-2 whitespace-normal break-words text-left h-auto py-3">
                   <FileText className="h-4 w-4" />
                   View Reports
                 </Button>
