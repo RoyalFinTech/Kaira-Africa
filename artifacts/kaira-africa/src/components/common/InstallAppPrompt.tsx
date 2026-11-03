@@ -93,7 +93,9 @@ export function InstallAppPrompt() {
   };
 
   const mobile = platform !== 'desktop';
-  if (isStandalone || dismissed || (!mobile && !installEvent)) return null;
+  // Show manual browser-menu guidance on desktop even when the browser does not expose beforeinstallprompt.
+  // The install action opens the help card; it never pretends to trigger a native install prompt.
+  if (isStandalone || dismissed) return null;
 
   const helpTitle = platform === 'ios'
     ? 'Add Kaira to your Home Screen'
