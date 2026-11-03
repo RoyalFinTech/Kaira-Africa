@@ -19,7 +19,7 @@ const NETWORKS = [
   { prefix: "87", name: "Africell" },
   { prefix: "83", name: "QCell" },
   { prefix: "86", name: "Comium" },
-  { prefix: "none", name: "Gamcel (no new prefix)" },
+  { prefix: "none", name: "Gamtel (9xxxxxx)" },
 ];
 
 function splitGambianPhone(value: string) {
@@ -87,7 +87,8 @@ export default function PinLoginPage() {
         title: "Welcome back",
         message: "Your PIN was verified. Kaira Africa is opening your workspace.",
       });
-      if (!result.user.firstName) setLocation("/login/name");
+      if (sessionStorage.getItem("kaira_pending_invitation_token")) setLocation("/invite/accept");
+      else if (!result.user.firstName) setLocation("/login/name");
       else if (!result.user.businessId) setLocation("/business-onboarding");
       else setLocation("/dashboard");
     } catch (cause) {
@@ -145,6 +146,11 @@ export default function PinLoginPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-3xl sm:mb-5" aria-hidden="true">👋</div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Your business is waiting.</h1>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{hasRememberedPhone ? "Enter your six-digit PIN to securely continue to your Kaira Africa dashboard." : "Enter your Gambian phone number and six-digit PIN to securely sign in."}</p>
+          {sessionStorage.getItem("kaira_pending_invitation_token") && (
+            <p className="mx-auto mt-3 max-w-sm rounded-lg border border-primary/20 bg-primary/5 p-3 text-left text-xs leading-5 text-primary" role="status">
+              You are signing in to accept a team invitation. Make sure this is the Gambian phone number the invitation was sent to; you can change it below.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-5 text-left sm:mt-7">
             {showPhoneEditor ? (

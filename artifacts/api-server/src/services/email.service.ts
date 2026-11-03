@@ -42,9 +42,10 @@ interface SendEmailInput {
 
 async function sendEmail(input: SendEmailInput): Promise<boolean> {
   if (!transporter) {
+    // Never write one-time tokens or invitation links into logs.
     logger.info(
       { to: input.to, subject: input.subject },
-      `[DEV EMAIL] Would send email (no SMTP configured):\n${input.text ?? input.html}`,
+      "[DEV EMAIL] Email not sent because SMTP is not configured",
     );
     return false;
   }
@@ -87,6 +88,41 @@ export async function sendAdminNotificationEmail(input: {
     subject: input.subject,
     text: input.message,
     html: `<p>${input.message}</p>`,
+  });
+}
+
+export async function sendTeamInvitationEmail(input: {
+  to: string;
+  firstName: string;
+  jobTitle: string;
+  accessRole: string;
+  businessName: string;
+  inviterName: string;
+  inviteUrl: string;
+  expiresInDays: number;
+}): Promise<boolean> {
+  const safeFirstName = escapeHtml(input.firstName);
+  const safeJobTitle = escapeHtml(input.jobTitle);
+  const safeRole = escapeHtml(input.accessRole);
+  const safeBusinessName = escapeHtml(input.businessName);
+  const safeInviterName = escapeHtml(input.inviterName);
+  const safeUrl = escapeHtml(input.inviteUrl);
+  const text = "Hello " + input.firstName + ", " + input.inviterName +
+    " invited you to join " + input.businessName + " on Kaira Africa as " +
+    input.jobTitle + " (" + input.accessRole + "). Accept your invitation: " +
+    input.inviteUrl + "\nSign in with the Gambian phone number this invitation was sent to. " +
+    "This link expires in " + input.expiresInDays + " days.";
+  return sendEmail({
+    to: input.to,
+    subject: "You are invited to join " + input.businessName.replace(/[\r\n]+/g, " ").slice(0, 120) + " on Kaira Africa",
+    text,
+    html: "<p>Hello " + safeFirstName + ",</p>" +
+      "<p>" + safeInviterName + " invited you to join <strong>" + safeBusinessName +
+      "</strong> on Kaira Africa.</p>" +
+      "<p>Role: " + safeJobTitle + " · Kaira access: " + safeRole + "</p>" +
+      "<p><a href=\"" + safeUrl + "\">Review and accept your invitation</a></p>" +
+      "<p>Sign in with the Gambian phone number this invitation was sent to. " +
+      "This link expires in " + input.expiresInDays + " days.</p>",
   });
 }
 

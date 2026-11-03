@@ -15,6 +15,8 @@ initApiClient();
 // ─── Lazy-loaded pages ──────────────────────────────────────────────────────
 const SplashScreen       = lazy(() => import('@/pages/SplashScreen'));
 const OnboardingFlow     = lazy(() => import('@/pages/OnboardingFlow'));
+const TeamInvitationPage = lazy(() => import('@/pages/TeamInvitationPage'));
+const TeamInvitationAcceptPage = lazy(() => import('@/pages/TeamInvitationPage').then((module) => ({ default: module.TeamInvitationAcceptPage })));
 
 // Auth
 const PhoneAuthPage      = lazy(() => import('@/pages/auth/PhoneAuthPage'));
@@ -290,6 +292,10 @@ function Router() {
         <Route path="/login/name" component={FullNamePage} />
         <Route path="/admin/forgot-password" component={ForgotPasswordPage} />
         <Route path="/admin/reset-password" component={ResetPasswordPage} />
+
+        {/* ── Public team invitation and secure acceptance ── */}
+        <Route path="/invite/accept" component={TeamInvitationAcceptPage} />
+        <Route path="/invite" component={TeamInvitationPage} />
 
         {/* ── Business Onboarding ── */}
         <Route path="/business-onboarding">

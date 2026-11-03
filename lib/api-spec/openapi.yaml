@@ -386,7 +386,7 @@ paths:
     post:
       operationId: createTeamMember
       tags: [team]
-      summary: Add a team member
+      summary: Legacy roster-only entry (does not deliver an invitation)
       requestBody:
         required: true
         content:
@@ -401,6 +401,109 @@ paths:
               schema:
                 $ref: "#/components/schemas/TeamMember"
 
+  /team/invitations:
+    get:
+      operationId: listTeamInvitations
+      tags: [team]
+      summary: List invitations for the current business
+      responses:
+        "200":
+          description: Invitation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamInvitationSummary"
+    post:
+      operationId: createTeamInvitation
+      tags: [team]
+      summary: Create a secure team invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationCreateInput"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationCreateResponse"
+
+  /team/invitations/preview:
+    post:
+      operationId: previewTeamInvitation
+      tags: [team]
+      summary: Preview an invitation without accepting it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationTokenInput"
+      responses:
+        "200":
+          description: Invitation preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationPreview"
+
+  /team/invitations/accept:
+    post:
+      operationId: acceptTeamInvitation
+      tags: [team]
+      summary: Accept an invitation after phone-verified sign-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationTokenInput"
+      responses:
+        "200":
+          description: Invitation accepted and account linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationAcceptResponse"
+
+  /team/invitations/{id}/resend:
+    post:
+      operationId: resendTeamInvitation
+      tags: [team]
+      summary: Rotate and resend an invitation link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: New invitation link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitationCreateResponse"
+
+  /team/invitations/{id}:
+    delete:
+      operationId: revokeTeamInvitation
+      tags: [team]
+      summary: Revoke a team invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation revoked
   /team/{id}:
     get:
       operationId: getTeamMember
@@ -1222,11 +1325,14 @@ components:
         lastName:
           type: string
         email:
-          type: string
+          type: ["string", "null"]
         phone:
           type: ["string", "null"]
         role:
           type: string
+        accessRole:
+          type: string
+          enum: [owner, admin, manager, staff]
         department:
           type: ["string", "null"]
         avatarUrl:
@@ -1237,16 +1343,143 @@ components:
         lastActiveAt:
           type: ["string", "null"]
         joinedAt:
-          type: string
+          type: ["string", "null"]
       required:
         - id
         - firstName
         - lastName
         - email
         - role
+        - accessRole
         - status
         - joinedAt
 
+    TeamInvitationTokenInput:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    TeamInvitationCreateInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [firstName, lastName, phone, jobTitle, accessRole]
+
+    TeamInvitationCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        inviteUrl:
+          type: string
+        expiresAt:
+          type: string
+        emailDeliveryStatus:
+          type: string
+          enum: [sent, not_configured, failed]
+        inviteeFirstName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [id, inviteUrl, expiresAt, emailDeliveryStatus, inviteeFirstName, businessName, jobTitle, accessRole]
+
+    TeamInvitationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        expiresAt:
+          type: string
+        lastSentAt:
+          type: string
+        acceptedAt:
+          type: ["string", "null"]
+        revokedAt:
+          type: ["string", "null"]
+        emailDeliveryStatus:
+          type: string
+      required: [id, status, firstName, lastName, email, jobTitle, accessRole, expiresAt, lastSentAt, acceptedAt, revokedAt, emailDeliveryStatus]
+
+    TeamInvitationPreview:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        firstName:
+          type: string
+        lastName:
+          type: string
+        businessName:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: ["string", "null"]
+        accessRole:
+          type: string
+          enum: [manager, staff]
+        phone:
+          type: string
+        expiresAt:
+          type: string
+      required: [status, firstName, lastName, businessName, jobTitle, accessRole, phone, expiresAt]
+
+    TeamInvitationAcceptResponse:
+      type: object
+      properties:
+        teamMemberId:
+          type: string
+        businessName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        accessRole:
+          type: string
+          enum: [manager, staff]
+      required: [teamMemberId, businessName, firstName, lastName, accessRole]
     TeamMemberInput:
       type: object
       properties:

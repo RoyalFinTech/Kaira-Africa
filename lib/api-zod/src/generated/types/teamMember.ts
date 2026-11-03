@@ -11,10 +11,11 @@ export interface TeamMember {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   /** @nullable */
   phone?: string | null;
   role: string;
+  accessRole: "owner" | "admin" | "manager" | "staff";
   /** @nullable */
   department?: string | null;
   /** @nullable */
@@ -22,5 +23,5 @@ export interface TeamMember {
   status: TeamMemberStatus;
   /** @nullable */
   lastActiveAt?: string | null;
-  joinedAt: string;
+  joinedAt: string | null;
 }
