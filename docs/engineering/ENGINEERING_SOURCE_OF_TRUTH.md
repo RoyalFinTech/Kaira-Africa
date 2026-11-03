@@ -327,3 +327,15 @@ Historical baseline: application-code commit 74c39e0a6db676a00511efe0460d395ffad
   - Admin dep-dbl4iqivcj2c7383di70
 - Physical browser/device testing remains outstanding: desktop native and no-native install-event cases, right-edge placement, manual help, standalone/dismissed; iOS/Android install; mobile widths and nav.
 - PR #177 was based on the pre-PWA main and became unmergeable; replace it with the fresh docs reconciliation PR based on main 3c0a73f.
+
+
+## Latest repository/deployment SHA — 2026-11-03 20:58 UTC
+
+- Latest GitHub main: 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b. This is the docs-only reconciliation commit after the last application-code release.
+- Last application-code release: 3c0a73fea6ce4372773b45e73f8746e31859e478 (PR #176 desktop PWA guidance). The referral feature release was 73f5ba1 (PR #174).
+- All three Render services were subsequently verified Live on the latest main/docs commit 61eb8e5:
+  - API dep-dbl4l0p42hec73c7qveg
+  - Frontend dep-dbl4l1142hec73c7qvr0
+  - Admin dep-dbl4l0p42hec73c7qvn0
+- Supabase latest verified schema remains migration ledger 26/max ID 26, with migration 0025 applied. No database migration was part of PR #176 or the documentation-only PRs.
+- Outstanding: physical browser/device acceptance for PWA, authenticated staged referral onboarding/count attribution, plus the complete roadmap in the continuation handover/FEATURE_AUDIT.md.

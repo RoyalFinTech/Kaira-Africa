@@ -186,3 +186,8 @@ The explicit Render static SPA route generator now includes /referrals. Verify t
 - Desktop PWA guidance PR #176 merged/deployed on 3c0a73f. Workspace 41715633932 and Backend CI 41715633934 passed including Docker. API, frontend and admin static Render deployments all verified Live on 3c0a73f.
 - Desktop browser/device acceptance is still NOT VERIFIED. Verify native beforeinstallprompt case, browser without event, right-edge card, manual help, dismissal and standalone. Mobile iOS/Android PWA, service worker and 320/360/390/430px viewports remain manual QA.
 - Referral authenticated staging E2E remains NOT VERIFIED. Do not create production referral/test businesses or expose actual codes. All rewards/payout/paid feature unlocking remain future-only.
+
+
+## Latest repository/deployment SHA — 2026-11-03 20:58 UTC
+
+Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only commit. The latest application-code release remains 3c0a73fea6ce4372773b45e73f8746e31859e478. All three Render services were verified Live on 61eb8e5 (API dep-dbl4l0p42hec73c7qveg, frontend dep-dbl4l1142hec73c7qvr0, admin dep-dbl4l0p42hec73c7qvn0). Referral migration 0025 remains applied/verified in Supabase; PWA physical browser acceptance and referral authenticated staging E2E remain NOT VERIFIED.
