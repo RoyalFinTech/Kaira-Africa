@@ -62,4 +62,32 @@ CREATE UNIQUE INDEX team_invitations_business_phone_pending_unique
 -- All invite and acceptance operations run through the authenticated Kaira API
 -- using its server-side database connection. No browser/Data API access is granted.
 ALTER TABLE public.team_invitations ENABLE ROW LEVEL SECURITY;
-REVOKE ALL PRIVILEGES ON TABLE public.team_invitations FROM PUBLIC, anon, authenticated;
+
+-- PUBLIC always exists; Supabase API roles are installed by Supabase but are
+-- not present in a vanilla PostgreSQL database used by CI.
+REVOKE ALL PRIVILEGES ON TABLE public.team_invitations FROM PUBLIC;
+
+DO $
+DECLARE
+  revoke_roles text[] := ARRAY[]::text[];
+  role_list text;
+BEGIN
+  IF to_regrole('anon') IS NOT NULL THEN
+    revoke_roles := array_append(revoke_roles, 'anon');
+  END IF;
+  IF to_regrole('authenticated') IS NOT NULL THEN
+    revoke_roles := array_append(revoke_roles, 'authenticated');
+  END IF;
+
+  IF cardinality(revoke_roles) > 0 THEN
+    SELECT string_agg(quote_ident(role_name), ', ')
+      INTO role_list
+      FROM unnest(revoke_roles) AS roles(role_name);
+
+    EXECUTE format(
+      'REVOKE ALL PRIVILEGES ON TABLE public.team_invitations FROM %s',
+      role_list
+    );
+  END IF;
+END
+$;
