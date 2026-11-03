@@ -169,6 +169,13 @@
       "when": 1793700000000,
       "tag": "0023_team_invitation_acceptance",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793710000000,
+      "tag": "0024_team_member_joined_at_no_default",
+      "breakpoints": true
     }
   ]
 }

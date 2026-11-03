@@ -49,7 +49,7 @@ export const teamMembers = pgTable(
     invitedAt: timestamp("invited_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow(),
+    joinedAt: timestamp("joined_at", { withTimezone: true }),
     lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
   },
   (table) => [
