@@ -148,13 +148,28 @@ export async function createTeamInvitation(input: CreateTeamInvitationInput): Pr
 }
 export async function expirePendingTeamInvitations(businessId: string): Promise<void> {
   const now = new Date();
-  await db.update(teamInvitations)
-    .set({ status: "expired", updatedAt: now })
-    .where(and(
-      eq(teamInvitations.businessId, businessId),
-      eq(teamInvitations.status, "pending"),
-      lte(teamInvitations.expiresAt, now),
-    ));
+  await db.transaction(async (tx) => {
+    const expired = await tx.update(teamInvitations)
+      .set({ status: "expired", updatedAt: now })
+      .where(and(
+        eq(teamInvitations.businessId, businessId),
+        eq(teamInvitations.status, "pending"),
+        lte(teamInvitations.expiresAt, now),
+      ))
+      .returning({ teamMemberId: teamInvitations.teamMemberId });
+
+    // Keep expired invitations in invitation history, but do not leave their
+    // roster rows looking like active pending invitations.
+    for (const invitation of expired) {
+      await tx.update(teamMembers)
+        .set({ status: "inactive", joinedAt: null })
+        .where(and(
+          eq(teamMembers.id, invitation.teamMemberId),
+          eq(teamMembers.businessId, businessId),
+          eq(teamMembers.status, "pending"),
+        ));
+    }
+  });
 }
 
 export async function listTeamInvitations(businessId: string) {
@@ -235,7 +250,7 @@ export async function rotateTeamInvitation(
         eq(teamMembers.id, invitation.teamMemberId),
         eq(teamMembers.businessId, businessId),
       )).limit(1);
-    if (!member || member.status !== "pending") {
+    if (!member || (member.status !== "pending" && member.status !== "inactive")) {
       throw new ConflictError("The pending team member record is no longer available.");
     }
     const [business] = await tx.select({ name: businesses.name }).from(businesses)
@@ -251,7 +266,14 @@ export async function rotateTeamInvitation(
       updatedAt: now,
     }).where(eq(teamInvitations.id, invitation.id)).returning();
 
-    return { invitation: updated, member, businessName: business.name };
+    const [restoredMember] = member.status === "inactive"
+      ? await tx.update(teamMembers).set({
+          status: "pending",
+          joinedAt: null,
+        }).where(eq(teamMembers.id, member.id)).returning()
+      : [member];
+
+    return { invitation: updated, member: restoredMember, businessName: business.name };
   });
 }
 

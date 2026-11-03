@@ -25,8 +25,27 @@ This change replaces the old pending-roster-row-only behavior with a real invita
 
 ## Database migration
 
-Migration 0023_team_invitation_acceptance.sql adds the access role, corrects pending joined_at values to NULL, enforces one roster membership per business/user, and creates the invitation table. The invitation table has RLS enabled and no direct Data API privileges for PUBLIC/anon/authenticated; all mutations use the trusted Kaira API server-side database connection.
+Migration 0023_team_invitation_acceptance.sql adds the access role, corrects existing pending joined_at values to NULL, enforces one roster membership per business/user, and creates the invitation table. Follow-up migration 0024_team_member_joined_at_no_default.sql removes the database default from joined_at so future pending roster-only inserts do not receive a false join date. The invitation table has RLS enabled and no direct Data API privileges for PUBLIC/anon/authenticated; all mutations use the trusted Kaira API server-side database connection.
 
+## Follow-up usability and lifecycle fixes
+
+- The invitation page uses the existing KairaLogo component and the official `kaira-logo.png` brand asset in its header.
+- Because the frontend is a Render Static Site, invitation URLs use `/invite?token=<opaque-token>` and the build generates static entry pages for `/invite` and `/invite/accept`.
+- When an invitation is pending, the remembered-user login shortcut is bypassed so the invitee can enter the exact invited Gambian number. If that number has PIN login enabled, the PIN page prefers the current sign-in session's pending phone over an older phone remembered on the device.
+- Expired invitations mark their unjoined roster entries inactive while retaining invitation history. Resending rotates the token and restores the roster row to pending.
+
+## Production verification recorded
+
+- PR #171 passed workspace build, API/frontend typechecks, API tests, fresh PostgreSQL migration validation, health smoke, and production Docker image build before merge.
+- Render frontend and API deployed merge commit `581e80c98b1134fbfec7e04782d040fc8cc63361` successfully. The API logged successful migration application and returned HTTP 200 from `/ready`.
+- Supabase verification confirmed migration 0023, invitation table columns, RLS enabled, no anon/authenticated table privileges, token/phone uniqueness indexes, and no duplicate existing team memberships or pending phones.
+- The frontend build generated 34 SPA route entry files, including the invitation routes.
+
+## Remaining controlled acceptance tests
+
+- Use a dedicated test business/member and a phone number whose owner has consented. Test new-user OTP, returning-user PIN, correct and incorrect invited phone, expiration, revocation, resend token rotation, one-time acceptance, and cross-business rejection.
+- Verify actual SMS delivery with the configured provider and SMTP delivery when an email address is provided. Automatic WhatsApp Business sending remains unconfigured; the shipped WhatsApp action is manual sharing.
+- Visually verify the branded invitation page and acceptance flow on physical mobile and desktop browsers after PR #172 deploys. Automated builds do not replace this device-level check.
 ## Delivery
 
 - Email: existing Nodemailer service, using Render SMTP configuration. If SMTP is unavailable in a non-production environment, the API reports not_configured and does not write one-time links to logs.

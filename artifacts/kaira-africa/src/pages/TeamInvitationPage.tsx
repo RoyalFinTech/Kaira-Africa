@@ -4,6 +4,7 @@ import { CheckCircle2, Clock3, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequestJson, clearToken, isPinUnlocked, isUserToken } from "@/lib/api-client";
+import { KairaLogo } from "@/components/common/KairaLogo";
 
 const PENDING_INVITATION_KEY = "kaira_pending_invitation_token";
 
@@ -111,8 +112,15 @@ export default function TeamInvitationPage() {
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-[#f4f7f4] px-3 py-8 sm:px-6">
       <Card className="w-full max-w-lg overflow-hidden border-[#e0e9e2] shadow-xl">
-        <CardHeader className="space-y-3 bg-[#0D2818] p-6 text-white sm:p-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#D8B45A]"><Users className="h-6 w-6" /></div>
+        <CardHeader className="space-y-4 bg-[#0D2818] p-6 text-white sm:p-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="inline-flex max-w-[min(72%,190px)] items-center rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-white/30">
+              <KairaLogo width={150} height={44} className="max-w-full" />
+            </div>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#D8B45A]" aria-hidden="true">
+              <Users className="h-6 w-6" />
+            </div>
+          </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8B45A]">Kaira Africa · Team invitation</p>
             <CardTitle className="mt-2 text-2xl font-bold text-white">You have been invited</CardTitle>

@@ -32,7 +32,7 @@ function splitGambianPhone(value: string) {
 
 export default function PinLoginPage() {
   const [, setLocation] = useLocation();
-  const initialPhone = localStorage.getItem("kaira_last_phone") || sessionStorage.getItem("kaira_pending_phone") || "";
+  const initialPhone = sessionStorage.getItem("kaira_pending_phone") || localStorage.getItem("kaira_last_phone") || "";
   const initial = useMemo(() => splitGambianPhone(initialPhone), []);
   const hasRememberedPhone = Boolean(initialPhone && /^\d{7}$/.test(initial.subscriber));
   const [showPhoneEditor, setShowPhoneEditor] = useState(!hasRememberedPhone);
