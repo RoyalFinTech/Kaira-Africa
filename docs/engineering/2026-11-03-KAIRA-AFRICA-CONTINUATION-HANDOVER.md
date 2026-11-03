@@ -9,7 +9,7 @@ This is the current continuation record for the next engineering chat. Read this
 
 ## A. Current baseline and connected resources
 
-- GitHub main: 07c7f63a3b9e1df1c01d38da2487d6a07b784aaa.
+- GitHub main at this release handover: 73f5ba1d3af5e4fcb31b53574465dc2bec9a4586.
 - PR #172 merged as c71a2fdbe6129ee895212bf98539098b7c7dfc1f: Kaira logo on public team invitation page, invitee phone/PIN continuation correction, expiry/resend roster consistency and migration 0024 removing the joined_at default.
 - PR #173 merged as 07c7f63a3b9e1df1c01d38da2487d6a07b784aaa: responsive mobile header, dashboard welcome/quick actions and calculator metric/discount/tax layouts.
 - Both PRs passed workspace and Backend CI, including frontend build, API tests, fresh migration checks, health smoke and production Docker build.
@@ -18,16 +18,16 @@ This is the current continuation record for the next engineering chat. Read this
 - Render admin static service srv-dbg86rmk1f9s73bkkev0.
 - Render workspace tea-d9usq87lk1mc73eia2f0.
 - Supabase project ref gofoibbvxnhqzqwrpcbx, region eu-west-1.
-- All three Render services were verified Live on main 07c7f63.
-- Production Supabase checkpoint before referral work: Drizzle migration ledger count 25/max ID 25 (through migration 0024); public.businesses count 2; businesses RLS enabled; anon/authenticated have no direct SELECT or INSERT grants on public.businesses. No production business records were changed during referral development.
+- All three Render services were verified Live on main 73f5ba1. Referral deployment IDs: API dep-dbl4el942hec73c7hqdg; frontend dep-dbl4elh42hec73c7hqqg; admin dep-dbl4elh42hec73c7hqmg.
+- Production Supabase checkpoint after migration 0025: Drizzle ledger count 26/max ID 26; public.businesses count 2; referral codes present 2, distinct 2, missing 0; RLS enabled; anon/authenticated direct SELECT/INSERT grants false; unique code index, referred-by index and self-FK verified; attributed-business count 0. No production business records were manually changed.
 
-## B. Open work — PR #174 business-to-business referral links
+## B. Delivered — PR #174 business-to-business referral links
 
 PR: https://github.com/RoyalFinTech/Kaira-Africa/pull/174
 Branch: feat/business-referral-links
-Head at this handover: 4a9172820054f63342907cce2dd394d6d29cb082
-State: OPEN, NOT MERGED, NOT DEPLOYED.
-Earlier required CI runs 41712804649 (Work Management Build Checks) and 41712804625 (Backend CI) were for a PR revision before the static-route correction. They are superseded. Re-check the latest runs for the exact current PR head before using any result; add the /referrals static-entry build to acceptance.
+Merged as 73f5ba1d3af5e4fcb31b53574465dc2bec9a4586; PR head before squash was 1ef0cdab662517d39fd6e8a3a8806a7a45c4cfe2.
+State: MERGED and DEPLOYED.
+Final PR checks passed: Work Management Build Checks 41714635692 and Backend CI 41714635727 (including Docker build). All three Render services are live on the squash merge. Migration 0025 and static /referrals entry verified.
 
 ### Required referral behavior
 
@@ -39,7 +39,7 @@ This is a separate business-to-business referral system, not team invitation:
 - Add the referral count to the page.
 - Future referral bonuses or paid feature unlocks are a future roadmap policy. Do not invent percentages, points, reward thresholds, payout terms or active entitlements. Page must be honest that rewards are not active yet.
 
-### Implementation currently in PR #174
+### Delivered implementation in PR #174
 
 - Drizzle businesses schema adds referralCode and nullable referredByBusinessId self-reference.
 - Migration 0025_business_referrals.sql adds/backfills KAI- plus 16 uppercase hexadecimal characters, enforces NOT NULL, adds unique referral-code index and referred-by index/FK.
@@ -53,18 +53,14 @@ This is a separate business-to-business referral system, not team invitation:
 - Page uses actual KairaLogo, green/gold brand system, permanent link, copy action, prefilled WhatsApp share, business count and a clear statement that it is for independent businesses and not team access.
 - No reward engine, payouts, commissions, paid feature entitlements or automatic bonuses.
 
-### PR #174 acceptance and merge gates
+### Post-release referral acceptance still required
 
-1. Poll latest Work Management Build Checks and Backend CI. If failure, inspect failing steps/logs and fix the branch. Require latest-head workspace typecheck/build and Backend CI including API tests/fresh DB migration validation/health/Docker build.
-2. Review exact changed files and full PR diff. There should be 12 intended files. The OpenAPI spec should remain about 47 KB / 1,933 lines and contain exactly one /businesses, one /businesses/me, one /businesses/me/referral, one BusinessReferralSummary. Earlier accidentally duplicated OpenAPI diff was corrected in f5d9563; preserve the focused version.
-3. Verify schema insert/update types do not allow client mutation of referral code or referrer; inspect all business insert call sites to ensure they always generate a code.
-4. Test endpoint authorization conceptually and through automated tests: owner 200, manager/staff 403, anonymous 401.
-5. Check malformed/unknown code, self-referral, new business creation, existing user business conflict and session storage behavior. Referrals must never grant membership.
-6. Only merge after all exact-head CI workflows are green and current PR head is reconfirmed.
-7. After merge, confirm main SHA and all three Render deployment SHAs/statuses. Inspect API logs for “Migrations applied successfully”.
-8. Verify Supabase Drizzle ledger now count 26/max ID 26; referral_code NOT NULL; distinct code backfill exists for each existing business; unique index and referred-by FK/index present; RLS enabled; anon/authenticated privileges remain absent.
-9. Do not show, print or log actual production referral codes. A safe read-only verification can query counts, distinctness and null count, not the code values.
-10. Do not create a new business or alter production referral counts. Full end-to-end attribution requires isolated staging and two controlled test business identities.
+1. Open /referrals as a controlled authenticated business owner; verify the owner page loads, copy works, WhatsApp share pre-fills, unique link is stable and direct URL refresh works.
+2. Verify manager/staff receive 403 from GET /businesses/me/referral and anonymous gets 401; the navigation item remains owner-only.
+3. In isolated staging with two controlled business owners, follow a referral link, continue through phone login and business onboarding, create a new workspace, confirm referred_by_business_id, the new business's own distinct referral code, and count increment for the referrer.
+4. Test malformed/unknown code, self-referral, an already-associated user, sessionStorage cleanup and “Continue without the referral link”.
+5. Confirm the new business remains independent; no team membership, role grants or shared customer/financial data.
+6. Never use production business records for test attribution and never output actual production codes. Referral rewards, payouts and paid-feature access remain future-only.
 
 ## C. Completed recent work already in main
 
@@ -154,16 +150,17 @@ Production frontend: https://kaira-africa-frontend.onrender.com/
 Production API: https://kaira-africa-api.onrender.com/
 Render workspace: tea-d9usq87lk1mc73eia2f0.
 Supabase project ref: gofoibbvxnhqzqwrpcbx.
-Main baseline at the time of handover: 07c7f63a3b9e1df1c01d38da2487d6a07b784aaa.
-Referral PR #174: feat/business-referral-links, current expected head f5d9563b0cb9ec9b5ab7012d8487b74a8dd1854d; recheck before acting.
+Main baseline at the time of handover: 73f5ba1d3af5e4fcb31b53574465dc2bec9a4586. PR #174 business-to-business referrals is merged and deployed; migration 0025 is applied and the owner-only referral page is live. Authenticated staging E2E is still required.
 
-Start by finishing PR #174:
-- poll its latest Work Management Build Checks and Backend CI and ensure both pass on the exact current head;
-- inspect the focused PR diff, schema, migration, business creation repository, API roles and onboarding flow;
-- merge only when both workflows pass and PR head is unchanged;
-- verify all three Render services deploy the new main SHA and API logs show migration success;
-- verify Drizzle migration 0025 recorded, expected ledger 26/max ID 26, backfilled unique codes, indexes/FK, RLS and no generic anon/authenticated grants;
-- do not expose codes or create production test businesses.
+Start by completing PR #176:
+- poll Work Management Build Checks 41715633932 and Backend CI 41715633934 (or latest runs on current PR head 794e3cf90ec1a2eeaecc7e44d205ec245b3dd036); workspace passed, Backend CI was still running at handover time;
+- merge only after both workflows pass on unchanged head;
+- verify all three Render services deploy the resulting main commit;
+- test real desktop browsers with and without beforeinstallprompt, right-edge placement, manual help, dismissal and standalone detection.
+
+Then perform controlled staging referral acceptance:
+- test owner-only page, non-owner 403, anonymous 401, copy/share, link capture through login/onboarding, attribution/count, self-referral rejection and cross-business isolation;
+- use staging identities only, never create production referral test businesses or expose real codes.
 
 Then proceed through the complete remaining feature roadmap in this handover and FEATURE_AUDIT.md, closing the highest-priority correctness/security/financial/mobile gaps. Preserve the clear separation between team invitations and business referrals; no referral bonuses, payouts or paid feature unlocks are active. Do not treat untested pages as complete.
 
@@ -173,4 +170,11 @@ End of prompt.
 
 ### Direct static route correction (2026-11-03)
 
-The static-site build uses an explicit SPA entry list; adding a Wouter route alone is not sufficient for a reliable direct URL or page refresh. Commit 4a9172820054f63342907cce2dd394d6d29cb082 adds referrals to artifacts/kaira-africa/scripts/generate-spa-routes.mjs. Verify the next frontend build log reports one additional SPA route entry and test /referrals refresh after deployment. This commit supersedes all earlier PR #174 CI runs.
+The static-site build uses an explicit SPA entry list; adding a Wouter route alone is not sufficient. PR #174 adds /referrals to artifacts/kaira-africa/scripts/generate-spa-routes.mjs. Both frontend and admin production build logs verified 35 SPA route entry files. Direct URL/browser refresh remains part of authenticated visual QA.
+
+
+## Release reconciliation — business referrals deployed and current next action (2026-11-03)
+
+PR #174 merged as 73f5ba1d3af5e4fcb31b53574465dc2bec9a4586. Final PR head 1ef0cdab662517d39fd6e8a3a8806a7a45c4cfe2; Work Management Build Checks 41714635692 and Backend CI 41714635727 passed, including Docker. All three Render services are live on 73f5ba1. API logged “Migrations applied successfully.” Supabase Drizzle ledger count 26/max 26; businesses count 2, referral codes present 2, distinct 2, missing 0; indexes/FK verified; RLS true and anon/authenticated direct SELECT/INSERT privileges false; referred-business count 0. No actual code values were selected or printed. Frontend and admin log 35 static SPA entries including /referrals.
+
+Current active PR #176: https://github.com/RoyalFinTech/Kaira-Africa/pull/176 — desktop PWA install guidance when beforeinstallprompt is unavailable. Branch fix/desktop-pwa-install-guidance-current, head 794e3cf90ec1a2eeaecc7e44d205ec245b3dd036. Workspace run 41715633932 passed; Backend CI run 41715633934 was in progress at handover update. Recheck live exact-head status before merge and physical desktop/browser behavior after deploy.

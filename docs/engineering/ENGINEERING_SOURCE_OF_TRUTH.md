@@ -296,7 +296,7 @@ Historical baseline: application-code commit 74c39e0a6db676a00511efe0460d395ffad
 - PR #172 merged as c71a2fdbe6129ee895212bf98539098b7c7dfc1f: official Kaira logo on the public team invitation page, correction to invitee phone/PIN continuation, expiry/resend roster consistency and migration 0024 removing the joined_at default. Workspace/Backend CI passed; frontend/API/admin Render services were verified Live on this commit. Supabase confirmed migration 0024 and team_members.joined_at nullable/no default.
 - PR #173 merged as 07c7f63a3b9e1df1c01d38da2487d6a07b784aaa: responsive mobile header, dashboard welcome and quick actions, calculator metric cards and discount/tax layout. Workspace and Backend CI including production Docker build passed. All three Render services were verified Live on this SHA. Physical device screenshots at 320/360/390/430px, tablet and desktop remain NOT VERIFIED.
 - Read-only Supabase checkpoint before referral work: Drizzle migration ledger count 25, max ID 25 (through 0024); public.businesses count 2; RLS enabled; anon and authenticated have no direct SELECT or INSERT privileges on public.businesses.
-- PR #174 is an IN-PROGRESS, OPEN referral implementation and is NOT MERGED/DEPLOYED. Branch feat/business-referral-links. Current head after OpenAPI and static SPA route corrections: 4a9172820054f63342907cce2dd394d6d29cb082. CI runs 41712804649 and 41712804625 were from an earlier head and are superseded; re-check the latest Work Management Build Checks and Backend CI runs for the exact current PR head.
+- PR #174 merged/deployed as 73f5ba1d3af5e4fcb31b53574465dc2bec9a4586. Final PR head 1ef0cdab662517d39fd6e8a3a8806a7a45c4cfe2; Work Management Build Checks 41714635692 and Backend CI 41714635727 passed. The release adds stable business referral codes, owner-only /referrals page, onboarding attribution, static route entry and migration 0025. This is B2B referral only, not a team invite.
 - Referral scope is business-to-business only. It gives a business owner a permanent KAI- code and a branded Refer a Business page, captures ?ref= through onboarding, and records the referring business on a newly created business. It never creates a team member, grants access to another business, or exposes customer/financial records.
 - PR #174 migration 0025 is not yet applied in production. Expected after successful deployment: Drizzle migration ledger count 26/max ID 26, referral codes backfilled for the two existing businesses, unique-code index and referred-by foreign key/index verified. Do not print actual production codes or create production test businesses.
 - No referral reward balances, payouts, commissions or paid-feature unlocks are active. Treat all rewards as future product policy.
@@ -304,3 +304,14 @@ Historical baseline: application-code commit 74c39e0a6db676a00511efe0460d395ffad
 
 
 - PR #174 static deep-link audit: added /referrals to artifacts/kaira-africa/scripts/generate-spa-routes.mjs because Render uses an explicit static SPA entry list. Direct load and browser refresh require the generated /referrals/index.html. Commit 4a9172820054f63342907cce2dd394d6d29cb082; previous referral CI runs are superseded.
+
+
+## Production verification — referral release and next active PR (2026-11-03)
+
+- Current main: 73f5ba1d3af5e4fcb31b53574465dc2bec9a4586.
+- PR #174 merged and deployed. API/frontend/admin services are live on the exact SHA. API startup logged successful migrations. Supabase ledger count 26/max 26.
+- Migration 0025 is verified: two businesses, two non-null distinct codes, zero missing; unique referral-code index, referred-by index and self-FK exist. Businesses RLS is enabled; anon/authenticated direct SELECT/INSERT privileges remain false. Attributed-business count is zero. No real referral code was output.
+- Frontend and admin static sites each generated 35 SPA entry routes, including /referrals.
+- Active PR #176: https://github.com/RoyalFinTech/Kaira-Africa/pull/176. Branch fix/desktop-pwa-install-guidance-current; head 794e3cf90ec1a2eeaecc7e44d205ec245b3dd036. Workspace Build Checks 41715633932 passed; Backend CI 41715633934 was still in progress at this record. This displays the right-edge desktop install help even without beforeinstallprompt; no false claim of native install.
+- Remaining: finish/merge PR #176 only after exact-head CI passes, verify Render deploy, and physically test desktop/mobile install behavior. Controlled staging referral E2E still required.
+- Main branch protection was previously observed as false through the branch API; app permissions could not read admin branch-protection settings. Recheck. Recommend requiring PR review, both CI workflows and blocking force pushes; do not claim protection is enabled until verified.
