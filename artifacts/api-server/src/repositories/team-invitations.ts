@@ -256,16 +256,36 @@ export async function rotateTeamInvitation(
 }
 
 export async function revokeTeamInvitation(businessId: string, invitationId: string): Promise<boolean> {
-  const updated = await db.update(teamInvitations).set({
-    status: "revoked",
-    revokedAt: new Date(),
-    updatedAt: new Date(),
-  }).where(and(
-    eq(teamInvitations.businessId, businessId),
-    eq(teamInvitations.id, invitationId),
-    or(eq(teamInvitations.status, "pending"), eq(teamInvitations.status, "expired")),
-  )).returning({ id: teamInvitations.id });
-  return updated.length === 1;
+  return db.transaction(async (tx) => {
+    const now = new Date();
+    const [updated] = await tx.update(teamInvitations).set({
+      status: "revoked",
+      revokedAt: now,
+      updatedAt: now,
+    }).where(and(
+      eq(teamInvitations.businessId, businessId),
+      eq(teamInvitations.id, invitationId),
+      or(eq(teamInvitations.status, "pending"), eq(teamInvitations.status, "expired")),
+    )).returning({
+      id: teamInvitations.id,
+      teamMemberId: teamInvitations.teamMemberId,
+    });
+
+    if (!updated) return false;
+
+    // A revoked invitation is not an active pending roster entry. Keep the
+    // invitation record for history, but remove the member from pending state.
+    await tx.update(teamMembers).set({
+      status: "inactive",
+      joinedAt: null,
+    }).where(and(
+      eq(teamMembers.id, updated.teamMemberId),
+      eq(teamMembers.businessId, businessId),
+      eq(teamMembers.status, "pending"),
+    ));
+
+    return true;
+  });
 }
 
 export async function acceptTeamInvitation(tokenHash: string, userId: string): Promise<{
