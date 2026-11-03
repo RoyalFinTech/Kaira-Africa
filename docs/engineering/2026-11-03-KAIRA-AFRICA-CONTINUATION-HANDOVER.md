@@ -9,7 +9,7 @@ This is the current continuation record for the next engineering chat. Read this
 
 ## A. Current baseline and connected resources
 
-- GitHub main at this release handover: 3c0a73fea6ce4372773b45e73f8746e31859e478.
+- Latest GitHub main at this handover: 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b (docs-only reconciliation commit). Last application-code release: 3c0a73fea6ce4372773b45e73f8746e31859e478.
 - PR #172 merged as c71a2fdbe6129ee895212bf98539098b7c7dfc1f: Kaira logo on public team invitation page, invitee phone/PIN continuation correction, expiry/resend roster consistency and migration 0024 removing the joined_at default.
 - PR #173 merged as 07c7f63a3b9e1df1c01d38da2487d6a07b784aaa: responsive mobile header, dashboard welcome/quick actions and calculator metric/discount/tax layouts.
 - Both PRs passed workspace and Backend CI, including frontend build, API tests, fresh migration checks, health smoke and production Docker build.
@@ -152,7 +152,7 @@ Render workspace: tea-d9usq87lk1mc73eia2f0.
 Supabase project ref: gofoibbvxnhqzqwrpcbx.
 Main baseline at the time of handover: 73f5ba1d3af5e4fcb31b53574465dc2bec9a4586. PR #174 business-to-business referrals is merged and deployed; migration 0025 is applied and the owner-only referral page is live. Authenticated staging E2E is still required.
 
-Start by verifying all three Render services are Live on current main 3c0a73fea6ce4372773b45e73f8746e31859e478. At handover update they were all Live; exact deploy IDs are recorded above.
+All three Render services are already verified Live on latest main 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b (docs-only commit); last application-code release is 3c0a73fea6ce4372773b45e73f8746e31859e478. Recheck exact Render SHAs before new deploy work.
 
 Then complete physical PWA browser/device acceptance:
 - Chromium/Edge with beforeinstallprompt: verify actual native install action.
@@ -201,3 +201,15 @@ Current active PR #176: https://github.com/RoyalFinTech/Kaira-Africa/pull/176 â€
 - Desktop PWA PR #176 merged on 3c0a73f; Workspace 41715633932 and Backend CI 41715633934 passed including Docker. All three Render services verified Live on 3c0a73f with deploy IDs: API dep-dbl4iqivcj2c7383dhu0, frontend dep-dbl4iqivcj2c7383dib0, admin dep-dbl4iqivcj2c7383di70.
 - PR #177 was an older docs-only PR based on 73f5ba1 and is now stale/unmergeable. This fresh docs branch and PR replaces it; do not merge PR #177.
 - Next: merge the fresh docs PR after workspace CI passes; physically test desktop/native PWA behavior and controlled staging referral E2E. Authenticated module E2E across CRM, finances, savings/inventory, Work Management and full roadmap remain.
+
+
+## Latest repository checkpoint â€” 2026-11-03 20:58 UTC
+
+- Latest GitHub main: 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b (documentation-only reconciliation).
+- Last application-code release: 3c0a73fea6ce4372773b45e73f8746e31859e478 (PR #176 desktop PWA guidance).
+- All three Render services verified Live on 61eb8e5:
+  - API dep-dbl4l0p42hec73c7qveg
+  - Frontend dep-dbl4l1142hec73c7qvr0
+  - Admin dep-dbl4l0p42hec73c7qvn0
+- Supabase migration ledger remains count 26/max 26; migration 0025 stays applied; two existing business referral codes are distinct/non-null, attributed-business count remains zero, RLS/privilege checks passed. No production referral test data was created.
+- No open application-code PRs from this round. Remaining priority is physical PWA tests, controlled staging B2B referral E2E, then the outstanding feature roadmap. PR #178 updated the full continuation prompt and audit; this final SHA note reconciles the latest docs-only commit.
