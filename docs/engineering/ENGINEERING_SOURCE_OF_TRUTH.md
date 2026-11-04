@@ -359,3 +359,17 @@ Historical baseline: application-code commit 74c39e0a6db676a00511efe0460d395ffad
 - Latest visual mobile patch PR #173 is deployed: one mobile header control, wrapping dashboard welcome and quick actions, responsive calculator metrics and long-value handling. No physical screenshot evidence exists for 320/360/390/430px, tablet or desktop.
 - The owner referral page should be described as implemented/deployed, not “to be created.” The next work is to validate its complete signup attribution safely, not duplicate its UI.
 
+
+
+## Post-merge release verification — PR #180 (2026-11-04 11:04 UTC)
+
+- PR #180 merged as `0835684f2158cb0624ccd43c8063dd9ec42646fe`.
+- Exact-head Work Management Build Checks run `41817865954` passed; exact-head Backend CI run `41817865764` passed, including API/frontend typechecks, API tests, fresh migration validation, health smoke and production Docker image build.
+- The code change adds a `FOR UPDATE` row lock to the current user's `users` record inside `createBusinessForUser`, serializing business workspace creation so concurrent onboarding requests cannot both observe a NULL business association.
+- No database schema migration was added. Render API, frontend and admin static services all verified Live on `0835684`:
+  - API `dep-dblh1iflk1mc73euq6hg`
+  - Frontend `dep-dblh1iflk1mc73euq6u0`
+  - Admin `dep-dblh1iflk1mc73euq6q0`
+- API deployment log: “Migrations applied successfully.” New instance started and `/ready` returned HTTP 200. Supabase data was not modified by this code-only release.
+- Current main at this checkpoint: `0835684f2158cb0624ccd43c8063dd9ec42646fe`. The referral feature remains implemented/deployed via PR #174. Its authenticated two-business E2E remains outstanding and requires isolated staging.
+
