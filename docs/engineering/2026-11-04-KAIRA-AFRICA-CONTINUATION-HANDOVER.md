@@ -425,3 +425,54 @@ This checkpoint supersedes the earlier main/deployment SHA values above. Histori
 4. Complete PWA installation/service-worker and viewport acceptance on real devices/browsers.
 5. Continue the full feature roadmap in FEATURE_AUDIT.md and this handover. Preserve all outstanding core finance, CRM, inventory, savings/investment, Work Management, notifications, billing, AI, legal/support and remote-work scope.
 6. Keep PR-first engineering, fresh migration validation, exact-head CI, exact Render SHA and migration checks for every runtime release. Never mutate production test data or PINs.
+
+
+---
+
+## Current continuation checkpoint — 2026-11-04 after PR #185
+
+### Repository and change record
+- GitHub `main`: `276e9b371bdb9641b47932bc808f77e96c03b8b4`.
+- PR #185: https://github.com/RoyalFinTech/Kaira-Africa/pull/185 — merged by squash as `276e9b371bdb9641b47932bc808f77e96c03b8b4`; final PR head `d95560eb0a1259398fd203e5ac4e7e7bc73e5709`.
+- PR #185 is test/CI and workflow-only. It adds 39 lines to the existing disposable PostgreSQL onboarding acceptance test and one anonymous-read route to the live access-control smoke workflow. No application runtime source, OpenAPI contract, generated API client, schema or migration changed.
+- The last application-code release remains PR #180, `0835684f2158cb0624ccd43c8063dd9ec42646fe`. PRs #183, #184 and #185 after that release are respectively test/CI-only, documentation-only, and test/smoke-only.
+- No other open PR was present after the PR #185 merge at the time checked.
+
+### Exact-head CI evidence
+- Backend CI run `41835886367`: SUCCESS on PR #185 head `d95560eb0a1259398fd203e5ac4e7e7bc73e5709`.
+  - Shared DB/API-Zod libraries, API and frontend typechecks passed.
+  - Frontend SPA and API builds passed.
+  - All migrations applied to the disposable PostgreSQL CI database.
+  - API suite: 71 passed, 0 failed, 0 skipped. The referral attribution test containing the self-referral and existing-business second-workspace assertions executed successfully.
+  - Built API `/health` check passed.
+  - Production Docker image build (verification only; no image push) passed.
+- Work Management Build Checks run `41835886321`: SUCCESS on the same PR head; workspace typecheck/build and API test steps passed.
+- These checks are PR/CI evidence. They are not authenticated browser E2E, OTP/SMS/SMTP delivery or physical device evidence.
+
+### PR #185 behavior and security test additions
+- The disposable PostgreSQL referral acceptance test now also verifies that:
+  1. A user already associated with a business cannot create a second workspace using another business's valid referral code.
+  2. A business owner cannot use their own referral code; the test temporarily clears and restores the owner's association only inside the disposable CI database, using `finally` for restoration.
+  3. Rejected attempts do not increment the referring business's attribution count.
+- `.github/workflows/live-api-access-smoke.yml` now includes `GET /api/businesses/me/referral` in the anonymous business-data probes, expecting HTTP 401. The workflow is configured for main pushes affecting protected API routes/workflow, on a six-hour schedule, and manual dispatch.
+- The push-triggered live workflow result and an observed HTTP 401 for this new route were NOT independently retrieved in this continuation. A post-deployment Render log query found no matching referral request, so do not record the live anonymous probe as passed yet. The route implementation is owner-only in code (`requireUser`, then `requireRole("owner")`); manager/staff 403 and owner 200 still require controlled authenticated acceptance.
+
+### Production deployment and database state
+- All three Render services are verified `live` on exact main SHA `276e9b371bdb9641b47932bc808f77e96c03b8b4`:
+  - API `srv-da6fnem7bikc738ekde0`: deploy `dep-dblivk5ckfvc73fkd9h0`.
+  - Frontend `srv-db257gjbc2fs73f9nsj0`: deploy `dep-dblivk5ckfvc73fkd9pg`.
+  - Admin static `srv-dbg86rmk1f9s73bkkev0`: deploy `dep-dblivk5ckfvc73fkd9ug`.
+- The API's new instance logged Redis connected and `/ready` HTTP 200 (approximately 119–122 ms in the sampled entries). The post-deploy HTTP request-log query returned no 500/502/503 entries. A separate older app-level log still contains a 503 on `POST /api/ai/assistant` dated 2026-10-28; this is historical and not evidence of a current post-deploy outage.
+- Production Drizzle migration ledger remains 26 rows / max ID 26. PR #185 adds no migration. No production business, user, referral, invitation, financial, inventory, customer or Storage test records were created or modified.
+- Last read-only production business summary remains 2 businesses, 2 distinct referral codes present and zero attributed businesses. Actual referral code values were not selected or printed.
+- Supabase branch listing still returns no staging branches. Staging branch provisioning was attempted only far enough to discover Supabase's cost-confirmation gate; the attempt was rejected before creation. No staging resource exists. Do not call `confirm_cost` or retry branch creation until the user has received the estimate and explicitly approved the charge.
+- RLS check: all 33 public tables have RLS enabled. The checked table-grant query found no direct SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER grants to `anon`, `authenticated` or `PUBLIC`. The 33 informational advisor findings for RLS-enabled tables without policies are not a reason to add broad grants or policies; the app uses the trusted API and direct PostgreSQL/Drizzle connection. Review table-specific behavior before security changes.
+
+### Acceptance status and next engineering work
+- Referral DB/repository acceptance now covers onboarding concurrency, independent referred workspace, no referral-created team membership, unknown-code rollback, self-referral rejection and already-associated-user second-workspace rejection.
+- Still NOT VERIFIED in isolated authenticated staging: owner page/copy/WhatsApp/direct refresh, owner 200, anonymous 401 live workflow result, manager/staff 403, referral retention through signup/login/onboarding, real attribution count increment across two controlled businesses, fallback UX, and cross-tenant access denial across customers/transactions/staff/ledger/inventory/savings/investments.
+- Team invitations remain implemented in PRs #171/#172, but the current DB acceptance suite does not yet exercise invitation repository lifecycle. Next code-level test target: wrong invited phone does not consume a token; the intended phone can accept exactly once; expired and revoked invitations cannot be accepted; resend rotates token hashes; accounts already attached to another business are rejected. Keep SMS/SMTP delivery as a separate staging test with consenting recipients.
+- PWA/mobile: PRs #173/#176 remain implemented/deployed. Android Chrome install, iOS Safari Add to Home Screen, desktop native/no-native event, right-edge placement, standalone/dismissal, service worker update and auth redirects, plus 320/360/390/430 px/tablet/desktop interaction screenshots remain NOT VERIFIED on physical devices.
+- Continue the complete roadmap preserved above and in `FEATURE_AUDIT.md`. This checkpoint closes no CRM, finance, inventory, investment, savings, Work Management, notifications, proposals, Freelancer Copilot, automation, AI, billing, legal or support feature.
+- Keep CI, Render deployment, migration state, authenticated E2E and physical-device evidence as independent statuses. Preserve production data; no production synthetic test users or records.
+
