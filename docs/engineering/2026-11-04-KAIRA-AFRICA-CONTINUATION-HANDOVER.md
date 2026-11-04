@@ -577,3 +577,50 @@ This checkpoint supersedes the earlier main/deployment SHA values above. Histori
 - Supabase staging branch remains uncreated. Verified cost estimate: **US$0.01344/hour** for one development branch in the Kaira Africa organization. No explicit approval has been given; do not call cost confirmation or create the branch until the user expressly approves this hourly charge. The branch would have a separate DB and does not copy production data.
 - PWA install/service-worker/device checks and full responsive viewport checks remain outstanding; all CRM, accounting, inventory, investments/savings, Work Management, push, proposals, Freelancer Copilot, automation, AI, billing, legal and support roadmap items remain preserved and open.
 
+
+
+---
+
+## Current continuation checkpoint — 2026-11-04 after PR #192
+
+### Current repository and CI
+- Current GitHub `main` before this documentation reconciliation: `ddd3d0b404a378701c49410d978a89e6b26016ed`.
+- PR #192: https://github.com/RoyalFinTech/Kaira-Africa/pull/192; merged by squash as `ddd3d0b404a378701c49410d978a89e6b26016ed`. Corrected PR head: `344311df1208e20c782fa6e6ed376fd580960887`.
+- PR #192 adds only `artifacts/api-server/test/auth-otp-pin-route-db.test.ts` (270 lines). No runtime source, API/OpenAPI/generated artifact, schema, migration, environment variable or production configuration changed.
+- Backend CI run `41842988171`: SUCCESS on corrected exact head. Work Management Build Checks run `41842988148`: SUCCESS.
+- Backend CI passed shared/API/frontend typechecks, frontend/API builds, fresh disposable PostgreSQL migrations, API health smoke and production Docker image build. API suite: **78 passed, 0 failed, 0 skipped**. The new OTP/PIN HTTP subtest executed successfully (not skipped).
+- The first PR #192 run failed only because the test expected `code` at the response root; the API's actual error contract is `error.code`. The test assertion was corrected and the rerun on the new exact head passed. No application behavior change or production defect was required.
+
+### PR #192 — OTP verification and PIN login acceptance
+- The new DB integration test is opt-in via `KAIRA_DB_INTEGRATION_TESTS=true` and runs after all migrations against Backend CI's disposable PostgreSQL and Redis services.
+- It inserts one already-HMAC-hashed OTP with a short expiry for a generated CI-only Gambian phone number. It does not call `request-otp` and does not send or expose an SMS.
+- It uses the actual Express auth router and verifies:
+  1. `POST /auth/verify-otp` consumes the hashed OTP, creates a new owner user and returns a persistent user session.
+  2. The returned session authorizes `GET /auth/me`.
+  3. First-time `POST /auth/set-pin` succeeds; the stored PIN is a non-plaintext Argon2id hash.
+  4. Changing an existing PIN without `currentPin` is rejected; using the correct current PIN allows the PIN to be changed.
+  5. A user with PIN enabled cannot request OTP fallback (`409 pin_login_required`); no additional OTP row is created and no SMS provider is invoked.
+  6. Incorrect PIN login is rejected; the new valid PIN returns a new session, and the new session can access `GET /auth/me`.
+- The test closes its loopback HTTP server and Redis client and deletes only its own OTP records, auth audit entries and test user(s) in the disposable CI database.
+- This proves route-level OTP verification and PIN behavior, but not actual OTP request/delivery, external carrier delivery, SMTP or real-user browser onboarding.
+
+### Production deployment and Supabase state
+- All three Render services are verified `live` on exact main SHA `ddd3d0b404a378701c49410d978a89e6b26016ed`:
+  - API `srv-da6fnem7bikc738ekde0`, deploy `dep-dbljl8avcj2c738rjh1g`.
+  - Frontend `srv-db257gjbc2fs73f9nsj0`, deploy `dep-dbljl8avcj2c738rjha0`.
+  - Admin static `srv-dbg86rmk1f9s73bkkev0`, deploy `dep-dbljl8avcj2c738rjhgg`.
+- The new API instance logged “Migrations applied successfully”, “Redis connected”, server listening on port 10000 and `/ready` HTTP 200. Render logged “Your service is live”.
+- Production Drizzle migration ledger remains 26 rows / max ID 26. PR #192 contains no migration.
+- Read-only production aggregate remains 2 businesses, 2 distinct referral codes present and 0 attributed businesses. Actual codes have not been selected or printed.
+- No production users, businesses, OTPs, PINs, sessions, referrals, invitations, financial, inventory, customer or Storage records were created or modified for the CI work.
+
+### Current acceptance status and next gates
+- Referral CI acceptance: live anonymous 401 verified (run 41836364878); route/session CI verifies invalid session and unassigned owner 401, manager/staff 403 and owner 200 with the correct per-business summary (PR #189).
+- Team invitation CI acceptance: database lifecycle (PR #187), HTTP preview masking/phone match/acceptance/duplicate rejection/manager-staff creation denial (PR #190).
+- OTP/PIN CI acceptance: hashed OTP verification, new user/session, Argon2id PIN setup/change and PIN login (PR #192).
+- Still NOT VERIFIED: actual SMS carrier delivery, real new-user OTP request/provider delivery, returning user browser/PIN UX, invitation email/SMTP delivery, provider retry/outbox, full browser signup/invitation journeys and physical device acceptance.
+- Referral browser copy/WhatsApp/direct refresh/retention through signup and controlled two-business conversion/count/complete tenant isolation remain staging acceptance tasks.
+- PWA install/service-worker/auth redirect and 320/360/390/430 px/tablet/desktop physical testing remain open.
+- The Supabase staging branch is still uncreated. Cost estimate remains US$0.01344/hour. No cost confirmation or branch creation until the user explicitly approves that hourly charge.
+- Keep all CRM, accounting/ledger/debts, inventory, investment/savings, receipt/profile, Work Management, notifications/push, proposals/quotations, Freelancer Copilot, automation, AI/privacy, billing/entitlements, legal and support roadmap requirements open unless independently tested and delivered.
+

@@ -462,3 +462,18 @@ These tests provide database/repository-level regression evidence for onboarding
 - Production Drizzle ledger is 26/max ID 26; no migration in either PR. The read-only production aggregate remains 2 businesses, 2 distinct referral codes, 0 attributed referrals. No production test records were created or changed.
 - Supabase isolated staging branch cost estimate is US$0.01344/hour; no creation or cost confirmation until explicit user approval. Real OTP/PIN, SMS/SMTP delivery, full browser referral/signup acceptance and physical PWA/device acceptance remain NOT VERIFIED. Preserve all other roadmap items and keep test CI evidence separate from staging acceptance.
 
+
+
+---
+
+## Release and QA addendum — 2026-11-04 (PR #192 OTP/PIN route acceptance)
+
+- Current main before this documentation update: `ddd3d0b404a378701c49410d978a89e6b26016ed`. PR #192 merged as that squash SHA (corrected PR head `344311df1208e20c782fa6e6ed376fd580960887`).
+- PR #192 adds only `artifacts/api-server/test/auth-otp-pin-route-db.test.ts`; no runtime source, OpenAPI/generated contract, database schema or migration changed.
+- Backend CI `41842988171` SUCCESS and Work Management Build Checks `41842988148` SUCCESS on corrected PR head. Backend passed all workspace/API/frontend typechecks/builds, fresh disposable migrations, 78 API tests (78 pass, 0 fail, 0 skip), API health smoke and production Docker image build.
+- New test verified HTTP OTP verification using a pre-seeded HMAC-hashed OTP in disposable PostgreSQL; successful verification creates a user/session; first-time PIN creation stores an Argon2id hash; existing PIN change requires current PIN; a PIN-enabled user receives HTTP 409 `pin_login_required` from OTP request without inserting another OTP; bad PIN login fails and correct PIN login creates a session accepted by `/auth/me`.
+- The test does not call the SMS provider. It validates verification and PIN routes, not actual OTP sending/carrier delivery.
+- All three Render services are Live on exact SHA `ddd3d0b404a378701c49410d978a89e6b26016ed`: API `dep-dbljl8avcj2c738rjh1g`, frontend `dep-dbljl8avcj2c738rjha0`, admin `dep-dbljl8avcj2c738rjhgg`. API startup logged successful migrations, Redis connected and readiness HTTP 200.
+- Supabase Drizzle production ledger remains 26/max ID 26; no migration. Business aggregate remains 2 businesses, 2 distinct referral codes, 0 attributed businesses. No production test user, OTP, session or PIN change was performed.
+- Real new-user OTP sending and SMS delivery, returning-user PIN browser flow, SMTP invitation delivery, referral browser/signup flow, physical PWA/device acceptance and full remaining roadmap still require their own acceptance evidence. Staging branch estimate is US$0.01344/hour; not provisioned pending explicit user cost approval.
+
