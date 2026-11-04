@@ -385,3 +385,32 @@ Historical baseline: application-code commit 74c39e0a6db676a00511efe0460d395ffad
 - Performance advisor snapshot: 26 INFO unindexed-FK findings and 30 unused-index findings. Review query workload and FK operations before adding/removing indexes; no bulk index changes.
 - PR #163 was closed as superseded. Current main's live smoke script already navigates to Transactions in the SPA session instead of full-page navigation that would relock the visual PIN session.
 - Full remaining roadmap and acceptance requirements remain in the phase register and FEATURE_AUDIT.md. Keep CI/deployment/authenticated E2E/physical device acceptance distinct.
+
+---
+
+## Release and QA addendum — 2026-11-04 (PR #183)
+
+### Superseding release checkpoint
+- Main before this documentation-only reconciliation: 6062488e696535cff1f30fa4a0f19b3fae111b62.
+- PR #183 merged as 6062488e696535cff1f30fa4a0f19b3fae111b62; test/CI-only. The last application-runtime release is PR #180, 0835684f2158cb0624ccd43c8063dd9ec42646fe.
+- Required CI: Backend CI 41828303516 SUCCESS; Work Management Build Checks 41828303519 SUCCESS.
+- Backend CI ran 71 API tests: 71 passed, 0 failed, 0 skipped. The database-backed cases ran against the fresh disposable PostgreSQL database after migrations; they were not skipped.
+- The same Backend CI run passed shared/API/frontend typechecks, builds, fresh migration validation, /health smoke and production Docker image build.
+- Render API dep-dbli6vivcj2c738pbkbg, frontend dep-dbli6vivcj2c738pbkp0 and admin dep-dbli6vivcj2c738pbkl0 are each verified Live on 6062488e696535cff1f30fa4a0f19b3fae111b62.
+- Supabase production Drizzle ledger remains 26/max ID 26. No production migration or production record was changed for PR #183.
+
+### New database acceptance tests
+PR #183 added opt-in PostgreSQL tests for:
+1. Eight concurrent createBusinessForUser calls for one user produce one business and seven existing-business conflicts, with the user's business association matching that sole business.
+2. Referral creation creates an independently owned business with its own unique referral code, links the referring business through referred_by_business_id, increments the attribution count, and does not create team membership for the referred user.
+3. An unknown referral code is rejected and leaves no new business or user/business association after transaction rollback.
+
+These tests provide database/repository-level regression evidence for onboarding serialization and referral independence. They do not prove authenticated UI flow, full tenant isolation across business data APIs or device behavior.
+
+### Current acceptance status and guardrails
+- Referral feature: IMPLEMENTED IN CODE + CI DATABASE ACCEPTANCE PASSED + DEPLOYED; AUTHENTICATED UI/ROLE/LOGIN-RETENTION/HTTP TENANT-ISOLATION E2E NOT VERIFIED.
+- Team invitations: IMPLEMENTED IN CODE; controlled authenticated OTP/PIN, invited-phone, expiry/revoke/resend/one-time/cross-business and real SMS/SMTP delivery acceptance NOT VERIFIED.
+- PWA/mobile: implemented changes deployed; physical Android/iOS/desktop install, service-worker and 320/360/390/430 px/tablet/desktop acceptance NOT VERIFIED.
+- The connected Supabase project has no development branches. No isolated staging project or staging identities were available for this pass. All user, business, referral, invitation, financial and Storage write tests must remain off production.
+- Production referral checkpoint remains 2 businesses, 2 distinct referral codes, 0 attributed businesses. Do not reveal code values and do not create production test referrals.
+- Keep CI passed, Render Live, migrations verified, authenticated E2E passed and physical device tested as separate statuses. All other roadmap features and acceptance gaps remain in the feature audit; this addendum does not close or remove them.
