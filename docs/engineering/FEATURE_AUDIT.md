@@ -284,3 +284,17 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - **Still NOT VERIFIED:** real new-user OTP, returning-user PIN, SMS/SMTP provider delivery/outbox, full browser invite journey, physical device invitation page, referral browser copy/WhatsApp/direct refresh/signup retention/two-business conversion/count and full domain-wide tenant isolation. PWA install/service worker and responsive physical viewports remain outstanding.
 - Supabase development branch cost has been quoted at US$0.01344/hour. No branch provisioned; wait for explicit approval before cost confirmation/creation. All remaining roadmap rows stay open.
 
+
+
+---
+
+## Acceptance update — 2026-11-04 (PR #192: OTP verification and PIN route tests)
+
+- PR #192 merged as `ddd3d0b404a378701c49410d978a89e6b26016ed`; test-only, no runtime or migration.
+- Backend CI `41842988171` and Work Management Build Checks `41842988148` succeeded. API suite: 78 passed, 0 failed, 0 skipped; fresh disposable migrations, workspace typechecks/builds, health smoke and production Docker image build passed.
+- OTP/PIN test used a pre-seeded hashed OTP in disposable PostgreSQL; actual HTTP verify-OTP created a new user/session, set PIN with Argon2id storage, enforced current PIN on change, rejected OTP fallback for PIN-enabled account with 409, rejected incorrect PIN and successfully logged in with the correct updated PIN.
+- **Auth status:** OTP verification/session and PIN setup/change/login are route-level CI tested. **NOT VERIFIED:** actual OTP request SMS send, real Africa's Talking/Twilio delivery and carrier receipt, real returning-user browser UX, real PIN/OTP recovery with a consenting external test number.
+- All three Render services live on `ddd3d0b404a378701c49410d978a89e6b26016ed`: API `dep-dbljl8avcj2c738rjh1g`, frontend `dep-dbljl8avcj2c738rjha0`, admin `dep-dbljl8avcj2c738rjhgg`; API logs show successful migrations, Redis connected, `/ready` HTTP 200.
+- Supabase ledger remains 26/max 26; no production data was changed. No staging branch provisioned; estimate US$0.01344/hour awaits explicit approval.
+- Referral, invitation, PWA/mobile, all core business and full roadmap acceptance remain separately tracked and open where not verified. Do not remove roadmap scope.
+
