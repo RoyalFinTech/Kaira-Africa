@@ -269,3 +269,18 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - Referral live anonymous 401 evidence remains unverified; owner UI/manager-staff 403/owner 200/signup retention/two-business conversion-count and tenant-isolation still require controlled staging. No staging branch is provisioned because Supabase's branch-creation cost gate requires an estimate and explicit approval.
 - PWA/mobile physical install, service-worker and viewport QA remain outstanding. All other roadmap rows remain open and are preserved.
 
+
+
+---
+
+## Acceptance update — 2026-11-04 (PRs #189 and #190)
+
+- **Referral live anonymous check VERIFIED:** workflow run `41836364878` (job `126596191694`) completed success on main `276e9b371bdb9641b47932bc808f77e96c03b8b4`; API health HTTP 200 and the referral endpoint explicitly returned HTTP 401 without authentication. Six other protected business-data endpoints also returned 401. This supersedes the earlier provisional “not verified” note.
+- **Referral authenticated route RBAC CI VERIFIED:** PR #189 merged `bc61a4022c3627db592f52c0b53921ce6c6aaf8a`; backend CI `41840262142` + Work Management `41840262711`; 76 API tests, 0 failures/skips. Actual referral Express route tested: anonymous/invalid session 401, manager/staff 403, unassigned owner 401, owner 200 with correct per-business summary.
+- **Team invitation HTTP route CI VERIFIED:** PR #190 merged `55399e3af49370305be9b0812643f25c19b55eb6`; backend CI `41841318239` + Work Management `41841318308`; 77 API tests, 0 failures/skips. Actual invitation router tested: public masked preview; invalid preview; anonymous acceptance 401; wrong-phone session 403 without consuming invite; invited-phone acceptance 200; duplicate accept 409; manager/staff create invitation 403.
+- Existing PR #187 DB lifecycle coverage remains: expiry/revoke, resend token rotation, old-link invalidation, cross-business rejection, wrong-phone non-consumption and one-time acceptance. The PR #190 HTTP test used existing DB/session fixtures; it did not use an external OTP/SMS/SMTP provider.
+- All three Render services verified live on `55399e3af49370305be9b0812643f25c19b55eb6`: API `dep-dbljg85ckfvc73fl7n4g`, frontend `dep-dbljg85ckfvc73fl7nd0`, admin `dep-dbljg85ckfvc73fl7ni0`.
+- Production migrations remain 26/max ID 26. Production business/referral aggregate remains 2 businesses, 2 distinct codes, 0 attributed businesses. No production test data.
+- **Still NOT VERIFIED:** real new-user OTP, returning-user PIN, SMS/SMTP provider delivery/outbox, full browser invite journey, physical device invitation page, referral browser copy/WhatsApp/direct refresh/signup retention/two-business conversion/count and full domain-wide tenant isolation. PWA install/service worker and responsive physical viewports remain outstanding.
+- Supabase development branch cost has been quoted at US$0.01344/hour. No branch provisioned; wait for explicit approval before cost confirmation/creation. All remaining roadmap rows stay open.
+

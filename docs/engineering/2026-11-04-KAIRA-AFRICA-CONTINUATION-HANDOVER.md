@@ -523,3 +523,57 @@ This checkpoint supersedes the earlier main/deployment SHA values above. Histori
 - All other product areas and roadmap requirements remain open as recorded earlier in this handover and `FEATURE_AUDIT.md`; PR #187 does not close CRM, financial, inventory, savings/investment, Work Management, notification/push, proposal, freelancer, automation, AI, billing, legal or support scope.
 - Maintain separate statuses for implementation, CI, deployment, production migrations, authenticated E2E, real delivery and physical-device acceptance.
 
+
+
+---
+
+## Current continuation checkpoint — 2026-11-04 after PRs #189 and #190
+
+### Repository and release state
+- Current GitHub `main` before this documentation reconciliation: `55399e3af49370305be9b0812643f25c19b55eb6`.
+- PR #189 merged as `bc61a4022c3627db592f52c0b53921ce6c6aaf8a`; PR #190 merged as `55399e3af49370305be9b0812643f25c19b55eb6`.
+- Both PRs are test-only. They add disposable-PostgreSQL acceptance tests, with no application runtime source, OpenAPI/generated-client, schema, migration or production configuration changes. Most recent runtime source release remains PR #180 `0835684f2158cb0624ccd43c8063dd9ec42646fe`.
+- Open PR search after PR #190 returned none.
+
+### PR #185 live anonymous referral smoke — VERIFIED (correction to earlier notes)
+- The live API access-control workflow did run after PR #185 merged: GitHub Actions run `41836364878`, push event, main SHA `276e9b371bdb9641b47932bc808f77e96c03b8b4`; job `126596191694` SUCCESS.
+- The workflow first observed the live API health endpoint returning HTTP 200, then tested seven business-data endpoints anonymously.
+- It explicitly logged `PASS /api/businesses/me/referral -> HTTP 401` and `All anonymous access-control probes passed.`
+- The other protected endpoints tested were auth/me, CRM customers, inventory products, investment plans, savings overview and daily ledger; all returned 401.
+- This closes the **live anonymous HTTP 401** evidence gap. It does not provide manager/staff/owner authenticated live identities; those are now separately CI route-tested below and still require controlled staging/browser testing for full end-user flow.
+- Earlier notes in this handover and SSOT/Audit that say this post-merge workflow result was “not independently retrieved” are historical observations and are superseded by this verified run. They are retained for history.
+
+### PR #189 — referral API role/session route matrix
+- PR: https://github.com/RoyalFinTech/Kaira-Africa/pull/189
+- Merge SHA: `bc61a4022c3627db592f52c0b53921ce6c6aaf8a`; PR head: `5568de095710f9c196a94e90be9a6648ca7f7875`.
+- Added `artifacts/api-server/test/business-referral-route-db.test.ts`, which boots the actual Express businesses router on loopback and persists real server-side session hashes in the disposable CI PostgreSQL database.
+- Actual HTTP outcomes asserted: anonymous 401; invalid session 401; manager 403; staff 403; owner without a business 401; owner with a business 200 and correct business name/referral summary. A second owner receives their own distinct referral code rather than the first owner's summary.
+- Backend CI run `41840262142` SUCCESS; Work Management Build Checks `41840262711` SUCCESS. API suite: 76 passed, 0 failed, 0 skipped; fresh disposable migrations, typechecks/builds, /health and Docker verification passed.
+- These tests are route-level CI with test identities and DB state. They do not test the browser's copy/WhatsApp interaction, sessionStorage retention through sign-up, or controlled two-business signup in staging.
+
+### PR #190 — team invitation preview/accept HTTP flow
+- PR: https://github.com/RoyalFinTech/Kaira-Africa/pull/190
+- Merge SHA: `55399e3af49370305be9b0812643f25c19b55eb6`; PR head: `154f05b61d9dc1ce03a583a010337caceb1a8b93`.
+- Added `artifacts/api-server/test/team-invitation-route-db.test.ts`, using the actual Express team router, user session middleware, invitation repositories and disposable PostgreSQL/Redis. It is enabled only by the Backend CI integration-test flag.
+- The HTTP test verifies public preview returns safe invitation details and a masked phone (not the full phone), invalid preview token is rejected, anonymous acceptance is 401, wrong-phone authenticated acceptance is 403 and leaves the invitation pending, intended-phone session accepts with 200, repeated acceptance is 409, and manager/staff cannot create invitations (403).
+- The successful acceptance assertion verifies the team membership, invited user's business association and least-privilege staff role. Manager/staff create-denial assertions exercise the actual route's role middleware; no new invite is inserted by those denied requests.
+- Backend CI run `41841318239` SUCCESS; Work Management Build Checks `41841318308` SUCCESS. API suite: 77 passed, 0 failed, 0 skipped. Shared/API/frontend typechecks, SPA/API builds, fresh migrations, API health smoke and production Docker image build all passed.
+- No SMS or SMTP provider was called; the test creates an already-authenticated test session in the disposable DB. This is not a substitute for real new-user OTP, returning-user PIN or delivery-provider acceptance.
+
+### Latest production deployment and database state
+- All three Render services are verified `live` on exact main SHA `55399e3af49370305be9b0812643f25c19b55eb6`:
+  - API `srv-da6fnem7bikc738ekde0`, deploy `dep-dbljg85ckfvc73fl7n4g`.
+  - Frontend `srv-db257gjbc2fs73f9nsj0`, deploy `dep-dbljg85ckfvc73fl7nd0`.
+  - Admin static `srv-dbg86rmk1f9s73bkkev0`, deploy `dep-dbljg85ckfvc73fl7ni0`.
+- Production Drizzle migration ledger remains 26 rows / max ID 26. PRs #189/#190 added no migrations.
+- Read-only business aggregate remains 2 businesses, 2 distinct referral codes present and 0 attributed businesses. Do not expose actual code values.
+- No production user/business/referral/invitation/customer/financial/inventory/Storage records were created or changed for these tests.
+
+### Remaining acceptance and cost boundary
+- Referral implementation and API authorization now have: live anonymous 401 proof, disposable-DB route tests for owner 200 / manager-staff 403 / invalid session 401, and DB onboarding tests for independent referred businesses/no team membership, invalid referral rollback, self-referral and existing workspace rejection.
+- Still NOT VERIFIED in controlled staging/browser: owner page copy/WhatsApp/direct refresh, sign-up/login referral retention, two-business live conversion/count increment and full tenant isolation across all data domains.
+- Team invitations now have DB lifecycle and HTTP route acceptance tests for preview masking, wrong-phone, intended-phone one-time acceptance, expiry/revocation, resend rotation, cross-business rejection, duplicate acceptance and manager/staff create denial.
+- Still NOT VERIFIED: real new-user OTP, returning-user PIN, real SMS and SMTP delivery/outbox behavior, physical invitation/PWA device interactions.
+- Supabase staging branch remains uncreated. Verified cost estimate: **US$0.01344/hour** for one development branch in the Kaira Africa organization. No explicit approval has been given; do not call cost confirmation or create the branch until the user expressly approves this hourly charge. The branch would have a separate DB and does not copy production data.
+- PWA install/service-worker/device checks and full responsive viewport checks remain outstanding; all CRM, accounting, inventory, investments/savings, Work Management, push, proposals, Freelancer Copilot, automation, AI, billing, legal and support roadmap items remain preserved and open.
+

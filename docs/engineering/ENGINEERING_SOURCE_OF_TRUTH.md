@@ -446,3 +446,19 @@ These tests provide database/repository-level regression evidence for onboarding
 - No staging Supabase branch exists. Branch creation is gated by Supabase cost confirmation; confirm the correct organization, obtain a current estimate, tell the user the exact price and get explicit approval before creating it.
 - Invitation lifecycle DB coverage is improved; real OTP, returning-user PIN continuation, matching invitee identity over actual auth, SMS/SMTP delivery, retry/outbox and browser/device QA remain NOT VERIFIED. All referral UI/role/login-retention/two-business E2E and physical PWA acceptance remain NOT VERIFIED. Preserve all remaining roadmap requirements in the feature audit.
 
+
+
+---
+
+## Release and acceptance addendum — 2026-11-04 (PRs #189 and #190)
+
+- Current main before this documentation update: `55399e3af49370305be9b0812643f25c19b55eb6`.
+- PR #189 `bc61a4022c3627db592f52c0b53921ce6c6aaf8a` adds actual referral endpoint route/session/RBAC DB acceptance. Backend CI `41840262142` and Work Management `41840262711` passed; API suite 76/76, 0 failed/skipped.
+- PR #190 `55399e3af49370305be9b0812643f25c19b55eb6` adds actual team invitation preview/accept HTTP route acceptance against disposable PostgreSQL/Redis. Backend CI `41841318239` and Work Management `41841318308` passed; API suite 77/77, 0 failed/skipped, including fresh migration validation, health smoke and Docker image build.
+- PR #189 route test: anonymous/invalid session/unassigned owner 401; manager/staff 403; owner 200 with their own business referral code/summary.
+- PR #190 route test: masked invitation preview; invalid token/anonymous rejection; wrong invited-phone 403 without consuming invitation; correct invited-phone session accepts 200; duplicate acceptance 409; manager/staff invitation creation 403. No SMS/SMTP provider was called.
+- Correction: the live access-control smoke workflow added by PR #185 **passed** after merge. Run `41836364878`, job `126596191694`, on main SHA `276e9b371bdb9641b47932bc808f77e96c03b8b4`; live health HTTP 200 and all seven anonymous protected endpoint probes returned 401, including `GET /api/businesses/me/referral`. This supersedes earlier notes that said its result was unavailable.
+- Render API `dep-dbljg85ckfvc73fl7n4g`, frontend `dep-dbljg85ckfvc73fl7nd0`, admin `dep-dbljg85ckfvc73fl7ni0` are verified live on `55399e3af49370305be9b0812643f25c19b55eb6`.
+- Production Drizzle ledger is 26/max ID 26; no migration in either PR. The read-only production aggregate remains 2 businesses, 2 distinct referral codes, 0 attributed referrals. No production test records were created or changed.
+- Supabase isolated staging branch cost estimate is US$0.01344/hour; no creation or cost confirmation until explicit user approval. Real OTP/PIN, SMS/SMTP delivery, full browser referral/signup acceptance and physical PWA/device acceptance remain NOT VERIFIED. Preserve all other roadmap items and keep test CI evidence separate from staging acceptance.
+
