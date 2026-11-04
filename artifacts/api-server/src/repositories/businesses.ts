@@ -36,11 +36,15 @@ export async function createBusinessForUser(
   }
 
   return db.transaction(async (tx) => {
+    // Serialize workspace creation for this user. Without the row lock,
+    // two concurrent onboarding submissions could both observe a null
+    // businessId and create separate businesses for the same account.
     const [existingUser] = await tx
       .select({ businessId: users.businessId })
       .from(users)
       .where(eq(users.id, userId))
-      .limit(1);
+      .limit(1)
+      .for("update");
 
     if (existingUser?.businessId) {
       throw new ConflictError("You already belong to a business");
