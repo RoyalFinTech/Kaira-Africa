@@ -224,8 +224,8 @@ test("OTP verification creates a user session and the PIN setup/login HTTP flow 
     phoneNumber: phoneKey,
   });
   assert.equal(otpRequestForPinUser.status, 409);
-  const otpRequestError = await otpRequestForPinUser.json() as { code?: string };
-  assert.equal(otpRequestError.code, "pin_login_required");
+  const otpRequestError = await otpRequestForPinUser.json() as { error?: { code?: string } };
+  assert.equal(otpRequestError.error?.code, "pin_login_required");
 
   const [otpRowsAfterPinRequest] = await db
     .select({ value: otpVerifications.id })
