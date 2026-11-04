@@ -414,3 +414,19 @@ These tests provide database/repository-level regression evidence for onboarding
 - The connected Supabase project has no development branches. No isolated staging project or staging identities were available for this pass. All user, business, referral, invitation, financial and Storage write tests must remain off production.
 - Production referral checkpoint remains 2 businesses, 2 distinct referral codes, 0 attributed businesses. Do not reveal code values and do not create production test referrals.
 - Keep CI passed, Render Live, migrations verified, authenticated E2E passed and physical device tested as separate statuses. All other roadmap features and acceptance gaps remain in the feature audit; this addendum does not close or remove them.
+
+
+---
+
+## Release and QA addendum — 2026-11-04 (PR #185)
+
+- Current main: `276e9b371bdb9641b47932bc808f77e96c03b8b4`. PR #185 merged as that squash SHA; final PR head was `d95560eb0a1259398fd203e5ac4e7e7bc73e5709`.
+- PR #185 changed only `artifacts/api-server/test/business-onboarding-db.test.ts` and `.github/workflows/live-api-access-smoke.yml`; no runtime source, OpenAPI, generated artifacts or database migration changed. Last application-code release remains PR #180 `0835684f2158cb0624ccd43c8063dd9ec42646fe`.
+- Backend CI `41835886367` SUCCESS and Work Management Build Checks `41835886321` SUCCESS on the exact PR head. Backend CI passed shared/API/frontend typechecks; frontend/API builds; fresh disposable PostgreSQL migrations; 71 API tests (71 passed, 0 failed, 0 skipped); API health smoke; and production Docker image build. The DB referral test now includes self-referral and already-associated-account rejection assertions.
+- New anonymous live API smoke probe for `GET /api/businesses/me/referral` expects HTTP 401 and is configured in the main-push/scheduled/manual workflow. The push-triggered workflow result was not independently exposed/retrieved here; no matching post-deploy request log was observed. Treat live anonymous 401 as NOT VERIFIED until a run or request evidence is inspected.
+- All Render services are verified `live` on exact SHA `276e9b371bdb9641b47932bc808f77e96c03b8b4`: API deploy `dep-dblivk5ckfvc73fkd9h0`, frontend deploy `dep-dblivk5ckfvc73fkd9pg`, admin deploy `dep-dblivk5ckfvc73fkd9ug`. API logs show Redis connected and `/ready` HTTP 200. No post-deployment HTTP 500/502/503 request entries were returned by the checked window.
+- Supabase Drizzle ledger remains 26/max ID 26; there was no migration. No production test records were created/changed. The read-only business count remains 2, 2 distinct codes present, zero referred businesses; do not reveal referral codes.
+- No Supabase staging branch exists. A branch-creation request hit Supabase's cost-confirmation gate and created nothing. Obtain the user's explicit approval to the quoted cost before creating any branch/project; no production data may be used for E2E.
+- All 33 public tables have RLS enabled; the checked table-grant query returned no generic table privileges to `anon`, `authenticated` or `PUBLIC`. Do not broaden Data API privileges to clear the informational no-policy advisor warnings.
+- Still NOT VERIFIED: authenticated referral page/owner 200/manager-staff 403/live anonymous 401/signup retention/two-business attribution and count/tenant isolation; team invitation database lifecycle/real OTP-PIN and SMS-SMTP delivery; physical PWA install/service worker and responsive viewport QA. Continue the complete feature audit without dropping requirements.
+
