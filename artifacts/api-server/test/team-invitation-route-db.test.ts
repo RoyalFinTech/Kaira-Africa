@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { count, eq } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import type { Server } from "node:http";
+import type Redis from "ioredis";
 import { after, test } from "node:test";
 import express from "express";
 import {
@@ -31,7 +32,7 @@ const databaseAcceptanceEnabled =
 const testUserIds: string[] = [];
 let server: Server | null = null;
 let baseUrl = "";
-let redisClient: import("ioredis").default | null = null;
+let redisClient: Redis | null = null;
 
 function randomPhone(): string {
   return `87${randomInt(1_000_000, 9_999_999)}`;
