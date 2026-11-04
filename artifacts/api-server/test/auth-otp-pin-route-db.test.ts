@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import type { Server } from "node:http";
 import type Redis from "ioredis";
@@ -92,16 +92,29 @@ after(async () => {
     // Discover users by the unique CI phones in case the OTP route created a
     // user before an assertion failed. Remove only this suite's test identities.
     for (const phoneNumber of testPhoneNumbers) {
+      const phoneKey = `+220${phoneNumber}`;
       const matchingUsers = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.phoneNumber, phoneNumber));
+        .where(and(
+          eq(users.phoneCountryCode, "+220"),
+          eq(users.phoneNumber, phoneNumber),
+        ));
       for (const user of matchingUsers) {
         if (!testUserIds.includes(user.id)) testUserIds.push(user.id);
       }
 
+      // Failed-OTP audit events are intentionally actorType=unknown and have
+      // no actor_id; remove them only by this suite's unique synthetic phone.
+      await db.delete(authAuditLogs).where(and(
+        eq(authAuditLogs.event, "otp_verify_failed"),
+        sql`(${authAuditLogs.metadata} ->> 'phone') = ${phoneKey}`,
+      ));
       await db.delete(otpVerifications)
-        .where(eq(otpVerifications.phoneNumber, phoneNumber));
+        .where(and(
+          eq(otpVerifications.phoneCountryCode, "+220"),
+          eq(otpVerifications.phoneNumber, phoneNumber),
+        ));
     }
 
     for (const userId of testUserIds) {
@@ -140,6 +153,86 @@ test("OTP verification creates a user session and the PIN setup/login HTTP flow 
     .returning({ id: otpVerifications.id });
 
   await startTestServer();
+
+  // Expired codes do not create users or sessions.
+  const expiredPhone = randomPhone();
+  testPhoneNumbers.push(expiredPhone);
+  const expiredOtp = await db.insert(otpVerifications)
+    .values({
+      phoneCountryCode: "+220",
+      phoneNumber: expiredPhone,
+      codeHash: hashOtp("654321", `+220${expiredPhone}`),
+      purpose: "login",
+      attempts: 0,
+      maxAttempts: 5,
+      expiresAt: new Date(Date.now() - 60_000),
+    })
+    .returning({ id: otpVerifications.id });
+  const expiredResponse = await request("/api/auth/verify-otp", {
+    phoneNumber: `+220${expiredPhone}`,
+    code: "654321",
+  });
+  assert.equal(expiredResponse.status, 400);
+  await expiredResponse.body?.cancel();
+  const [expiredUser] = await db.select({ id: users.id }).from(users).where(and(
+    eq(users.phoneCountryCode, "+220"),
+    eq(users.phoneNumber, expiredPhone),
+  ));
+  assert.equal(expiredUser, undefined);
+  const [storedExpiredOtp] = await db.select({
+    consumedAt: otpVerifications.consumedAt,
+  }).from(otpVerifications).where(eq(otpVerifications.id, expiredOtp[0].id));
+  assert.equal(storedExpiredOtp?.consumedAt, null);
+
+  // Incorrect attempts increment the stored counter; a correct code cannot
+  // bypass the lock once maxAttempts has been reached.
+  const limitedPhone = randomPhone();
+  testPhoneNumbers.push(limitedPhone);
+  const validLimitedCode = "765432";
+  const [limitedOtp] = await db.insert(otpVerifications)
+    .values({
+      phoneCountryCode: "+220",
+      phoneNumber: limitedPhone,
+      codeHash: hashOtp(validLimitedCode, `+220${limitedPhone}`),
+      purpose: "login",
+      attempts: 0,
+      maxAttempts: 2,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    })
+    .returning({ id: otpVerifications.id });
+
+  for (const expectedAttempts of [1, 2]) {
+    const wrongCodeResponse = await request("/api/auth/verify-otp", {
+      phoneNumber: `+220${limitedPhone}`,
+      code: "123456",
+    });
+    assert.equal(wrongCodeResponse.status, 400);
+    await wrongCodeResponse.body?.cancel();
+    const [attemptState] = await db.select({
+      attempts: otpVerifications.attempts,
+      consumedAt: otpVerifications.consumedAt,
+    }).from(otpVerifications).where(eq(otpVerifications.id, limitedOtp.id));
+    assert.equal(attemptState?.attempts, expectedAttempts);
+    assert.equal(attemptState?.consumedAt, null);
+  }
+
+  const lockedCorrectCodeResponse = await request("/api/auth/verify-otp", {
+    phoneNumber: `+220${limitedPhone}`,
+    code: validLimitedCode,
+  });
+  assert.equal(lockedCorrectCodeResponse.status, 400);
+  await lockedCorrectCodeResponse.body?.cancel();
+  const [limitedUser] = await db.select({ id: users.id }).from(users).where(and(
+    eq(users.phoneCountryCode, "+220"),
+    eq(users.phoneNumber, limitedPhone),
+  ));
+  assert.equal(limitedUser, undefined);
+  const [lockedOtp] = await db.select({
+    attempts: otpVerifications.attempts,
+    consumedAt: otpVerifications.consumedAt,
+  }).from(otpVerifications).where(eq(otpVerifications.id, limitedOtp.id));
+  assert.equal(lockedOtp?.attempts, 2);
+  assert.equal(lockedOtp?.consumedAt, null);
 
   const verifyResponse = await request("/api/auth/verify-otp", {
     phoneNumber: phoneKey,
