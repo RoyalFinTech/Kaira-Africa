@@ -287,3 +287,95 @@ Next, complete referral acceptance tests, then follow the complete remaining roa
 - Referral feature is already deployed from PR #174; controlled authenticated staging conversion/count/tenant-isolation tests are still open.
 - For the next chat, use the copy-ready prompt in this document, but start by confirming current main and deploy SHA again.
 
+
+## Current verified checkpoint — 2026-11-04 (this continuation)
+
+This section supersedes the earlier SHA/deployment snapshots above. Recheck all live services before the next release.
+
+### Exact source and deployment state
+- GitHub `main`: `07cc2aa5a8b80c29677e1534d2923261b48270ef` (latest docs/source-of-truth reconciliation commit at the time of this check).
+- Last application-code release: PR #180 merge `0835684f2158cb0624ccd43c8063dd9ec42646fe` (serializes business workspace creation with a user-row lock).
+- PRs #171, #172, #173, #174, #176 and #180 are merged. The older test-only PR #163 was closed as superseded because its mobile CSV smoke navigation behavior is already present in current `main`.
+- Render API service `srv-da6fnem7bikc738ekde0`, deployment `dep-dblh3hdckfvc73fhqnm0`: Live on `07cc2aa5a8b80c29677e1534d2923261b48270ef`.
+- Render frontend service `srv-db257gjbc2fs73f9nsj0`, deployment `dep-dblh3hdckfvc73fhqnug`: Live on the same SHA.
+- Render admin static service `srv-dbg86rmk1f9s73bkkev0`, deployment `dep-dblh3hdckfvc73fhqo3g`: Live on the same SHA.
+- Render workspace remains `tea-d9usq87lk1mc73eia2f0`. Supabase Kaira Africa project remains `gofoibbvxnhqzqwrpcbx` (`eu-west-1`).
+- There were no open PRs after closing #163 at this checkpoint. Re-list open PRs before the next branch/merge.
+
+### Business referral feature — already implemented; do not rebuild
+- PR #174 (`feat/business-referral-links`) introduced the independent business-to-business referral system. It is distinct from staff/team invitations.
+- Sidebar: GROWTH → `Refer a Business`; route `/referrals`; the route is included in the explicit Render static SPA entry generator.
+- Page: `artifacts/kaira-africa/src/pages/app/ReferralsPage.tsx`. It uses the official `KairaLogo`, Kaira green/gold design, the current business name, a permanent business-specific link, copy control, prefilled WhatsApp share, referral code, attributed-business count and an explicit explanation that referred businesses get independent workspaces.
+- Link format is `/?ref=KAI-<16 uppercase hex characters>`. Do not copy real production codes into chat, tests, logs or handover documents.
+- Database: migration `0025_business_referrals.sql` adds/backfills `businesses.referral_code`, adds the `referred_by_business_id` self-reference and creates the unique referral-code and referred-by indexes.
+- API: owner-only `GET /businesses/me/referral` returns business name, code and count. New-business creation accepts `x-kaira-referral-code`, validates the format and referrer inside the same transaction as business creation, blocks self-referral and stores the referred-by business ID. Normal business profile writes cannot edit referral codes/attribution.
+- Frontend captures the first valid `?ref=` code in sessionStorage and carries it through login/onboarding. Invalid code handling lets the new business continue without attribution. A referred business creates its own separate workspace and gets its own referral code; it does not become a team member of the referrer.
+- Rewards/bonuses/commissions/payouts/paid-feature unlocks are future-only. The current page truthfully says rewards are not active. Do not add credits or entitlements until a separately approved reward policy/payment/entitlement system exists.
+
+### Fresh production database verification
+- Drizzle migration ledger: 26 records; maximum migration ID 26. Migration `0025_business_referrals.sql` is recorded.
+- Production has 2 business rows, 2 non-null referral codes, 2 distinct codes and 0 referred-business rows. This is expected until a recipient creates a business from a referral link.
+- `public.businesses` RLS is enabled. Direct SELECT/INSERT privileges for `anon` and `authenticated` are false. The referral-code unique index, referred-by index and self-FK are present.
+- Actual referral code values were deliberately not selected or displayed. No production business or referral records were created/changed for this verification.
+- Supabase project listing showed only the Kaira Africa project; `list_branches` returned no development branches. Do not run referral conversion tests against production. A new Supabase branch can incur usage charges and needs cost approval/confirmation before creation.
+
+### Referral acceptance status — still NOT VERIFIED end to end
+1. With a controlled owner session, open `/referrals`, refresh the direct route, copy the link and verify WhatsApp prefill.
+2. Verify access with controlled tokens: owner succeeds; anonymous returns 401; manager/staff return 403. Route code currently enforces `requireUser` and `requireRole('owner')`, but live authenticated role probes were not performed here.
+3. In isolated staging with two consenting business owners, Business A shares the link; a new user signs up and creates Business B. Confirm `B.referred_by_business_id = A.id`, B gets a distinct referral code and A's count increments exactly once.
+4. Verify no team-member row, role grant or cross-business customer/finance access is created. Verify B receives its own independent `/referrals` link.
+5. Test malformed/unknown code, self-referral, already-associated user, concurrent onboarding, invalid-code fallback and clearing the stored code when the user chooses to continue without attribution.
+6. No isolated staging project or Supabase branch is currently available. Do not substitute production businesses for test identities. Ask for approval to provision a cost-bearing Supabase branch or use an existing external staging project before running these tests.
+
+### Current Supabase advisor snapshot
+- Security advisor reported 33 informational `rls_enabled_no_policy` findings. These tables have RLS enabled but no direct policies; the current app data model relies on the trusted API server and generic `anon`/`authenticated` table grants are denied. Do not add broad policies just to silence this informational lint; inspect the exact API/service-role model and use least privilege.
+- Performance advisor reported 26 unindexed foreign-key findings and 30 unused-index findings (INFO). Do not create/drop indexes in bulk. Review high-traffic queries and FK delete/update paths, then add only justified indexes in a separate migration with fresh-DB/production validation.
+
+### Only open PR found at this checkpoint
+- PR #163 (`Keep mobile CSV smoke navigation within PIN session`) was a stale test-only branch 14 commits behind/diverged from `main`. The current main smoke script already navigates to Transactions using the bottom-nav SPA link while preserving the in-memory visual-test token. PR #163 was closed as superseded on 2026-11-04. It did not contain application code.
+
+### Copy-ready full prompt for the next chat
+
+```text
+You are continuing Kaira Africa engineering for Royal FinTech Company. Act as senior full-stack engineer, database/security engineer, QA engineer and release engineer. Continue the existing project; do not restart, invent another architecture or ask for project details already below.
+
+First read these repository source-of-truth files:
+1. docs/engineering/2026-11-04-KAIRA-AFRICA-CONTINUATION-HANDOVER.md
+2. docs/engineering/ENGINEERING_SOURCE_OF_TRUTH.md
+3. docs/engineering/FEATURE_AUDIT.md
+
+Then independently verify current GitHub main/open PRs, Render deployment SHAs/status/logs and Supabase migrations/security using connected tools. Never trust this prompt's SHA without rechecking.
+
+Project: RoyalFinTech/Kaira-Africa.
+Frontend: https://kaira-africa-frontend.onrender.com/
+API: https://kaira-africa-api.onrender.com/ (readiness: /ready).
+Render workspace: tea-d9usq87lk1mc73eia2f0.
+Services: API srv-da6fnem7bikc738ekde0; frontend srv-db257gjbc2fs73f9nsj0; admin static srv-dbg86rmk1f9s73bkkev0.
+Supabase project: gofoibbvxnhqzqwrpcbx, eu-west-1.
+Last verified main: 07cc2aa5a8b80c29677e1534d2923261b48270ef. Last app-code release PR #180: 0835684f2158cb0624ccd43c8063dd9ec42646fe. All three Render services were live on the main SHA at the latest check.
+
+Important referral requirement: the business-to-business referral feature is ALREADY BUILT and DEPLOYED by PR #174/migration 0025. Do not rebuild it. It is owner-only Sidebar GROWTH > Refer a Business at /referrals. Each independent business has a permanent unique KAI-… referral link, copy/WhatsApp share, attributed-business count and onboarding attribution via ?ref= / sessionStorage / x-kaira-referral-code. Referred users create their own independent business; they do not join the referrer’s team or gain access to any of its data. Future referral bonuses, commissions, payouts or paid feature unlocks are NOT active and must not be promised or granted. Never expose actual production referral codes.
+
+Referral code/schema production verification at the last checkpoint: Drizzle ledger count 26/max ID 26; two business records, two non-null distinct referral codes, zero attributed businesses; businesses RLS enabled; anon/authenticated direct SELECT/INSERT denied; unique code index, referred-by index and self-FK exist. No production business data was changed. There is only one listed Supabase project (Kaira Africa), no development branches and no staging environment. Do not create test referral businesses in production. If staging needs a Supabase branch, inspect costs and obtain cost approval before creating it.
+
+PR #180 already fixed concurrent business creation using SELECT ... FOR UPDATE on the user row; it is merged, CI passed, and all three Render services were live. Do not redo unless a new defect is found.
+
+Recently merged work to preserve: PR #171 secure team invitation lifecycle; PR #172 official Kaira logo on invitation page, correct invitee-phone PIN routing, expiry/resend roster state and migration 0024; PR #173 mobile header/dashboard/calculator overflow fixes; PR #174 business referrals; PR #176 desktop PWA installation guidance when beforeinstallprompt is unavailable; PR #180 onboarding serialization.
+
+Highest priority now:
+1. Create or use an isolated staging environment only after cost approval; finish two-business referral end-to-end attribution/count and tenant-isolation tests, owner/manager/staff/anonymous access matrix, invalid/self-referral, fallback and concurrent onboarding cases.
+2. Finish controlled team invitation acceptance tests with consenting recipients: new-user OTP, returning-user PIN, correct/wrong phone, expiry, revoke, resend token rotation, one-time acceptance, cross-business rejection, SMS/SMTP delivery.
+3. Complete physical PWA acceptance: Android Chrome install, iOS Safari Add to Home Screen, desktop native beforeinstallprompt, desktop no-event manual-help card, right-edge position, standalone/dismissal, service worker update/caching and auth redirects.
+4. Verify mobile/tablet/desktop layouts at 320/360/390/430px and larger; include hamburger/drawer, keyboard/focus, calculator/dashboard, referral page and install prompt.
+5. Continue the complete outstanding roadmap in FEATURE_AUDIT.md: CRM/customer CRUD/photo/notes/export/print; transactions and payment safety; multi-currency daily ledger/sales/expenses/debt/atomic inventory; private inventory photos and printing; investment planner; savings goals/pools/withdrawals/PDF; receipt branding; profile/appearance; billing with real plan/payment entitlements only; tasks/projects/meetings/notes/calendar/time tracking/chat; VAPID web push and SMTP verification; proposals/quotations; Freelancer & Remote Work Copilot; auditable automation; AI insights/privacy; tutorials; legal/privacy and branding fallbacks.
+
+Engineering rules: branch-first; inspect code and current state before edits; update OpenAPI and generated artifacts by the repo's prescribed scripts; no reset --hard, clean -fd, force-push or destructive production operations; no production test identities/data/PIN changes; use migrations and preserve RLS/least privilege; pass both required CI workflows including fresh DB, health smoke and Docker before merge; verify all three Render SHAs and Supabase migration ledger after merge. Keep code present, CI passed, deployed, authenticated E2E passed and physical device tested as separate evidence.
+
+Continue implementing concrete fixes rather than only planning. Update ENGINEERING_SOURCE_OF_TRUTH.md, FEATURE_AUDIT.md and the dated handover with each material change. Report exact PR/commit/check/deploy evidence and blockers honestly.
+```
+
+### Short continuation prompt
+
+```text
+Continue Kaira Africa from the current GitHub/Render/Supabase state. First read the 2026-11-04 continuation handover, ENGINEERING_SOURCE_OF_TRUTH.md and FEATURE_AUDIT.md, then recheck live SHAs and migrations. Referral Link / Refer a Business is already implemented and deployed; do not rebuild it. Finish controlled staging referral attribution/tenant-isolation and team-invitation E2E, then PWA/mobile physical acceptance and the remaining roadmap in FEATURE_AUDIT.md. No production test records, no real referral-code disclosure, no PIN changes, no destructive Git. Use branch/PR, full CI, migration/health/Docker validation, and verify all three Render deployments before claiming completion. Update the source-of-truth docs as you work.
+```
