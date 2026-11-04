@@ -59,6 +59,7 @@ jobs:
             "/api/investment-plans",
             "/api/savings/overview",
             "/api/daily-ledger",
+            "/api/businesses/me/referral",
           ];
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
           const failures = [];
