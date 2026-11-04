@@ -430,3 +430,19 @@ These tests provide database/repository-level regression evidence for onboarding
 - All 33 public tables have RLS enabled; the checked table-grant query returned no generic table privileges to `anon`, `authenticated` or `PUBLIC`. Do not broaden Data API privileges to clear the informational no-policy advisor warnings.
 - Still NOT VERIFIED: authenticated referral page/owner 200/manager-staff 403/live anonymous 401/signup retention/two-business attribution and count/tenant isolation; team invitation database lifecycle/real OTP-PIN and SMS-SMTP delivery; physical PWA install/service worker and responsive viewport QA. Continue the complete feature audit without dropping requirements.
 
+
+
+---
+
+## Release and QA addendum — 2026-11-04 (PR #187 team invitations)
+
+- Current GitHub main: `0e920c77450f56db657d8127cf539d09fcecb01b`; PR #187 merged as this squash SHA (PR head `45d3469a64bcb66ffcc045ea71800bfd9f487b64`).
+- PR #187 adds only `artifacts/api-server/test/team-invitations-db.test.ts`. No runtime source, OpenAPI/generated artifact, schema or migration changed; last runtime code release remains PR #180 `0835684f2158cb0624ccd43c8063dd9ec42646fe`.
+- Backend CI `41837224773` SUCCESS; Work Management Build Checks `41837224553` SUCCESS. Backend CI passed typechecks/builds, fresh disposable PostgreSQL migrations, 75 API tests (75 pass, 0 fail, 0 skipped), API health smoke and production Docker image build. Work Management workspace typecheck/build/API tests passed.
+- Four new DB invitation tests passed: wrong invited phone does not consume invite, valid phone accepts once, expired/revoked invites cannot be accepted, resend rotates token hash and invalidates old link, and a user already attached to another business cannot join the inviting business. The cross-business case is the fourth test; resend is third.
+- This is database/repository acceptance only, not real OTP/PIN session E2E or SMS/SMTP provider delivery.
+- All three Render services are live on the exact SHA: API `dep-dblj3ilbedkc73ad9hn0`, frontend `dep-dblj3ilbedkc73ad9i40`, admin `dep-dblj3ilbedkc73ad9i00`. Log retrieval was intermittently unavailable in the final check; do not claim an independently observed post-PR #187 `/ready` 200 from those logs.
+- Supabase Drizzle ledger remains 26/max ID 26; PR #187 has no migration. Production businesses remain 2, with 2 referral codes present/distinct and 0 attributed records. No production test records were used.
+- No staging Supabase branch exists. Branch creation is gated by Supabase cost confirmation; confirm the correct organization, obtain a current estimate, tell the user the exact price and get explicit approval before creating it.
+- Invitation lifecycle DB coverage is improved; real OTP, returning-user PIN continuation, matching invitee identity over actual auth, SMS/SMTP delivery, retry/outbox and browser/device QA remain NOT VERIFIED. All referral UI/role/login-retention/two-business E2E and physical PWA acceptance remain NOT VERIFIED. Preserve all remaining roadmap requirements in the feature audit.
+
