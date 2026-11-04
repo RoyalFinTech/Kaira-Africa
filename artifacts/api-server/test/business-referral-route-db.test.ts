@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { eq } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import type { Server } from "node:http";
 import { after, test } from "node:test";
@@ -38,18 +39,22 @@ function businessInput(label: string) {
   };
 }
 
-async function createTestUser(role = "owner", businessId?: string) {
+async function createTestUser(
+  role: "owner" | "admin" | "manager" | "staff" = "owner",
+  businessId?: string,
+) {
+  const phone = phoneNumber();
   const [user] = await db
     .insert(users)
     .values({
       phoneCountryCode: "+220",
-      phoneNumber: phoneNumber(),
+      phoneNumber: phone,
       role,
       ...(businessId ? { businessId } : {}),
     })
     .returning({ id: users.id, role: users.role });
   testUserIds.push(user.id);
-  return user;
+  return { ...user, phoneNumber: phone };
 }
 
 async function createTeamRoleUser(
@@ -63,7 +68,7 @@ async function createTeamRoleUser(
     firstName: "CI",
     lastName: role,
     email: null,
-    phone: "+220",
+    phone: `+220${user.phoneNumber}`,
     role,
     accessRole: role,
     status: "active",
