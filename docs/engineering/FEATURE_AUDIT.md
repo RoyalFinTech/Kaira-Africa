@@ -191,3 +191,13 @@ The explicit Render static SPA route generator now includes /referrals. Verify t
 ## Latest repository/deployment SHA — 2026-11-03 20:58 UTC
 
 Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only commit. The latest application-code release remains 3c0a73fea6ce4372773b45e73f8746e31859e478. All three Render services were verified Live on 61eb8e5 (API dep-dbl4l0p42hec73c7qveg, frontend dep-dbl4l1142hec73c7qvr0, admin dep-dbl4l0p42hec73c7qvn0). Referral migration 0025 remains applied/verified in Supabase; PWA physical browser acceptance and referral authenticated staging E2E remain NOT VERIFIED.
+
+
+## Current checkpoint addendum — 2026-11-04
+
+- Current production main at start of this audit continuation: `dd29ae76bbd035938626979daaaf397be86b204d`; all three Render services verified Live on this exact SHA (API `dep-dbl4n2c9v7es73aud6vg`, frontend `dep-dbl4n2c9v7es73aud78g`, admin `dep-dbl4n2c9v7es73aud7e0`).
+- Business-to-business referral links are implemented and deployed (PR #174 / migration 0025). Read-only Supabase check: 2 businesses, 2 codes present, 2 distinct codes, zero attributed businesses; businesses RLS true; anon/authenticated SELECT/INSERT privileges false; referral self-FK and both indexes verified. Actual code values intentionally not read or displayed.
+- UI is confirmed in code at owner-only Sidebar GROWTH > Refer a Business and `/referrals`; mobile More drawer reuses Sidebar. Referral page uses official Kaira branding, permanent link, copy, prefilled WhatsApp, count and honest “rewards not active” copy. API enforces owner access and independent workspace attribution. Authenticated referral conversion/tenant-isolation E2E is still NOT VERIFIED; use only isolated staging.
+- Current active integrity fix branch: `fix/business-onboarding-serialization`, adds a row lock around `users.business_id` check in `createBusinessForUser` to prevent concurrent duplicate workspace creation. This change is pending PR/CI until verified; don't mark as merged or deployed prematurely.
+- Continue keeping CI, Render deployment, authenticated E2E and physical device/browser acceptance as separate evidence categories.
+
