@@ -254,3 +254,18 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - No staging Supabase branch is provisioned. Creation is cost-gated and requires explicit user approval after a price estimate. No synthetic production test data is allowed.
 - All other rows in this feature audit remain open/unchanged; do not remove CRM/finance/inventory/investment/savings/Work Management/AI/notifications/billing/legal/support scope.
 
+
+
+---
+
+## Acceptance update — 2026-11-04 (PR #187: invitation lifecycle DB tests)
+
+- PR #187 merged as `0e920c77450f56db657d8127cf539d09fcecb01b`; adds opt-in PostgreSQL acceptance coverage only, with no runtime change or migration.
+- Backend CI `41837224773` SUCCESS and Work Management Build Checks `41837224553` SUCCESS. API suite: 75 passed, 0 failed, 0 skipped; fresh DB migration validation, builds, health smoke and production Docker image build passed.
+- New DB acceptance verifies wrong invite phone does not consume a pending invite; the intended phone accepts and cannot accept twice; expired and revoked invites cannot be accepted and roster state is no longer pending; resend rotates the hash and old link is invalidated; account already assigned to another business cannot accept a cross-business invitation.
+- **Team invitation status:** IMPLEMENTED + DB/REPOSITORY ACCEPTANCE TESTED. **NOT VERIFIED:** real new-user OTP, returning-user PIN, full authenticated HTTP/browser session, actual SMS/SMTP delivery, physical invitation page/device.
+- All three Render services are live on exact SHA `0e920c77450f56db657d8127cf539d09fcecb01b`; API deployment `dep-dblj3ilbedkc73ad9hn0`, frontend `dep-dblj3ilbedkc73ad9i40`, admin `dep-dblj3ilbedkc73ad9i00`. Post-deploy Render log retrieval was intermittent; do not claim a separately observed readiness log from that query.
+- Drizzle production ledger remains 26/max ID 26. No production test records or schema changes were made.
+- Referral live anonymous 401 evidence remains unverified; owner UI/manager-staff 403/owner 200/signup retention/two-business conversion-count and tenant-isolation still require controlled staging. No staging branch is provisioned because Supabase's branch-creation cost gate requires an estimate and explicit approval.
+- PWA/mobile physical install, service-worker and viewport QA remain outstanding. All other roadmap rows remain open and are preserved.
+
