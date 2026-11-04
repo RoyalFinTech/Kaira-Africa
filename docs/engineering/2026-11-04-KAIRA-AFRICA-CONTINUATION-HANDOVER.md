@@ -379,3 +379,49 @@ Continue implementing concrete fixes rather than only planning. Update ENGINEERI
 ```text
 Continue Kaira Africa from the current GitHub/Render/Supabase state. First read the 2026-11-04 continuation handover, ENGINEERING_SOURCE_OF_TRUTH.md and FEATURE_AUDIT.md, then recheck live SHAs and migrations. Referral Link / Refer a Business is already implemented and deployed; do not rebuild it. Finish controlled staging referral attribution/tenant-isolation and team-invitation E2E, then PWA/mobile physical acceptance and the remaining roadmap in FEATURE_AUDIT.md. No production test records, no real referral-code disclosure, no PIN changes, no destructive Git. Use branch/PR, full CI, migration/health/Docker validation, and verify all three Render deployments before claiming completion. Update the source-of-truth docs as you work.
 ```
+
+
+---
+
+## Current continuation checkpoint — 2026-11-04 after PR #183
+
+This checkpoint supersedes the earlier main/deployment SHA values above. Historical entries are retained as release history.
+
+### Current source, CI and deployment state
+- GitHub main at the start of this documentation update: 6062488e696535cff1f30fa4a0f19b3fae111b62.
+- PR #183 (https://github.com/RoyalFinTech/Kaira-Africa/pull/183) merged by squash as 6062488e696535cff1f30fa4a0f19b3fae111b62.
+- PR #183 is test/CI-only. The last application-runtime code release remains PR #180, 0835684f2158cb0624ccd43c8063dd9ec42646fe. No application runtime source or database schema was changed by PR #183.
+- Backend CI run 41828303516 completed successfully; Work Management Build Checks run 41828303519 completed successfully.
+- Backend CI completed shared/API/frontend typechecks, frontend and API builds, fresh Drizzle migration application to disposable PostgreSQL, API/DB acceptance tests, /health smoke and production Docker image build.
+- API test output: 71 passed, 0 failed, 0 skipped. The three new PostgreSQL cases executed (not skipped): concurrent workspace creation; independent referral attribution without a team-membership row; unknown referral rollback.
+- All three Render services are verified Live on the exact PR #183 merge commit:
+  - API srv-da6fnem7bikc738ekde0, deploy dep-dbli6vivcj2c738pbkbg.
+  - Frontend srv-db257gjbc2fs73f9nsj0, deploy dep-dbli6vivcj2c738pbkp0.
+  - Admin srv-dbg86rmk1f9s73bkkev0, deploy dep-dbli6vivcj2c738pbkl0.
+- Production Supabase Drizzle migration ledger remains 26 records, maximum ID 26. PR #183 has no migration. Production business/referral data was not written or otherwise changed for this work.
+- The open-PR search after merging PR #183 returned no open PRs. Recheck before starting further work.
+
+### PR #183 — isolated PostgreSQL regression/acceptance coverage
+- Added artifacts/api-server/test/business-onboarding-db.test.ts.
+- Updated .github/workflows/backend.yml so the API suite runs after the disposable CI PostgreSQL database has received the current migrations. The DB-specific tests require the explicit KAIRA_DB_INTEGRATION_TESTS=true flag; the separate Work Management workflow does not set this flag.
+- Eight concurrent calls to createBusinessForUser for one CI user yielded exactly one workspace and seven ConflictError rejections; the test confirmed only one owner business and the matching users.business_id.
+- Referral acceptance at repository/database level verified a separate business ID, owner ID and newly generated referral code, the correct referred_by_business_id, a single attribution count, the referred user's own business association and no team_members row for that user.
+- An unknown referral code was rejected and the transaction left the CI user without a business association and without an owned business.
+- Tests used only the ephemeral GitHub Actions PostgreSQL service and cleaned up their own test rows. They did not use Render or production Supabase.
+- These are database/repository integration results. They do not replace authenticated browser/API E2E or establish the full tenant-isolation matrix across CRM, transactions, ledger, staff, inventory, savings or investments.
+
+### Staging, production and device acceptance boundaries
+- Supabase branch listing returned no development branches; only the production Kaira Africa Supabase project is connected. No isolated staging database/project or controlled staging business identities were available in this continuation.
+- Do not test referral conversion, team invitation acceptance, financial writes, inventory/customer photo lifecycle or authenticated tenant isolation by creating synthetic records in production.
+- Business referrals remain implemented and deployed (PR #174). The new tests prove core repository attribution/rollback and independence invariants only. Still NOT VERIFIED in authenticated staging: owner page and copy/share in a real browser, manager/staff 403 and anonymous 401 against the referral route, direct /referrals refresh, referral retention across splash/login/onboarding, self-referral and already-associated-user behavior through the HTTP/UI flow, and end-to-end cross-business data-access denial.
+- Team invitations remain implemented in code (PRs #171/#172). Still NOT VERIFIED with controlled recipients: new-user OTP, returning-user PIN, correct/wrong invite phone, expiry, revoke, resend token rotation, one-time acceptance, cross-business rejection and real SMS/SMTP delivery.
+- PWA/mobile work remains implemented in code (PR #173 mobile responsive changes and PR #176 desktop guidance). Still NOT VERIFIED on physical Android Chrome, iOS Safari and desktop browsers; also pending dismissal/standalone/service-worker/auth redirect checks and responsive interactions/screenshots at 320, 360, 390 and 430 px, tablet and desktop.
+- Do not merge CI evidence, Render Live evidence, authenticated E2E and physical device checks into one status. They remain independent release/acceptance gates.
+
+### Immediate next execution order
+1. Provision/authorize an isolated staging environment and two controlled business-owner identities before performing referral conversion, team invitation or tenant-isolation writes. Confirm cost approval before creating a Supabase branch/project.
+2. Execute referral UI/API/flow acceptance and verify that referred businesses have no team-membership or data access in the referring business.
+3. Execute invitation acceptance and delivery tests with consenting controlled phone/email recipients.
+4. Complete PWA installation/service-worker and viewport acceptance on real devices/browsers.
+5. Continue the full feature roadmap in FEATURE_AUDIT.md and this handover. Preserve all outstanding core finance, CRM, inventory, savings/investment, Work Management, notifications, billing, AI, legal/support and remote-work scope.
+6. Keep PR-first engineering, fresh migration validation, exact-head CI, exact Render SHA and migration checks for every runtime release. Never mutate production test data or PINs.
