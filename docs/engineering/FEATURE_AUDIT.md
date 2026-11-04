@@ -211,3 +211,16 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - API deployment logged successful migrations and HTTP 200 readiness. This release did not change production business/referral data.
 - Referral E2E still NOT VERIFIED: owner/anonymous/manager access matrix, controlled two-business attribution/count increment, self-referral, invalid code fallback and tenant-isolation tests remain to be completed in staging.
 
+
+## Current verification addendum — 2026-11-04
+
+- Latest repository `main` verified: `07cc2aa5a8b80c29677e1534d2923261b48270ef`. Last application-code release: PR #180 `0835684f2158cb0624ccd43c8063dd9ec42646fe`. All three Render services are Live on current main (API `dep-dblh3hdckfvc73fhqnm0`, frontend `dep-dblh3hdckfvc73fhqnug`, admin `dep-dblh3hdckfvc73fhqo3g`).
+- Business-to-business referrals: implemented/deployed (PR #174, migration 0025), owner-only `/referrals`, stable per-business code, copy/WhatsApp, signup attribution, count and independent-workspace warning. No team membership or cross-business data access is granted. Rewards/payouts/commissions/paid feature bonuses remain NOT IMPLEMENTED and must remain so until a separate policy/entitlement project is approved.
+- Read-only referral database verification: Drizzle ledger 26/max ID 26; 2 businesses, 2 present/distinct referral codes, 0 attributed businesses; `businesses` RLS on; anon/authenticated direct SELECT/INSERT false; 2 referral indexes and 1 self-FK found. Actual codes are intentionally not exposed.
+- Referral authenticated E2E remains NOT VERIFIED. No staging project or Supabase development branch exists in the connected Kaira account; tests requiring a new Supabase branch need cost approval first. Do not use production for referral attribution tests.
+- Team invitation authenticated OTP/PIN, lifecycle and SMS/SMTP E2E remain NOT VERIFIED; physical invitation-page device visual check remains outstanding.
+- PWA physical install acceptance remains NOT VERIFIED (Android Chrome, iOS Safari, desktop native/no-native prompt, standalone/dismissed, service worker/update/cache).
+- Responsive physical viewport checks at 320/360/390/430px, tablet and desktop remain NOT VERIFIED despite PR #173 CI/deployment.
+- Supabase advisor snapshot (2026-11-04): 33 informational RLS-enabled/no-policy findings; 26 unindexed-FK findings; 30 unused-index findings. No broad public policies or bulk indexes should be added/dropped. Investigate high-value query/FK cases independently.
+- PR #163 test-only mobile CSV smoke PR was closed as superseded; equivalent in-session navigation is already present in main's `smoke-live-branding.mjs`.
+- The sole remaining work must proceed through the rest of this audit: authenticated CRM/customer/media CRUD and tenant isolation; transaction and multi-currency financial correctness; daily ledger/stock atomicity/debts; inventory private image upload/print; investment/savings CRUD/concurrency/PDF; receipt branding/profile; Work Management authenticated workflows; SMTP and VAPID push; proposals/quotations; Freelancer Copilot; automation; AI/privacy; billing/paid entitlements; legal and appearance QA. Keep each area NOT VERIFIED until its own evidence exists.

@@ -373,3 +373,15 @@ Historical baseline: application-code commit 74c39e0a6db676a00511efe0460d395ffad
 - API deployment log: “Migrations applied successfully.” New instance started and `/ready` returned HTTP 200. Supabase data was not modified by this code-only release.
 - Current main at this checkpoint: `0835684f2158cb0624ccd43c8063dd9ec42646fe`. The referral feature remains implemented/deployed via PR #174. Its authenticated two-business E2E remains outstanding and requires isolated staging.
 
+
+## Current engineering checkpoint — 2026-11-04 (supersedes older SHA snapshots)
+
+- Latest verified `main`: `07cc2aa5a8b80c29677e1534d2923261b48270ef` (docs reconciliation). Last application-code release is PR #180 merge `0835684f2158cb0624ccd43c8063dd9ec42646fe`.
+- All Render services were read from their latest deploy records and are Live on the current main SHA: API `dep-dblh3hdckfvc73fhqnm0`, frontend `dep-dblh3hdckfvc73fhqnug`, admin static `dep-dblh3hdckfvc73fhqo3g`.
+- PR #174 business-to-business referrals is already implemented/deployed: owner-only `/referrals`, Sidebar GROWTH > Refer a Business, permanent business-specific link, copy/WhatsApp, onboarding attribution and count. This is separate from team invitations; rewards/payouts/paid-feature access are future-only.
+- Read-only Supabase verification: migration ledger 26/max ID 26; two businesses; two non-null distinct referral codes; zero attributed business rows; `businesses` RLS enabled; direct anon/authenticated SELECT/INSERT denied; referral indexes and self-FK present. Do not reveal actual codes.
+- No separate staging project or Supabase development branch was available; only the Kaira Africa project was listed and `list_branches` returned none. Referral and invitation E2E must wait for approved isolated staging or authorized controlled test identities. Never synthesize production businesses/referrals.
+- Security advisor snapshot: 33 INFO `rls_enabled_no_policy` findings. This is not a reason to grant broad Data API access: generic anon/authenticated business table SELECT/INSERT are denied and app access is through the trusted API. Review each table's actual API access model before changing RLS.
+- Performance advisor snapshot: 26 INFO unindexed-FK findings and 30 unused-index findings. Review query workload and FK operations before adding/removing indexes; no bulk index changes.
+- PR #163 was closed as superseded. Current main's live smoke script already navigates to Transactions in the SPA session instead of full-page navigation that would relock the visual PIN session.
+- Full remaining roadmap and acceptance requirements remain in the phase register and FEATURE_AUDIT.md. Keep CI/deployment/authenticated E2E/physical device acceptance distinct.
