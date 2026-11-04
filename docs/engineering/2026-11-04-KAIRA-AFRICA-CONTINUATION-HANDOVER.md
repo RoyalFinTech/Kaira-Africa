@@ -476,3 +476,50 @@ This checkpoint supersedes the earlier main/deployment SHA values above. Histori
 - Continue the complete roadmap preserved above and in `FEATURE_AUDIT.md`. This checkpoint closes no CRM, finance, inventory, investment, savings, Work Management, notifications, proposals, Freelancer Copilot, automation, AI, billing, legal or support feature.
 - Keep CI, Render deployment, migration state, authenticated E2E and physical-device evidence as independent statuses. Preserve production data; no production synthetic test users or records.
 
+
+
+---
+
+## Current continuation checkpoint — 2026-11-04 after PR #187
+
+### Repository, PR and runtime scope
+- Latest GitHub main: `0e920c77450f56db657d8127cf539d09fcecb01b`.
+- PR #187: https://github.com/RoyalFinTech/Kaira-Africa/pull/187; merged by squash as `0e920c77450f56db657d8127cf539d09fcecb01b`. PR head before squash: `45d3469a64bcb66ffcc045ea71800bfd9f487b64`.
+- PR #187 adds only `artifacts/api-server/test/team-invitations-db.test.ts` (370 lines). No runtime source, API contract/OpenAPI, generated client, database schema, migration, environment variable, OTP/SMS/SMTP integration or production configuration changed.
+- PRs #183, #185 and #187 add CI/DB tests; PRs #184 and #186 are documentation-only. The most recent application-runtime source release remains PR #180 `0835684f2158cb0624ccd43c8063dd9ec42646fe`.
+- Open-PR search after PR #187 returned no open PRs.
+
+### PR #187 exact-head CI evidence
+- Backend CI run `41837224773`: SUCCESS on exact PR head `45d3469a64bcb66ffcc045ea71800bfd9f487b64`.
+  - Workspace shared/API/frontend typechecks and frontend/API builds passed.
+  - Fresh disposable PostgreSQL migration application passed.
+  - API suite: 75 passed, 0 failed, 0 skipped.
+  - Built API `/health` smoke passed.
+  - Production Docker image build passed (validation only, no image pushed).
+- Work Management Build Checks run `41837224553`: SUCCESS on the same PR head (workspace typecheck/build and API test step passed).
+- All four new database-backed invitation acceptance tests explicitly executed and passed:
+  1. Wrong phone is forbidden without consuming the pending invitation; correct invitee phone accepts; repeated acceptance is rejected.
+  2. Expiry updates the invitation to expired and pending roster row to inactive; revoked invitation and roster state are consistent; expired/revoked acceptance is denied.
+  3. Resend rotates the stored token hash; old token is no longer found; replacement token accepts once.
+  4. An account already linked to a different business cannot accept an invitation into the inviting business; its existing owner association/role remain unchanged and no foreign membership is created.
+- These are repository/database integration checks against disposable CI PostgreSQL. No SMS, email, OTP or PIN provider was called. They do not prove full real-browser/API session flow or carrier delivery.
+
+### Current Render release and Supabase state
+- All three Render services are verified live on exact main SHA `0e920c77450f56db657d8127cf539d09fcecb01b`:
+  - API `srv-da6fnem7bikc738ekde0`, deploy `dep-dblj3ilbedkc73ad9hn0`.
+  - Frontend `srv-db257gjbc2fs73f9nsj0`, deploy `dep-dblj3ilbedkc73ad9i40`.
+  - Admin static `srv-dbg86rmk1f9s73bkkev0`, deploy `dep-dblj3ilbedkc73ad9i00`.
+- Admin and frontend completed first, then the API deploy completed live. The Render log-query service intermittently returned Loki HTTP 503 during final verification and a later `/ready` query returned no matching log rows. Therefore, exact deployment state is confirmed live, but do not claim a separately observed post-PR #187 `/ready` 200 or no-error log check from that last log query. Earlier PR #185 new API instance logs did record Redis connected and `/ready` HTTP 200.
+- Production Drizzle migration ledger remains 26 rows / max ID 26. PR #187 has no migration.
+- Read-only production business aggregate remains 2 businesses, 2 referral codes present/distinct, zero attributed businesses. Do not select or reveal code values.
+- No production user, business, invitation, referral, customer, financial, inventory or Storage record was created or modified by this work.
+- Supabase still has no staging branch. The branch creation request was stopped by the Supabase cost-confirmation gate and created nothing. Cost-estimate flow requires the correct organization ID, then the exact price must be shown and explicitly approved before confirmation and branch creation. Do not use production for authenticated E2E.
+
+### Updated acceptance coverage and remaining gates
+- Team invitation repository/database lifecycle is now CI-tested for wrong-phone non-consumption, correct-phone single acceptance, duplicate acceptance, expiry, revoke, resend/token rotation, old-link invalidation and cross-business rejection.
+- Still NOT VERIFIED in isolated controlled staging: new invitee real OTP; returning-user PIN login/continuation; full invitation HTTP/browser flow and auth session; matching target phone across actual OTP session; real SMS provider delivery; real SMTP delivery; provider retry/outbox status; and invitation page physical device/viewport visual interaction.
+- Referral CI/database checks cover workspace concurrency, independent B2B referral attribution, no team membership, unknown-code rollback, self-referral and existing-account second-workspace rejection. Still NOT VERIFIED: owner UI/copy/WhatsApp/direct refresh, anonymous 401 live workflow result, manager/staff 403, owner 200, retention through login/onboarding, controlled two-business conversion/count and full tenant isolation across every business data domain.
+- PWA/mobile PRs #173/#176 remain deployed. Android Chrome installation, iOS Safari Add to Home Screen, desktop native/no-native prompt, right-edge guidance, standalone/dismissal, service-worker update/auth redirect and 320/360/390/430 px/tablet/desktop physical/browser checks remain NOT VERIFIED.
+- All other product areas and roadmap requirements remain open as recorded earlier in this handover and `FEATURE_AUDIT.md`; PR #187 does not close CRM, financial, inventory, savings/investment, Work Management, notification/push, proposal, freelancer, automation, AI, billing, legal or support scope.
+- Maintain separate statuses for implementation, CI, deployment, production migrations, authenticated E2E, real delivery and physical-device acceptance.
+
