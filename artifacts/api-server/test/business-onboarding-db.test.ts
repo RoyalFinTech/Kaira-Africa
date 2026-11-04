@@ -122,6 +122,45 @@ test("attributes a referred workspace without creating team membership or sharin
     .from(teamMembers)
     .where(eq(teamMembers.userId, referredUserId));
   assert.equal(teamMemberships.length, 0, "a referral must not create team membership in the referring business");
+
+  // An account that already owns/joins a workspace cannot create a second
+  // workspace, even when it submits a different business's valid referral code.
+  await assert.rejects(
+    createBusinessForUser(
+      referredUserId,
+      businessInput("second-workspace-attempt"),
+      referrerBusiness.referralCode,
+    ),
+    (error: unknown) =>
+      error instanceof ConflictError && /already belong to a business/i.test(error.message),
+  );
+
+  // Exercise the self-referral branch with a new-workspace-eligible account:
+  // detach the test owner only inside this disposable CI database, then restore
+  // its association in finally so the normal fixture cleanup remains reliable.
+  await db.update(users)
+    .set({ businessId: null })
+    .where(eq(users.id, referrerUserId));
+  try {
+    await assert.rejects(
+      createBusinessForUser(
+        referrerUserId,
+        businessInput("self-referral-attempt"),
+        referrerBusiness.referralCode,
+      ),
+      (error: unknown) =>
+        error instanceof BadRequestError && /cannot use your own business referral link/i.test(error.message),
+    );
+  } finally {
+    await db.update(users)
+      .set({ businessId: referrerBusiness.id })
+      .where(eq(users.id, referrerUserId));
+  }
+
+  const [finalReferralCount] = await db.select({ value: count() })
+    .from(businesses)
+    .where(eq(businesses.referredByBusinessId, referrerBusiness.id));
+  assert.equal(Number(finalReferralCount?.value ?? 0), 1, "rejected self/second-workspace attempts must not change referral attribution");
 });
 
 test("rejects an unknown referral code without creating a workspace", {
