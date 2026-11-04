@@ -100,9 +100,6 @@ jobs:
           PORT: 5173
           BASE_PATH: /
 
-      - name: Run smoke tests
-        run: pnpm --filter @workspace/api-server run test
-
       - name: Build api-server (bundles dist/index.mjs + dist/scripts/migrate.mjs)
         run: pnpm --filter @workspace/api-server run build
 
@@ -112,6 +109,11 @@ jobs:
           node --enable-source-maps ./dist/scripts/migrate.mjs
         env:
           DATABASE_URL: postgres://kaira:kaira@localhost:5432/kaira_ci
+
+      - name: Run API unit and PostgreSQL-backed acceptance tests
+        run: pnpm --filter @workspace/api-server run test
+        env:
+          KAIRA_DB_INTEGRATION_TESTS: "true"
 
       - name: Boot the built server and check /health
         run: |
