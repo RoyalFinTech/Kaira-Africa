@@ -298,3 +298,17 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - Supabase ledger remains 26/max 26; no production data was changed. No staging branch provisioned; estimate US$0.01344/hour awaits explicit approval.
 - Referral, invitation, PWA/mobile, all core business and full roadmap acceptance remain separately tracked and open where not verified. Do not remove roadmap scope.
 
+
+
+---
+
+## Acceptance update — 2026-11-04 (PR #194 OTP expiry and attempt limits)
+
+- PR #194 merged as `8711ee8008040479f5ceef2dd418967e3c79011e`; tests only, no runtime change or migration.
+- Backend CI `41844754318` and Work Management checks `41844754245` passed. API suite: 78 passed, 0 failed, 0 skipped; fresh migrations, builds, health smoke and Docker image passed.
+- OTP/PIN HTTP CI verifies expired OTP rejection without account creation or consumption, failed-attempt counting and lockout after `maxAttempts`, in addition to OTP verification/session creation and Argon2id PIN setup/change/login.
+- **NOT VERIFIED:** actual SMS/carrier delivery, real OTP request, returning-user PIN browser recovery, physical OTP/PIN UX, SMTP invitation delivery and physical PWA acceptance.
+- All Render services live on `8711ee8008040479f5ceef2dd418967e3c79011e`; API `dep-dbljqilbedkc73aed64g`, frontend `dep-dbljqilbedkc73aed6d0`, admin `dep-dbljqilbedkc73aed6i0`. API startup shows migration success, Redis connected and `/ready` HTTP 200.
+- Production ledger remains 26/max 26; production business/referral aggregate unchanged. No production test data used.
+- Supabase staging branch not provisioned; estimate US$0.01344/hour awaits explicit approval. All other roadmap requirements remain open.
+

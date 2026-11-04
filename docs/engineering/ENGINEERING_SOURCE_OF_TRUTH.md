@@ -477,3 +477,17 @@ These tests provide database/repository-level regression evidence for onboarding
 - Supabase Drizzle production ledger remains 26/max ID 26; no migration. Business aggregate remains 2 businesses, 2 distinct referral codes, 0 attributed businesses. No production test user, OTP, session or PIN change was performed.
 - Real new-user OTP sending and SMS delivery, returning-user PIN browser flow, SMTP invitation delivery, referral browser/signup flow, physical PWA/device acceptance and full remaining roadmap still require their own acceptance evidence. Staging branch estimate is US$0.01344/hour; not provisioned pending explicit user cost approval.
 
+
+
+---
+
+## Release and QA addendum — 2026-11-04 (PR #194 OTP security)
+
+- Main: `8711ee8008040479f5ceef2dd418967e3c79011e`; PR #194 changed only `artifacts/api-server/test/auth-otp-pin-route-db.test.ts`, with no runtime/schema/migration change.
+- Backend CI `41844754318` and Work Management Build Checks `41844754245` SUCCESS. API suite 78/78; fresh migrations, typechecks/builds, health smoke and production Docker image build passed.
+- OTP/PIN CI acceptance now includes expired-code rejection without user creation/consumption, failed-attempt increments and lockout even when a later code is correct; existing OTP verification/session and Argon2id PIN setup/change/login checks remain passing.
+- These tests use hashed synthetic OTPs in disposable CI PostgreSQL and make no SMS provider calls.
+- All Render services live on the exact SHA: API `dep-dbljqilbedkc73aed64g`, frontend `dep-dbljqilbedkc73aed6d0`, admin `dep-dbljqilbedkc73aed6i0`. API logs show migrations successful, Redis connected and readiness HTTP 200.
+- Production Drizzle ledger remains 26/max ID 26; 2 businesses, 2 distinct referral codes, 0 attributed referrals. No production data changed.
+- Real SMS/carrier, OTP request delivery, browser PIN recovery, SMTP and physical-device acceptance remain NOT VERIFIED. Staging branch cost estimate US$0.01344/hour remains unapproved. Preserve all remaining roadmap items.
+

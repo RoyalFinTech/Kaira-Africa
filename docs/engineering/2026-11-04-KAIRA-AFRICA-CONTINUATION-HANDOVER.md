@@ -624,3 +624,22 @@ This checkpoint supersedes the earlier main/deployment SHA values above. Histori
 - The Supabase staging branch is still uncreated. Cost estimate remains US$0.01344/hour. No cost confirmation or branch creation until the user explicitly approves that hourly charge.
 - Keep all CRM, accounting/ledger/debts, inventory, investment/savings, receipt/profile, Work Management, notifications/push, proposals/quotations, Freelancer Copilot, automation, AI/privacy, billing/entitlements, legal and support roadmap requirements open unless independently tested and delivered.
 
+
+
+---
+
+## Current continuation checkpoint — 2026-11-04 after PR #194 (OTP security)
+
+- Current main: `8711ee8008040479f5ceef2dd418967e3c79011e`. PR #194 merged as that squash SHA; PR head `8ac501c816d25e24abbc93edf42d821a2ddcc6b9`.
+- PR #194 changes only `artifacts/api-server/test/auth-otp-pin-route-db.test.ts`; no runtime, OpenAPI/generated client, schema or migration change.
+- Backend CI `41844754318` and Work Management Build Checks `41844754245` both succeeded. Backend CI passed typechecks/builds, fresh disposable PostgreSQL migrations, health smoke, Docker image build and **78 API tests (78 pass, 0 fail, 0 skipped)**.
+- The OTP/PIN HTTP integration test now also proves:
+  1. An expired HMAC-hashed OTP returns HTTP 400, remains unconsumed and cannot create a user.
+  2. Two incorrect codes increment the stored attempts counter from 0 to 2.
+  3. After `maxAttempts` is reached, even the correct OTP is rejected; no user/session is created and the OTP remains unconsumed.
+- Existing assertions still cover OTP verification/session issuance, Argon2id PIN storage, current-PIN requirement when changing a PIN, OTP fallback rejection for a PIN-enabled account, incorrect PIN rejection and successful PIN login.
+- All OTPs/phones are synthetic CI fixtures in disposable PostgreSQL, stored as hashes. No SMS provider is called. Teardown removes only the suite's OTP/audit rows and fixture user(s).
+- All three Render services are verified live on exact SHA `8711ee8008040479f5ceef2dd418967e3c79011e`: API `dep-dbljqilbedkc73aed64g`, frontend `dep-dbljqilbedkc73aed6d0`, admin `dep-dbljqilbedkc73aed6i0`. API startup logged successful migrations, Redis connected and `/ready` HTTP 200.
+- Supabase Drizzle ledger remains 26/max ID 26. Production aggregate remains 2 businesses, 2 distinct referral codes, 0 attributed businesses. No production data changed.
+- Still NOT VERIFIED: real SMS/carrier delivery, OTP request/provider receipt, PIN-enabled returning-user browser recovery, device OTP/PIN UX, SMTP invitation delivery and physical PWA acceptance. The staging branch remains uncreated pending explicit approval of the US$0.01344/hour estimate. Keep the full product roadmap open.
+
