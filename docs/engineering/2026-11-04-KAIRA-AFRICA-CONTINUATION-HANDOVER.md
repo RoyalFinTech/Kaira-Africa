@@ -238,7 +238,7 @@ This addendum supersedes earlier SHA/deployment snapshots in the sections below.
 ### Active work started in this continuation
 - Branch: `fix/business-onboarding-serialization`.
 - Change: `createBusinessForUser` now locks the current user row (`SELECT ... FOR UPDATE`) while checking `users.business_id` and inserting the workspace. This closes the race where two concurrent onboarding requests could create multiple business rows for one user.
-- This is pending PR/CI at the handover point. Verify exact branch head and PR state. Do not merge until Work Management Build Checks and Backend CI (including Docker build) pass. After merge verify all three Render deploy SHAs; no database migration is expected for this code-only lock.
+- PR #180 has already merged as `0835684f2158cb0624ccd43c8063dd9ec42646fe`; Work Management Build Checks `41817865954` and Backend CI `41817865764` passed including Docker. All three Render services are live on that SHA. No schema migration was required.
 
 ### First acceptance priority: referrals (safe, controlled testing)
 1. Open `/referrals` with a controlled business-owner session; verify page loads, direct refresh works, copy works and WhatsApp opens a prefilled message.
@@ -269,6 +269,21 @@ Repository `RoyalFinTech/Kaira-Africa`. Frontend `https://kaira-africa-frontend.
 
 Important: business-to-business referrals ALREADY exist in PR #174. Do not recreate the page. The owner sees Sidebar GROWTH > “Refer a Business” and route `/referrals`. It uses a unique permanent business code, branded Kaira UI, copy/WhatsApp share, referral count and signup/workspace attribution. It is not the team invite system and grants no membership/data access. Rewards/payouts/paid-feature unlocking are future-only. Production has two distinct codes and zero attributed businesses at the last read-only check; do not display codes or create production test businesses. Complete the controlled referral E2E only with two consenting staging identities and verify access boundaries.
 
-Check branch/PR `fix/business-onboarding-serialization` (user-row `FOR UPDATE` lock in `createBusinessForUser`) and its CI. If the head is still current and both workflows including Docker are green, review and merge safely; otherwise diagnose, update branch-first and retest. Verify all three Render services on the merge SHA.
+PR #180 already merged the `FOR UPDATE` user-row lock in `createBusinessForUser` as `0835684f2158cb0624ccd43c8063dd9ec42646fe`. Both required workflows including Docker passed and all three Render services are live on that SHA. Do not recreate the change unless later evidence shows a defect.
 
 Next, complete referral acceptance tests, then follow the complete remaining roadmap above and in FEATURE_AUDIT.md. Keep exact evidence/statuses separate: code present, CI passed, Render Live, migration verified, authenticated E2E passed, physical device tested. No fabricated data, no production test identities and no destructive Git operations.
+
+
+## Final checkpoint after PR #180 — 2026-11-04 11:04 UTC
+
+- Current main: `0835684f2158cb0624ccd43c8063dd9ec42646fe`.
+- PR #180 merged; row-level locking now serializes concurrent business workspace creation per user.
+- CI passed: Work Management Build Checks `41817865954`; Backend CI `41817865764` (including production Docker image).
+- Render services are all Live on the same commit:
+  - API `dep-dblh1iflk1mc73euq6hg`
+  - Frontend `dep-dblh1iflk1mc73euq6u0`
+  - Admin `dep-dblh1iflk1mc73euq6q0`
+- API runtime logged migration application success and `/ready` HTTP 200. No schema migrations or business records changed in this release.
+- Referral feature is already deployed from PR #174; controlled authenticated staging conversion/count/tenant-isolation tests are still open.
+- For the next chat, use the copy-ready prompt in this document, but start by confirming current main and deploy SHA again.
+

@@ -201,3 +201,13 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - Current active integrity fix branch: `fix/business-onboarding-serialization`, adds a row lock around `users.business_id` check in `createBusinessForUser` to prevent concurrent duplicate workspace creation. This change is pending PR/CI until verified; don't mark as merged or deployed prematurely.
 - Continue keeping CI, Render deployment, authenticated E2E and physical device/browser acceptance as separate evidence categories.
 
+
+
+## PR #180 post-deployment checkpoint — 2026-11-04
+
+- PR #180 merged as `0835684f2158cb0624ccd43c8063dd9ec42646fe`; Work Management Build Checks `41817865954` and Backend CI `41817865764` both passed, including Docker build.
+- `createBusinessForUser` now locks the current user's row while checking business association and creating a workspace. This serializes concurrent new-business submissions. No schema migration was required.
+- All three Render services verified Live on the merge SHA: API `dep-dblh1iflk1mc73euq6hg`, frontend `dep-dblh1iflk1mc73euq6u0`, admin `dep-dblh1iflk1mc73euq6q0`.
+- API deployment logged successful migrations and HTTP 200 readiness. This release did not change production business/referral data.
+- Referral E2E still NOT VERIFIED: owner/anonymous/manager access matrix, controlled two-business attribution/count increment, self-referral, invalid code fallback and tenant-isolation tests remain to be completed in staging.
+
