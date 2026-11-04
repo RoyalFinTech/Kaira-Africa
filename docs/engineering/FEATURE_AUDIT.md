@@ -238,3 +238,19 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - Team invitation authenticated OTP/PIN acceptance, expiry/revoke/resend/one-time/cross-business and real SMS/SMTP delivery remain NOT VERIFIED.
 - Physical PWA installation on Android/iOS/desktop and viewport tests at 320/360/390/430 px, tablet and desktop remain NOT VERIFIED.
 - Preserve all remaining roadmap rows and the separation between implementation, CI, deployment, authenticated E2E and physical-device evidence.
+
+
+---
+
+## Acceptance update — 2026-11-04 (PR #185)
+
+- Referral/onboarding CI coverage expanded by PR #185 (merged `276e9b371bdb9641b47932bc808f77e96c03b8b4`). The existing PostgreSQL acceptance test now rejects (a) an account already assigned to a workspace attempting a second referred workspace, and (b) a business owner attempting to use their own referral code; it asserts rejected attempts do not increment referral attribution.
+- Backend CI `41835886367` SUCCESS: 71 tests passed, 0 failed, 0 skipped; fresh disposable migrations, all workspace/API/frontend typechecks and builds, API health smoke and production Docker image build passed. Work Management Build Checks `41835886321` SUCCESS.
+- The read-only live access-control workflow now includes `GET /api/businesses/me/referral` and expects HTTP 401 for anonymous access. Workflow execution/HTTP 401 evidence was NOT VERIFIED independently after merge; do not promote this to a passed live test until the run is inspected.
+- All three Render services are Live on `276e9b371bdb9641b47932bc808f77e96c03b8b4`; Drizzle migration ledger remains 26/max ID 26. No runtime source or production data changed.
+- **Referral acceptance remains partial:** DB/repository invariants are CI-tested; owner UI, share/refresh, role matrix, referral retention, two-business attributed conversion/count and full cross-tenant denial still need controlled staging.
+- **Team invitations remain partial:** implementation exists, but invitation lifecycle repository/DB tests are a next engineering target; actual new-user OTP, returning-user PIN, correct/wrong phone, expiry, revoke, resend rotation, one-time, cross-business, SMS and SMTP remain unverified in controlled staging.
+- **PWA/mobile remains partial:** Android/iOS/Desktop install, service worker/auth redirects and viewport/device tests remain unverified.
+- No staging Supabase branch is provisioned. Creation is cost-gated and requires explicit user approval after a price estimate. No synthetic production test data is allowed.
+- All other rows in this feature audit remain open/unchanged; do not remove CRM/finance/inventory/investment/savings/Work Management/AI/notifications/billing/legal/support scope.
+
