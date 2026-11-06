@@ -670,3 +670,14 @@ Baseline rechecked before this work: main `277d57d6819adc6f6d07259681b867e3ecab6
 
 ### Safety and release gates
 All work stays on the feature branch and goes through PR + free CI. No paid staging, production test accounts, fake financial records, secrets, or production schema/data writes. Mark physical-device acceptance and external WhatsApp/Facebook crawler preview as NOT VERIFIED until tested. Do not merge/deploy until checks pass and the target route/assets are verified.
+
+
+### Implementation update — 6 November 2026 (feature branch; validation pending)
+
+Working branch `feat/pwa-share-mobile-country-ux` now contains the first implementation pass:
+- Business onboarding country selector now renders the locally drawn flag for each of the eight existing country choices, including the selected value; The Gambia remains the default. The Gambian-only +220 phone authentication flow was not changed.
+- Root HTML now declares the canonical frontend URL and Open Graph/Twitter share metadata. The share image currently points to the existing locally hosted dashboard hero WebP asset; this avoids inventing a new asset path. Social-crawler rendering and recipient-device navigation remain NOT VERIFIED.
+- PWA manifest now explicitly declares the existing PNG as the general icon and the inset Kaira SVG mark as both ordinary and maskable SVG icon. Service-worker shell cache version was bumped and the Kaira PNG icon is precached. Physical installation, OS icon crop and update behaviour remain NOT VERIFIED.
+- App header now includes a manual data refresh control using React Query invalidation (no full-page reload, so active form input is not deliberately discarded). The scrollable app shell now supports a top-edge pull-down gesture to invalidate active queries, with a visible status indicator and overscroll containment. Touch-device gesture, accessibility and per-page refresh behaviour remain pending QA.
+- These are implementation changes only; no PR merge, production deploy, production database write or migration has occurred. Build/typecheck/CI must pass before considering merge.
+- Remaining: verify the new flag artwork visually and through selector interaction; inspect/validate the deployed root and all deep links; test crawler access to the share image and preview; test PWA installation and icon crop on Android/iOS/desktop; test refresh and pull-to-refresh on real devices; audit responsive 320/360/390/430 px/tablet/desktop layouts; continue dashboard visual work and remaining roadmap.
