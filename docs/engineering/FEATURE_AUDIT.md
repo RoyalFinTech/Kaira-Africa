@@ -374,3 +374,11 @@ PR #196 remains draft pending external browser, crawler and physical-device acce
 |---|---|---|---|
 | Share-card artwork | Added Kaira-branded 1200×630 PNG `public/kaira-social-preview.png` (~757 KB). Root Open Graph and Twitter image URLs now reference this asset with `image/png`; replaces the interim square-logo image and earlier WebP. | Verify deployed HTTP 200, `Content-Type: image/png`, cache headers, and actual WhatsApp/Facebook/LinkedIn previews. | IMPLEMENTED; EXTERNAL FETCH/CRAWLER PREVIEW NOT VERIFIED |
 | Deep-link navigation | Existing SPA build script emits route HTML shells carrying the root metadata. | Test root and invitation/onboarding/dashboard deep links from a clean browser/device; reproduce the original reported URL failure. | SOURCE/BUILD PATH EVIDENCE; BROWSER ACCEPTANCE NOT VERIFIED |
+
+## Referral sharing UX — 6 November 2026
+
+| Area | Implementation | Remaining acceptance | Status |
+|---|---|---|---|
+| Native share | Uses Web Share API when available, with cancellation handled as normal. | Test Android and iOS native share sheets and supported desktop browsers. | IMPLEMENTED; DEVICE TEST PENDING |
+| WhatsApp share | Dedicated `wa.me` action remains available. | Confirm recipient handoff and actual preview in WhatsApp. | IMPLEMENTED; DEVICE/RECIPIENT TEST PENDING |
+| Copy link | Clipboard API with legacy selection-copy fallback and accessible success/failure feedback. | Test secure-context permissions and fallback browsers/devices. | IMPLEMENTED; DEVICE TEST PENDING |
