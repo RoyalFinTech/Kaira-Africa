@@ -367,3 +367,10 @@ PR #196 remains draft pending external browser, crawler and physical-device acce
 |---|---|---|---|
 | Social share image format | Open Graph and Twitter metadata now reference the existing public Kaira logo PNG and declare `image/png`, replacing the dashboard WebP. | Confirm deployed image HTTP 200/content type/cache headers, dimensions and WhatsApp/Facebook/LinkedIn crawler preview. Existing PNG is ~1.82 MB and square; optimized 1200×630 share card remains desirable. | METADATA UPDATED; EXTERNAL DELIVERY/PREVIEW NOT VERIFIED |
 | Recipient navigation | No change to app routing in this follow-up. | Reproduce the original link failure and test root plus representative deep links in a fresh unauthenticated browser/device. | NOT VERIFIED |
+
+## Dedicated social preview asset — 6 November 2026
+
+| Area | Implementation | Remaining acceptance | Status |
+|---|---|---|---|
+| Share-card artwork | Added Kaira-branded 1200×630 PNG `public/kaira-social-preview.png` (~757 KB). Root Open Graph and Twitter image URLs now reference this asset with `image/png`; replaces the interim square-logo image and earlier WebP. | Verify deployed HTTP 200, `Content-Type: image/png`, cache headers, and actual WhatsApp/Facebook/LinkedIn previews. | IMPLEMENTED; EXTERNAL FETCH/CRAWLER PREVIEW NOT VERIFIED |
+| Deep-link navigation | Existing SPA build script emits route HTML shells carrying the root metadata. | Test root and invitation/onboarding/dashboard deep links from a clean browser/device; reproduce the original reported URL failure. | SOURCE/BUILD PATH EVIDENCE; BROWSER ACCEPTANCE NOT VERIFIED |
