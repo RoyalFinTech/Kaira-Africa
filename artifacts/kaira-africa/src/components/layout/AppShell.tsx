@@ -7,6 +7,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useToast } from '@/hooks/use-toast';
 
 interface AppShellProps {
   children: ReactNode;
@@ -20,13 +21,16 @@ export function AppShell({ children }: AppShellProps) {
   const pullStart = useRef<{ x: number; y: number } | null>(null);
   const pullRefreshInFlight = useRef(false);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const refreshVisibleQueries = async () => {
     if (pullRefreshInFlight.current) return;
     pullRefreshInFlight.current = true;
     setIsPullRefreshing(true);
     try {
-      await queryClient.invalidateQueries();
+      await queryClient.invalidateQueries(undefined, { throwOnError: true });
+    } catch {
+      toast({ title: 'Refresh failed', description: 'Check your connection and try again.', variant: 'destructive' });
     } finally {
       pullRefreshInFlight.current = false;
       setIsPullRefreshing(false);
