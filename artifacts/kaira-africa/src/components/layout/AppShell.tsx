@@ -17,30 +17,53 @@ export function AppShell({ children }: AppShellProps) {
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [location] = useLocation();
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
-  const pullStartY = useRef<number | null>(null);
+  const pullStart = useRef<{ x: number; y: number } | null>(null);
+  const pullRefreshInFlight = useRef(false);
   const queryClient = useQueryClient();
 
   const refreshVisibleQueries = async () => {
-    if (isPullRefreshing) return;
+    if (pullRefreshInFlight.current) return;
+    pullRefreshInFlight.current = true;
     setIsPullRefreshing(true);
     try {
       await queryClient.invalidateQueries();
     } finally {
+      pullRefreshInFlight.current = false;
       setIsPullRefreshing(false);
     }
   };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
-    pullStartY.current = event.currentTarget.scrollTop <= 0
-      ? (event.touches[0]?.clientY ?? null)
-      : null;
+    const touch = event.touches[0];
+    if (!touch || event.currentTarget.scrollTop > 0) {
+      pullStart.current = null;
+      return;
+    }
+
+    // Do not hijack a downward gesture while an inner scroll panel is
+    // positioned below its own top edge.
+    let node = event.target as HTMLElement | null;
+    while (node && node !== event.currentTarget) {
+      const style = window.getComputedStyle(node);
+      const scrollableY = /(auto|scroll|overlay)/.test(style.overflowY);
+      if (scrollableY && node.scrollHeight > node.clientHeight && node.scrollTop > 0) {
+        pullStart.current = null;
+        return;
+      }
+      node = node.parentElement;
+    }
+
+    pullStart.current = { x: touch.clientX, y: touch.clientY };
   };
 
   const handleTouchEnd = (event: React.TouchEvent<HTMLElement>) => {
-    const startY = pullStartY.current;
-    pullStartY.current = null;
-    const endY = event.changedTouches[0]?.clientY;
-    if (startY !== null && endY !== undefined && endY - startY >= 84) {
+    const start = pullStart.current;
+    pullStart.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const deltaY = touch.clientY - start.y;
+    const deltaX = Math.abs(touch.clientX - start.x);
+    if (deltaY >= 88 && deltaY > deltaX * 1.4) {
       void refreshVisibleQueries();
     }
   };
