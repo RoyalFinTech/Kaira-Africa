@@ -27,16 +27,10 @@
       "purpose": "any"
     },
     {
-      "src": "/kaira-logo.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
