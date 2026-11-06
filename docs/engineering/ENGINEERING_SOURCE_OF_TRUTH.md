@@ -507,3 +507,11 @@ Add to the active acceptance register:
 - Dashboard imagery: review the existing hero asset and add optimized branded visual assets to meaningful dashboard modules only where they improve understanding; no image should obscure live data or slow first render.
 
 Do not mark these complete until implementation, CI, direct-link/browser checks and supported device checks are evidenced. No-cost branch/PR/CI/local strategy remains in force; no paid staging environment is to be provisioned.
+
+
+## UX implementation checkpoint — 6 November 2026 (branch only; QA pending)
+Branch: `feat/pwa-share-mobile-country-ux`.
+
+Implemented but not yet validated: reusable local SVG country flags in the eight-option business-country selector (Gambia remains default); canonical + Open Graph/Twitter metadata pointing at the verified frontend origin and existing dashboard hero WebP; explicit general/maskable PWA icon declarations using existing assets and a versioned shell cache with app icon precache; header manual refresh and top-edge mobile pull-to-refresh implemented with React Query invalidation, not page reload. PhoneAuthPage's Gambian +220 authentication remains unchanged. No production DB or service changes.
+
+Do not mark these complete until typecheck/build/CI and focused source/browser tests pass. External social preview, recipient navigation, actual PWA install/icon crop, physical pull gesture and responsive device acceptance remain NOT VERIFIED. See continuation handover and FEATURE_AUDIT for acceptance gates.
