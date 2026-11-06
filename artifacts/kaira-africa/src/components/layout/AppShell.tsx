@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { AppPageErrorBoundary } from '@/components/common/AppPageErrorBoundary';
 import { Sidebar } from './Sidebar';
@@ -14,6 +16,34 @@ export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [location] = useLocation();
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const pullStartY = useRef<number | null>(null);
+  const queryClient = useQueryClient();
+
+  const refreshVisibleQueries = async () => {
+    if (isPullRefreshing) return;
+    setIsPullRefreshing(true);
+    try {
+      await queryClient.invalidateQueries();
+    } finally {
+      setIsPullRefreshing(false);
+    }
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    pullStartY.current = event.currentTarget.scrollTop <= 0
+      ? (event.touches[0]?.clientY ?? null)
+      : null;
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLElement>) => {
+    const startY = pullStartY.current;
+    pullStartY.current = null;
+    const endY = event.changedTouches[0]?.clientY;
+    if (startY !== null && endY !== undefined && endY - startY >= 84) {
+      void refreshVisibleQueries();
+    }
+  };
 
   // Route changes from any menu item close the mobile drawer immediately.
   useEffect(() => {
