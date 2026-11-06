@@ -92,7 +92,22 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         <Header onMenuClick={() => setMobileMenuOpen(value => !value)} onDesktopMenuToggle={() => setDesktopSidebarCollapsed(value => !value)} />
-        <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-6">
+        <main
+          className="relative min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-4 pb-24 sm:p-6 lg:pb-6"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => { pullStart.current = null; }}
+        >
+          {isPullRefreshing && (
+            <div
+              className="sticky top-0 z-30 mx-auto mb-3 flex w-fit items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              Refreshing latest data…
+            </div>
+          )}
           <AppPageErrorBoundary key={location}>{children}</AppPageErrorBoundary>
         </main>
       </div>
