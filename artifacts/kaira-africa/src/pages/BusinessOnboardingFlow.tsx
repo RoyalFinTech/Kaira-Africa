@@ -284,7 +284,7 @@ export default function BusinessOnboardingFlow() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="country" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">Country <CountryFlag country={field.value} width={24} height={16} /></FormLabel>
+                        <FormLabel>Country</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
