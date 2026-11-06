@@ -643,3 +643,30 @@ This checkpoint supersedes the earlier main/deployment SHA values above. Histori
 - Supabase Drizzle ledger remains 26/max ID 26. Production aggregate remains 2 businesses, 2 distinct referral codes, 0 attributed businesses. No production data changed.
 - Still NOT VERIFIED: real SMS/carrier delivery, OTP request/provider receipt, PIN-enabled returning-user browser recovery, device OTP/PIN UX, SMTP invitation delivery and physical PWA acceptance. The staging branch remains uncreated pending explicit approval of the US$0.01344/hour estimate. Keep the full product roadmap open.
 
+
+
+## Continuation update — 6 November 2026 (PWA, sharing, visual and mobile UX)
+
+
+Baseline rechecked before this work: main `277d57d6819adc6f6d07259681b867e3ecab68e8`; no open PRs; API, frontend and admin Render services are Live on that exact SHA. New working branch: `feat/pwa-share-mobile-country-ux`, created from that SHA. No production data or configuration changed.
+
+### Newly requested work — keep in active scope
+- Diagnose recipient-facing Kaira Africa links. Add correct canonical/Open Graph/Twitter metadata and an absolute share-preview image URL; inspect SPA direct-route handling and test root/deep links. A social preview image is distinct from the destination URL actually loading; both need verification.
+- Verify PWA icon assets and manifest for installed Android/iOS/desktop experiences. Ensure the Kaira mark is used consistently for standard, Apple-touch and maskable icon purposes; review asset weight and cache/version behaviour.
+- Add an accessible manual refresh control and mobile pull-to-refresh gesture. Refresh must refetch current screen data, avoid accidental browser navigation, expose loading/error feedback, and not discard unsaved form input.
+- Audit responsive layouts at 320/360/390/430 px, tablet and desktop, including dashboard, onboarding, navigation, cards, forms and install prompt placement.
+- Fix onboarding country selector so each listed country visibly displays its own flag, using consistent compact SVG flag artwork. Preserve The Gambia as the default and cover Senegal, Sierra Leone, Ghana, Nigeria, Kenya, South Africa and Egypt.
+- Continue dashboard visual improvements and add image assets only where they support comprehension and brand quality. The existing dashboard hero image is already present; do not describe the image feature as entirely absent. Keep artwork optimized and locally served where possible.
+
+### Initial code inspection findings (not yet fixes)
+- `PhoneAuthPage.tsx` is explicitly Gambian +220 authentication with carrier prefixes; do not broaden it accidentally when fixing the separate business-country selector.
+- `BusinessOnboardingFlow.tsx` lists eight countries but only conditionally shows the Gambia flag in the field label; individual options do not show flags.
+- `index.html` has title/description/Open Graph title+description and Twitter title+description, but no canonical URL, `og:url`, `og:image` or `twitter:image`.
+- `manifest.webmanifest` currently lists the PNG and favicon SVG without explicit 192/512 sizes or a maskable icon purpose. The PNG is 1,824,369 bytes; review optimization and icon variants before changing install assets.
+- `sw.js` currently caches the app root, manifest and favicon; app icons and refresh/update behaviour need a deliberate cache strategy.
+- `DashboardPage.tsx` already renders `/kaira-dashboard-hero.webp`; next image work should improve other useful dashboard sections rather than duplicate decorative hero art.
+- `AppShell.tsx` currently has a scrollable main region but no pull-to-refresh interaction or shared refresh control.
+- Link delivery failure is not yet reproduced. Request the exact URL/channel if it remains unclear whether the failure is a destination load, a deep link, or only a missing preview card.
+
+### Safety and release gates
+All work stays on the feature branch and goes through PR + free CI. No paid staging, production test accounts, fake financial records, secrets, or production schema/data writes. Mark physical-device acceptance and external WhatsApp/Facebook crawler preview as NOT VERIFIED until tested. Do not merge/deploy until checks pass and the target route/assets are verified.
