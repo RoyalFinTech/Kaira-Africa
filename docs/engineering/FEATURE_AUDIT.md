@@ -337,7 +337,7 @@ Do not confuse social preview metadata with a destination URL actually opening. 
 |---|---|---|
 | Country flags | Added local SVG flags to all eight business onboarding country options; Gambia remains default. | Build, visual accuracy and selector interaction NOT VERIFIED. Gambian +220 auth unchanged. |
 | Share metadata | Canonical URL, Open Graph and Twitter image/title/description metadata added; image points to existing dashboard hero WebP. | Direct link delivery, crawler fetch and WhatsApp/Facebook preview NOT VERIFIED. Metadata does not prove a destination-load fix. |
-| PWA icon/cache | Existing PNG declared as general icon; inset SVG declared any+maskable; cache version bumped and PNG precached. | Manifest validation, actual OS mask crop, Android/iOS/desktop install and service-worker lifecycle NOT VERIFIED. |
+| PWA icon/cache | Existing PNG declared as general icon; inset SVG declared any+maskable; cache version bumped and lightweight SVG precached (large PNG not install-pre-cached). | Manifest validation, actual OS mask crop, Android/iOS/desktop install and service-worker lifecycle NOT VERIFIED. |
 | Manual refresh | Header button invalidates React Query data without reloading the page. | Build and page-specific refresh behaviour NOT VERIFIED. |
 | Pull-to-refresh | App scroll container detects downward gesture from scroll top, invalidates active queries and shows refresh status. | Real-device gesture, accidental-scroll behaviour and accessibility NOT VERIFIED. |
 | Responsive/mobile | No full responsive audit completed in this checkpoint. | 320/360/390/430 px, tablet and desktop acceptance remains OPEN. |
