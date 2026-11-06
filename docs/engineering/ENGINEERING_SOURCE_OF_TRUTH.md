@@ -532,3 +532,4 @@ Added `artifacts/kaira-africa/public/kaira-social-preview.png`, a 1200×630 appr
 ## Referral sharing UX hardening — 6 November 2026
 
 `ReferralsPage.tsx` now offers progressive native Web Share, a dedicated WhatsApp share action, and more resilient clipboard copying (Clipboard API with a selection-based fallback). Native share cancellation is handled without a false error, and copy success/failure is announced accessibly. Commit `da04af83f2036bef8275c2594ab366d57beb197a`; latest CI is pending. Physical-device share-sheet/WhatsApp/clipboard behavior is not yet verified.
+Clipboard fallback cleanup was tightened in `b87a01663aa2c14d9a3188ddd7c6dc08661f9880` and `c38b52f255e7b437c720e1b833e060af7f6958d6`: focus before selection-copy, guaranteed temporary-element cleanup, and no stale success indicator after a new share attempt. Verify CI against the final PR head.
