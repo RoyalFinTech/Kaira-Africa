@@ -312,3 +312,20 @@ Latest GitHub main is 61eb8e53a02035a809cd9b2e4e1b16f6ac2e627b, a docs-only comm
 - Production ledger remains 26/max 26; production business/referral aggregate unchanged. No production test data used.
 - Supabase staging branch not provisioned; estimate US$0.01344/hour awaits explicit approval. All other roadmap requirements remain open.
 
+
+
+## New QA scope — 6 November 2026 (requested; implementation pending)
+
+
+The following requests were added to the active audit on branch `feat/pwa-share-mobile-country-ux` from main `277d57d6819adc6f6d07259681b867e3ecab68e8`. All are currently **REQUESTED / NOT VERIFIED** until code and test evidence exist.
+
+| Area | Initial finding | Required acceptance / next action | Status |
+|---|---|---|---|
+| Public app links and share previews | `index.html` has basic title/description metadata but lacks canonical URL, `og:url`, `og:image` and `twitter:image`. Recipient URL failure has not yet been reproduced. | Test root and representative SPA deep links from a fresh browser/device; correct redirect/fallback behavior; add absolute share-card image metadata; validate preview metadata with external crawlers when available. Obtain exact failing URL/channel if needed. | REQUESTED; NOT VERIFIED |
+| PWA installed identity | Manifest references PNG and SVG without explicit 192/512 sizes or maskable purpose; PNG is 1.82 MB. Install prompt already displays the Kaira logo. | Produce optimized, dimensioned standard/Apple/maskable icons; verify manifest, MIME, install icon/name and service-worker cache update on Android, iOS and desktop. | REQUESTED; NOT VERIFIED |
+| Refresh controls | App shell has scrollable main content but no shared manual refresh or pull-to-refresh gesture. | Add accessible refresh action and mobile pull gesture; refetch current route queries; prevent accidental browser back/forward; protect unsaved form edits; test loading/error states. | REQUESTED; NOT IMPLEMENTED |
+| Business onboarding country flags | Eight country options exist; only Gambia is conditionally shown in the field label and options themselves are text-only. | Render the correct SVG flag beside each country option and selected value; keep Gambia default; test all eight countries and keyboard selection. | REQUESTED; NOT IMPLEMENTED |
+| Dashboard visual assets | Dashboard already includes `kaira-dashboard-hero.webp`; additional image-led dashboard modules are not yet assessed. | Audit dashboard sections and add optimized, brand-consistent visuals only where useful; keep KPI data primary and verify responsive crop/performance. | PARTIAL EXISTING ART; NEW WORK NOT VERIFIED |
+| Responsive layout | Existing responsive work is present, but latest requested viewport sweep has not been evidenced. | Test 320/360/390/430 px, tablet and desktop across dashboard, onboarding, forms, navigation and install prompt; fix overflow/tap-target issues. | REQUESTED; NOT VERIFIED |
+
+Do not confuse social preview metadata with a destination URL actually opening. Verify both independently. Phone authentication remains Gambian +220 and is not to be changed as part of the business-country flag fix. Physical device checks and external share crawler results remain NOT VERIFIED until performed.
