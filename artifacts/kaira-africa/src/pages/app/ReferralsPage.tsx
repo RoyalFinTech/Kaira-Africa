@@ -43,6 +43,7 @@ export default function ReferralsPage() {
           textarea.style.opacity = "0";
           textarea.style.pointerEvents = "none";
           document.body.appendChild(textarea);
+          textarea.focus();
           textarea.select();
           const copied = document.execCommand("copy");
           textarea.remove();
@@ -57,6 +58,7 @@ export default function ReferralsPage() {
         textarea.style.opacity = "0";
         textarea.style.pointerEvents = "none";
         document.body.appendChild(textarea);
+        textarea.focus();
         textarea.select();
         const copied = document.execCommand("copy");
         textarea.remove();
