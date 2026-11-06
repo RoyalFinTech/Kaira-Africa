@@ -705,3 +705,10 @@ Working branch `feat/pwa-share-mobile-country-ux` now contains the first impleme
 - Added `artifacts/kaira-africa/public/kaira-social-preview.png`, a purpose-built 1200×630 PNG share card using the Kaira green/gold visual identity and a compact business-dashboard illustration. PNG is approximately 757 KB (indexed palette), avoiding the large 1.82 MB square logo and WebP crawler-compatibility concern.
 - Root HTML Open Graph secure/image and Twitter image metadata now point to `https://kaira-africa-frontend.onrender.com/kaira-social-preview.png`; `og:image:type` is `image/png`. The static SPA route generator copies the root HTML shell to supported route entries, so this metadata is present in generated route shells as build-source evidence.
 - The PNG dimensions and byte size are known from the generated asset. The deployed HTTP response, content type, crawler access, WhatsApp/Facebook/LinkedIn rendered preview, and recipient browser navigation remain NOT VERIFIED because the public Render URL could not be fetched by the available external browser checker. Do not claim a working preview or fixed destination navigation yet.
+
+### Referral sharing UX hardening — 6 November 2026
+
+- Updated `ReferralsPage.tsx` with progressive native Web Share (`navigator.share`) for supported mobile/desktop browsers, retaining a dedicated WhatsApp deep link for recipients who prefer WhatsApp.
+- Improved copy-link reliability: Clipboard API first, then a temporary selection-based `document.execCommand('copy')` fallback when the API is absent or permission is denied. Failure now gives clear manual-selection guidance; success is announced through an `aria-live` status region.
+- Native share cancellation (`AbortError`) is treated as an intentional dismissal rather than an error. Unsupported native sharing falls back to copying the link.
+- Latest share-UX commit: `da04af83f2036bef8275c2594ab366d57beb197a`. CI is running for this commit; do not infer its outcome until the latest jobs finish. Actual Android/iOS share-sheet, WhatsApp handoff and clipboard permission tests remain device acceptance work.
