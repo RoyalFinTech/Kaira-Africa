@@ -344,3 +344,19 @@ Do not confuse social preview metadata with a destination URL actually opening. 
 | Dashboard visuals | Existing dashboard hero retained; no additional dashboard artwork implemented in this pass. | Dashboard visual enhancement remains OPEN. |
 
 All entries above are branch-only until PR CI and review pass. No production data writes or migrations.
+
+
+## QA evidence checkpoint — 6 November 2026, 20:05 UTC
+
+| Area | Current evidence | Status |
+|---|---|---|
+| CI for UX branch | Exact head `c99f4d6b0c883bde01b5cc1bb8ba20150de97d2d`: typecheck/build, backend tests + disposable migration validation, Docker build, and Work Management Build Checks passed. | CI PASS |
+| Country selector flags | Eight local flag components/options wired; Gambia remains default; no phone-auth change. | IMPLEMENTED; visual and keyboard/device test NOT VERIFIED |
+| Manual refresh | Header invalidates active queries, shows spinner, reports failure by toast. | IMPLEMENTED; runtime/page-specific test NOT VERIFIED |
+| Pull-to-refresh | Main scroll container wired; top-edge threshold, horizontal swipe and nested scroll guard, loading status, failure toast. | IMPLEMENTED; physical device test NOT VERIFIED |
+| PWA icon | Manifest uses lightweight SVG for `any maskable`; SVG is shell-cached; PNG remains Apple touch icon only. | IMPLEMENTED; manifest/browser install and OS mask crop NOT VERIFIED |
+| Share preview | Canonical/OG/Twitter metadata and existing absolute WebP image URL; robots allows crawlers. | METADATA IMPLEMENTED; image fetch, crawler compatibility and WhatsApp/Facebook preview NOT VERIFIED |
+| Direct routes | Build script emits static HTML entries for root app routes including onboarding, login, dashboard and invitation acceptance. | BUILD SOURCE VERIFIED; deployed browser route loading NOT VERIFIED |
+| Production | Render frontend auto-deploys from main; still live on `277d57d6819adc6f6d07259681b867e3ecab68e8`. | NO DEPLOYMENT OF THIS BRANCH |
+
+PR #196 remains draft pending external browser, crawler and physical-device acceptance. No production data/schema/configuration changes.
