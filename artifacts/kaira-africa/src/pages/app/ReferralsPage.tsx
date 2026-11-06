@@ -25,48 +25,41 @@ export default function ReferralsPage() {
     ? `${window.location.origin}/?ref=${encodeURIComponent(referral.data.referralCode)}`
     : "";
 
+  const copyWithLegacyFallback = () => {
+    const textarea = document.createElement("textarea");
+    textarea.value = referralUrl;
+    textarea.setAttribute("readonly", "");
+    textarea.setAttribute("aria-hidden", "true");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    textarea.style.pointerEvents = "none";
+    document.body.appendChild(textarea);
+    try {
+      textarea.focus();
+      textarea.select();
+      if (!document.execCommand("copy")) throw new Error("Clipboard fallback was denied");
+    } finally {
+      textarea.remove();
+    }
+  };
+
   const copyReferralLink = async () => {
     if (!referralUrl) return;
     setCopyError(null);
+    setCopied(false);
     try {
       if (navigator.clipboard?.writeText) {
         try {
           await navigator.clipboard.writeText(referralUrl);
         } catch {
-          // Fall through to the selection-based fallback for browsers that
-          // expose Clipboard API but deny permission in the current context.
-          const textarea = document.createElement("textarea");
-          textarea.value = referralUrl;
-          textarea.setAttribute("readonly", "");
-          textarea.setAttribute("aria-hidden", "true");
-          textarea.style.position = "fixed";
-          textarea.style.opacity = "0";
-          textarea.style.pointerEvents = "none";
-          document.body.appendChild(textarea);
-          textarea.focus();
-          textarea.select();
-          const copied = document.execCommand("copy");
-          textarea.remove();
-          if (!copied) throw new Error("Clipboard fallback was denied");
+          // Fall through to the selection-based fallback when permission is denied.
+          copyWithLegacyFallback();
         }
       } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = referralUrl;
-        textarea.setAttribute("readonly", "");
-        textarea.setAttribute("aria-hidden", "true");
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        textarea.style.pointerEvents = "none";
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        const copied = document.execCommand("copy");
-        textarea.remove();
-        if (!copied) throw new Error("Clipboard fallback was denied");
+        copyWithLegacyFallback();
       }
       setCopied(true);
     } catch {
-      setCopied(false);
       setCopyError("Kaira Africa could not copy automatically. Tap the link above to select it, then copy.");
     }
   };
@@ -74,6 +67,7 @@ export default function ReferralsPage() {
   const shareReferralLink = async () => {
     if (!referralUrl || !referral.data) return;
     setCopyError(null);
+    setCopied(false);
     if (typeof navigator.share !== "function") {
       await copyReferralLink();
       return;
