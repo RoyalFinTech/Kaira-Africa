@@ -130,7 +130,8 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
           variant="ghost"
           size="icon"
           aria-label="Refresh current page data"
-          title="Refresh data"
+          aria-busy={isRefreshing}
+          title={isRefreshing ? "Refreshing data…" : "Refresh data"}
           onClick={handleRefresh}
           disabled={isRefreshing}
         >
