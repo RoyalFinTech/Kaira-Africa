@@ -383,3 +383,4 @@ PR #196 remains draft pending external browser, crawler and physical-device acce
 | WhatsApp share | Dedicated `wa.me` action remains available. | Confirm recipient handoff and actual preview in WhatsApp. | IMPLEMENTED; DEVICE/RECIPIENT TEST PENDING |
 | Copy link | Clipboard API with legacy selection-copy fallback and accessible success/failure feedback. | Test secure-context permissions and fallback browsers/devices. | IMPLEMENTED; DEVICE TEST PENDING |
 Clipboard fallback follow-up commits `b87a01663aa2c14d9a3188ddd7c6dc08661f9880` and `c38b52f255e7b437c720e1b833e060af7f6958d6` add focus, guaranteed cleanup, and fresh status state. Latest-head CI and physical-device behavior remain release gates.
+Referral attribution edge case fixed in `b431ef2ad450e61f4ced36694f6042c9b87d853a`: the latest explicitly opened valid referral URL supersedes stale pending session attribution. Latest-head CI must pass before release.
