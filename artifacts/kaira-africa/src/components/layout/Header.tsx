@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Search, Menu } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Bell, Search, Menu, RefreshCw } from 'lucide-react';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,18 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
   const { data: user } = useGetMe();
   const { data: notifications } = useListNotifications({ unreadOnly: true });
   const [shouldShake, setShouldShake] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const unreadCount = notifications?.length || 0;
 
@@ -107,7 +120,7 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
         {/* Route title belongs to each page. */}
       </div>
 
-      {/* Right: Search, Notifications, Avatar */}
+      {/* Right: Refresh, Search, Notifications, Avatar */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-3">
         <Button variant="ghost" size="icon" aria-label="Find customers" title="Find customers" onClick={() => setLocation("/customers")} className="max-[360px]:hidden">
           <Search className="h-5 w-5" />
