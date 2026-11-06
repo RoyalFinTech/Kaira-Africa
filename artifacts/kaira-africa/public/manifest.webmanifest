@@ -22,8 +22,15 @@
   "icons": [
     {
       "src": "/kaira-logo.png",
+      "sizes": "any",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/kaira-logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/favicon.svg",
