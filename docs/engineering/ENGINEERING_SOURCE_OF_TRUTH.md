@@ -528,3 +528,7 @@ PR #196 now points Open Graph/Twitter image metadata to the existing Kaira logo 
 ## Dedicated social preview asset — 6 November 2026
 
 Added `artifacts/kaira-africa/public/kaira-social-preview.png`, a 1200×630 approximately 757 KB Kaira-branded PNG card. Canonical/OG/Twitter image references now target `/kaira-social-preview.png` and declare `image/png`; this supersedes the interim use of the existing square logo PNG. Generated SPA route shells inherit the root HTML metadata. External HTTP delivery, content-type/cache headers, WhatsApp/Facebook/LinkedIn crawler preview, and real recipient navigation remain NOT VERIFIED; external fetch of the Render asset/root was unavailable in this QA session.
+
+## Referral sharing UX hardening — 6 November 2026
+
+`ReferralsPage.tsx` now offers progressive native Web Share, a dedicated WhatsApp share action, and more resilient clipboard copying (Clipboard API with a selection-based fallback). Native share cancellation is handled without a false error, and copy success/failure is announced accessibly. Commit `da04af83f2036bef8275c2594ab366d57beb197a`; latest CI is pending. Physical-device share-sheet/WhatsApp/clipboard behavior is not yet verified.
