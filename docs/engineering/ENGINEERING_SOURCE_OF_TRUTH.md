@@ -491,3 +491,19 @@ These tests provide database/repository-level regression evidence for onboarding
 - Production Drizzle ledger remains 26/max ID 26; 2 businesses, 2 distinct referral codes, 0 attributed referrals. No production data changed.
 - Real SMS/carrier, OTP request delivery, browser PIN recovery, SMTP and physical-device acceptance remain NOT VERIFIED. Staging branch cost estimate US$0.01344/hour remains unapproved. Preserve all remaining roadmap items.
 
+
+
+## Current continuation scope — 6 November 2026
+
+
+A new feature branch `feat/pwa-share-mobile-country-ux` was created from verified main `277d57d6819adc6f6d07259681b867e3ecab68e8`. Current main had no open PRs at inspection; all three Render services were Live on that SHA. This entry records newly requested scope; it is not a claim of implementation or deployment.
+
+Add to the active acceptance register:
+- Shareable app URLs: verify root and deep-link destination loading on a second device/browser; correct canonical, Open Graph and Twitter metadata; provide an absolute Kaira preview image; verify crawler-visible metadata separately from browser navigation.
+- PWA identity: standard/Apple/maskable icon variants with correct dimensions and MIME types; installed app icon/name on Android, iOS and desktop; safe service-worker cache versioning and update activation.
+- Refresh UX: accessible manual refresh and mobile pull-down refresh, query invalidation/refetch, clear progress/error state, no accidental route navigation, no loss of unsaved edits.
+- Responsive QA: dashboard, onboarding, forms, navigation, install prompt and cards at 320/360/390/430 px, tablet and desktop.
+- Country flags in business onboarding: The Gambia remains default; every option (The Gambia, Senegal, Sierra Leone, Ghana, Nigeria, Kenya, South Africa, Egypt) has its own visible compact SVG flag. This is separate from the Gambian-only +220 phone authentication flow.
+- Dashboard imagery: review the existing hero asset and add optimized branded visual assets to meaningful dashboard modules only where they improve understanding; no image should obscure live data or slow first render.
+
+Do not mark these complete until implementation, CI, direct-link/browser checks and supported device checks are evidenced. No-cost branch/PR/CI/local strategy remains in force; no paid staging environment is to be provisioned.
