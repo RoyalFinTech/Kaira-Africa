@@ -360,3 +360,10 @@ All entries above are branch-only until PR CI and review pass. No production dat
 | Production | Render frontend auto-deploys from main; still live on `277d57d6819adc6f6d07259681b867e3ecab68e8`. | NO DEPLOYMENT OF THIS BRANCH |
 
 PR #196 remains draft pending external browser, crawler and physical-device acceptance. No production data/schema/configuration changes.
+
+## Share image follow-up — 6 November 2026
+
+| Area | Change | Remaining acceptance | Status |
+|---|---|---|---|
+| Social share image format | Open Graph and Twitter metadata now reference the existing public Kaira logo PNG and declare `image/png`, replacing the dashboard WebP. | Confirm deployed image HTTP 200/content type/cache headers, dimensions and WhatsApp/Facebook/LinkedIn crawler preview. Existing PNG is ~1.82 MB and square; optimized 1200×630 share card remains desirable. | METADATA UPDATED; EXTERNAL DELIVERY/PREVIEW NOT VERIFIED |
+| Recipient navigation | No change to app routing in this follow-up. | Reproduce the original link failure and test root plus representative deep links in a fresh unauthenticated browser/device. | NOT VERIFIED |
