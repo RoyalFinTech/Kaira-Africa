@@ -122,6 +122,16 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
 
       {/* Right: Refresh, Search, Notifications, Avatar */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Refresh current page data"
+          title="Refresh data"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
         <Button variant="ghost" size="icon" aria-label="Find customers" title="Find customers" onClick={() => setLocation("/customers")} className="max-[360px]:hidden">
           <Search className="h-5 w-5" />
         </Button>
