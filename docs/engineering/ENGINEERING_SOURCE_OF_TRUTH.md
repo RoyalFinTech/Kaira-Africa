@@ -524,3 +524,7 @@ PR #196 branch `feat/pwa-share-mobile-country-ux`, head `c99f4d6b0c883bde01b5cc1
 ## Share metadata follow-up — 6 November 2026
 
 PR #196 now points Open Graph/Twitter image metadata to the existing Kaira logo PNG (`/kaira-logo.png`) and declares `image/png`, replacing the WebP dashboard hero to improve compatibility with social preview crawlers. Existing PNG is approximately 1.82 MB and square; a dedicated optimized 1200×630 share card is still desirable. Dimensions, HTTP delivery, crawler fetch, recipient navigation and WhatsApp/Facebook/LinkedIn preview remain NOT VERIFIED. This metadata change does not prove the user's reported destination-link failure is fixed.
+
+## Dedicated social preview asset — 6 November 2026
+
+Added `artifacts/kaira-africa/public/kaira-social-preview.png`, a 1200×630 approximately 757 KB Kaira-branded PNG card. Canonical/OG/Twitter image references now target `/kaira-social-preview.png` and declare `image/png`; this supersedes the interim use of the existing square logo PNG. Generated SPA route shells inherit the root HTML metadata. External HTTP delivery, content-type/cache headers, WhatsApp/Facebook/LinkedIn crawler preview, and real recipient navigation remain NOT VERIFIED; external fetch of the Render asset/root was unavailable in this QA session.
