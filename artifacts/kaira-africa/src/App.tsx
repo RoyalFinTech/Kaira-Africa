@@ -15,10 +15,9 @@ function captureIncomingBusinessReferralCode() {
   try {
     const incoming = new URLSearchParams(window.location.search).get("ref");
     if (!incoming || !/^KAI-[A-F0-9]{16}$/i.test(incoming.trim())) return;
-    // First valid business referral seen in this tab wins for this onboarding session.
-    if (!sessionStorage.getItem("kaira_business_referral_code")) {
-      sessionStorage.setItem("kaira_business_referral_code", incoming.trim().toUpperCase());
-    }
+    // A newly opened valid referral URL is explicit user intent and replaces
+    // any stale, unfinished referral attribution left in this tab.
+    sessionStorage.setItem("kaira_business_referral_code", incoming.trim().toUpperCase());
   } catch {
     // Referral attribution is optional; storage restrictions must never block signup.
   }
