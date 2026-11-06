@@ -382,3 +382,4 @@ PR #196 remains draft pending external browser, crawler and physical-device acce
 | Native share | Uses Web Share API when available, with cancellation handled as normal. | Test Android and iOS native share sheets and supported desktop browsers. | IMPLEMENTED; DEVICE TEST PENDING |
 | WhatsApp share | Dedicated `wa.me` action remains available. | Confirm recipient handoff and actual preview in WhatsApp. | IMPLEMENTED; DEVICE/RECIPIENT TEST PENDING |
 | Copy link | Clipboard API with legacy selection-copy fallback and accessible success/failure feedback. | Test secure-context permissions and fallback browsers/devices. | IMPLEMENTED; DEVICE TEST PENDING |
+Clipboard fallback follow-up commits `b87a01663aa2c14d9a3188ddd7c6dc08661f9880` and `c38b52f255e7b437c720e1b833e060af7f6958d6` add focus, guaranteed cleanup, and fresh status state. Latest-head CI and physical-device behavior remain release gates.
