@@ -693,3 +693,9 @@ Working branch `feat/pwa-share-mobile-country-ux` now contains the first impleme
 - Render frontend remains configured to auto-deploy from `main`; latest live deployment is still SHA `277d57d6819adc6f6d07259681b867e3ecab68e8`. Feature branch has not been deployed.
 - Still NOT VERIFIED: recipient browser navigation, actual image HTTP response and image dimensions/content length, WhatsApp/Facebook/LinkedIn crawler preview, PWA OS icon crop/install, and physical touch/refresh behaviour across real mobile devices. The share image currently points to existing WebP; crawler format support varies, so verify before declaring social preview fixed. Do not confuse metadata presence with a confirmed working preview.
 - No production DB writes, migrations, secrets, or Render configuration changes were made. Keep PR draft pending external/browser/device acceptance.
+
+### Share image compatibility improvement — 6 November 2026
+
+- Updated Open Graph and Twitter image URLs from the existing dashboard WebP to the existing Kaira brand PNG (`/kaira-logo.png`) and corrected `og:image:type` to `image/png`. This chooses a broadly supported raster format for social crawlers; the asset is already in the public build. No image binary was added or duplicated.
+- The PNG is approximately 1.82 MB based on the repository tree. Exact dimensions, deployed HTTP response/cache headers, crawler fetch, and WhatsApp/Facebook/LinkedIn preview remain NOT VERIFIED. The existing asset is square rather than a purpose-built 1200×630 share card; a dedicated optimized landscape PNG remains a quality improvement.
+- This fixes the format choice in metadata, not the un-reproduced report that a recipient cannot open the link. Root/deep-link navigation still requires a fresh external browser/device test.
