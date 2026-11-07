@@ -399,3 +399,14 @@ Service worker now awaits the root-shell cache update after a successful navigat
 - Public HTTP fetch of the frontend, social image and API readiness endpoint could not be completed by the available browser checker. External share preview, recipient navigation and physical-device PWA/refresh acceptance remain NOT VERIFIED.
 - Team invitation implementation PR #171 is merged. PRs #187 and #190 add database lifecycle and HTTP-route acceptance coverage; the invitation workflow is implemented and CI-covered, but real provider delivery and controlled external OTP/PIN recipient journeys remain NOT VERIFIED.
 - No production database writes, migrations, Render configuration changes or production test records were made during this checkpoint.
+## PWA icon follow-up — 7 November 2026
+
+| Area | Finding / change | Verification | Status |
+|---|---|---|---|
+| Install icons | Added 192×192 and 512×512 Kaira PNG icons for general use and a separate padded 512×512 maskable SVG; manifest declares accurate sizes/MIME/purpose. Service-worker shell cache advanced to v5 and precaches the icon assets. | Repository PNG headers confirm 192×192 and 512×512; manifest parses as valid JSON. Browser installability, OS icon selection/cropping, deployed asset delivery and physical-device install remain outstanding. | IMPLEMENTED ON PR BRANCH; CI/DEVICE ACCEPTANCE PENDING |
+
+## Branch update — 7 November 2026
+
+- Added a form/editable-surface guard to pull-to-refresh in AppShell.tsx.
+- Added dimensioned 192/512 PNG install icons, separate maskable SVG and service-worker precache/version update.
+- No production database, Render configuration or production user data changed. Await latest-head GitHub CI.
