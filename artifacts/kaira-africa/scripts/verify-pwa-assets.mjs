@@ -23,7 +23,7 @@ for (const expected of [
   assert(entry, `manifest is missing ${expected.src}`);
   assert(entry.sizes === expected.sizes, `${expected.src} must declare ${expected.sizes}`);
   assert(entry.type === 'image/png', `${expected.src} must declare image/png`);
-  assert(String(entry.purpose ?? 'any').split(/\\s+/).includes('any'), `${expected.src} must support the any purpose`);
+  assert(String(entry.purpose ?? 'any').split(/\s+/).includes('any'), `${expected.src} must support the any purpose`);
   const image = await readFile(publicFile(expected.src.slice(1)));
   const dimensions = readPngDimensions(image, expected.src);
   assert(dimensions.width === expected.width && dimensions.height === expected.height,
@@ -31,7 +31,7 @@ for (const expected of [
 }
 
 const maskable = icons.find((icon) => icon.src === '/kaira-maskable.svg');
-assert(maskable && maskable.type === 'image/svg+xml' && String(maskable.purpose).split(/\\s+/).includes('maskable'),
+assert(maskable && maskable.type === 'image/svg+xml' && String(maskable.purpose).split(/\s+/).includes('maskable'),
   'manifest must declare the separate maskable SVG icon');
 const maskableSvg = await readFile(publicFile('kaira-maskable.svg'), 'utf8');
 assert(maskableSvg.includes('<svg') && maskableSvg.includes('viewBox="0 0 180 180"'),
@@ -47,6 +47,6 @@ const worker = await readFile(publicFile('sw.js'), 'utf8');
 for (const asset of ['kaira-icon-192.png', 'kaira-icon-512.png', 'kaira-maskable.svg']) {
   assert(worker.includes(asset), `service worker must precache ${asset}`);
 }
-assert(/kaira-africa-shell-v\\d+/.test(worker), 'service worker must declare a versioned shell cache');
+assert(/kaira-africa-shell-v\d+/.test(worker), 'service worker must declare a versioned shell cache');
 
 console.log('PWA assets verified: manifest, 192/512 PNG icons, maskable SVG, social preview, and service-worker precache.');
