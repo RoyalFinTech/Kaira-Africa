@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaira-africa-shell-v4';
+const CACHE_NAME = 'kaira-africa-shell-v5';
 const scopeUrl = new URL(self.registration.scope);
 const APP_ROOT = scopeUrl.pathname;
 
@@ -8,7 +8,10 @@ self.addEventListener('install', (event) => {
     await cache.addAll([
       APP_ROOT,
       new URL('manifest.webmanifest', scopeUrl).pathname,
-      new URL('favicon.svg', scopeUrl).pathname
+      new URL('favicon.svg', scopeUrl).pathname,
+      new URL('kaira-icon-192.png', scopeUrl).pathname,
+      new URL('kaira-icon-512.png', scopeUrl).pathname,
+      new URL('kaira-maskable.svg', scopeUrl).pathname
     ]);
     await self.skipWaiting();
   })());
