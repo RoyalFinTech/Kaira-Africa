@@ -643,3 +643,97 @@ This checkpoint supersedes the earlier main/deployment SHA values above. Histori
 - Supabase Drizzle ledger remains 26/max ID 26. Production aggregate remains 2 businesses, 2 distinct referral codes, 0 attributed businesses. No production data changed.
 - Still NOT VERIFIED: real SMS/carrier delivery, OTP request/provider receipt, PIN-enabled returning-user browser recovery, device OTP/PIN UX, SMTP invitation delivery and physical PWA acceptance. The staging branch remains uncreated pending explicit approval of the US$0.01344/hour estimate. Keep the full product roadmap open.
 
+
+
+## Continuation update — 6 November 2026 (PWA, sharing, visual and mobile UX)
+
+
+Baseline rechecked before this work: main `277d57d6819adc6f6d07259681b867e3ecab68e8`; no open PRs; API, frontend and admin Render services are Live on that exact SHA. New working branch: `feat/pwa-share-mobile-country-ux`, created from that SHA. No production data or configuration changed.
+
+### Newly requested work — keep in active scope
+- Diagnose recipient-facing Kaira Africa links. Add correct canonical/Open Graph/Twitter metadata and an absolute share-preview image URL; inspect SPA direct-route handling and test root/deep links. A social preview image is distinct from the destination URL actually loading; both need verification.
+- Verify PWA icon assets and manifest for installed Android/iOS/desktop experiences. Ensure the Kaira mark is used consistently for standard, Apple-touch and maskable icon purposes; review asset weight and cache/version behaviour.
+- Add an accessible manual refresh control and mobile pull-to-refresh gesture. Refresh must refetch current screen data, avoid accidental browser navigation, expose loading/error feedback, and not discard unsaved form input.
+- Audit responsive layouts at 320/360/390/430 px, tablet and desktop, including dashboard, onboarding, navigation, cards, forms and install prompt placement.
+- Fix onboarding country selector so each listed country visibly displays its own flag, using consistent compact SVG flag artwork. Preserve The Gambia as the default and cover Senegal, Sierra Leone, Ghana, Nigeria, Kenya, South Africa and Egypt.
+- Continue dashboard visual improvements and add image assets only where they support comprehension and brand quality. The existing dashboard hero image is already present; do not describe the image feature as entirely absent. Keep artwork optimized and locally served where possible.
+
+### Initial code inspection findings (not yet fixes)
+- `PhoneAuthPage.tsx` is explicitly Gambian +220 authentication with carrier prefixes; do not broaden it accidentally when fixing the separate business-country selector.
+- `BusinessOnboardingFlow.tsx` lists eight countries but only conditionally shows the Gambia flag in the field label; individual options do not show flags.
+- `index.html` has title/description/Open Graph title+description and Twitter title+description, but no canonical URL, `og:url`, `og:image` or `twitter:image`.
+- `manifest.webmanifest` currently lists the PNG and favicon SVG without explicit 192/512 sizes or a maskable icon purpose. The PNG is 1,824,369 bytes; review optimization and icon variants before changing install assets.
+- `sw.js` currently caches the app root, manifest and favicon; app icons and refresh/update behaviour need a deliberate cache strategy.
+- `DashboardPage.tsx` already renders `/kaira-dashboard-hero.webp`; next image work should improve other useful dashboard sections rather than duplicate decorative hero art.
+- `AppShell.tsx` currently has a scrollable main region but no pull-to-refresh interaction or shared refresh control.
+- Link delivery failure is not yet reproduced. Request the exact URL/channel if it remains unclear whether the failure is a destination load, a deep link, or only a missing preview card.
+
+### Safety and release gates
+All work stays on the feature branch and goes through PR + free CI. No paid staging, production test accounts, fake financial records, secrets, or production schema/data writes. Mark physical-device acceptance and external WhatsApp/Facebook crawler preview as NOT VERIFIED until tested. Do not merge/deploy until checks pass and the target route/assets are verified.
+
+
+### Implementation update — 6 November 2026 (feature branch; validation pending)
+
+Working branch `feat/pwa-share-mobile-country-ux` now contains the first implementation pass:
+- Business onboarding country selector now renders the locally drawn flag for each of the eight existing country choices, including the selected value; The Gambia remains the default. The Gambian-only +220 phone authentication flow was not changed.
+- Root HTML now declares the canonical frontend URL and Open Graph/Twitter share metadata. The share image currently points to the existing locally hosted dashboard hero WebP asset; this avoids inventing a new asset path. Social-crawler rendering and recipient-device navigation remain NOT VERIFIED.
+- PWA manifest now uses the lightweight Kaira SVG mark for standard and maskable purposes; the service worker precaches that SVG as the favicon. The 1.8 MB PNG remains the Apple touch icon in HTML and is not added to the install precache. Service-worker shell cache version was bumped. Physical installation, OS icon crop and update behaviour remain NOT VERIFIED.
+- App header now includes a manual data refresh control using React Query invalidation (no full-page reload, so active form input is not deliberately discarded). The scrollable app shell now wires a top-edge pull-down gesture to invalidate active queries, with a visible status indicator, horizontal-gesture guard, nested-scroll guard and overscroll containment. Touch-device gesture, accessibility and per-page refresh behaviour remain pending QA.
+- These are implementation changes only; no PR merge, production deploy, production database write or migration has occurred. Build/typecheck/CI must pass before considering merge.
+- Remaining: verify the new flag artwork visually and through selector interaction; inspect/validate the deployed root and all deep links; test crawler access to the share image and preview; test PWA installation and icon crop on Android/iOS/desktop; test refresh and pull-to-refresh on real devices; audit responsive 320/360/390/430 px/tablet/desktop layouts; continue dashboard visual work and remaining roadmap.
+
+
+### CI and source-review checkpoint — 6 November 2026, 20:05 UTC
+
+- Latest branch commit at this checkpoint: `c99f4d6b0c883bde01b5cc1bb8ba20150de97d2d`; PR #196 remains open/draft against main `277d57d6819adc6f6d07259681b867e3ecab68e8`.
+- GitHub checks on that exact head all passed: `typecheck-and-build`, `install-typecheck-build-test` (including API tests, frontend build and disposable database migration check), and `docker-build`; Work Management Build Checks also passed.
+- Source review caught and corrected the missing pull-refresh JSX event wiring, the inaccurate PNG `sizes:any` manifest declaration, duplicate selected-country flag in the label, and missing refresh-error feedback. Pull-to-refresh now has top-edge and horizontal-swipe thresholds, nested-scroll protection and a loading indicator; failed refreshes show a destructive toast.
+- Manifest now declares the existing lightweight `favicon.svg` for `any maskable`; service worker precaches this SVG. Existing large PNG remains the HTML Apple touch icon; it is not added to the service-worker install precache.
+- Robots.txt allows crawlers. Build script generates static HTML entries for the root app routes (including onboarding, login, dashboard, CRM, inventory, ledger, referrals and invitation acceptance). This is source/build evidence only, not an external browser test.
+- Render frontend remains configured to auto-deploy from `main`; latest live deployment is still SHA `277d57d6819adc6f6d07259681b867e3ecab68e8`. Feature branch has not been deployed.
+- Still NOT VERIFIED: recipient browser navigation, actual image HTTP response and image dimensions/content length, WhatsApp/Facebook/LinkedIn crawler preview, PWA OS icon crop/install, and physical touch/refresh behaviour across real mobile devices. The share image currently points to existing WebP; crawler format support varies, so verify before declaring social preview fixed. Do not confuse metadata presence with a confirmed working preview.
+- No production DB writes, migrations, secrets, or Render configuration changes were made. Keep PR draft pending external/browser/device acceptance.
+
+### Share image compatibility improvement — 6 November 2026
+
+- Updated Open Graph and Twitter image URLs from the existing dashboard WebP to the existing Kaira brand PNG (`/kaira-logo.png`) and corrected `og:image:type` to `image/png`. This chooses a broadly supported raster format for social crawlers; the asset is already in the public build. No image binary was added or duplicated.
+- The PNG is approximately 1.82 MB based on the repository tree. Exact dimensions, deployed HTTP response/cache headers, crawler fetch, and WhatsApp/Facebook/LinkedIn preview remain NOT VERIFIED. The existing asset is square rather than a purpose-built 1200×630 share card; a dedicated optimized landscape PNG remains a quality improvement.
+- This fixes the format choice in metadata, not the un-reproduced report that a recipient cannot open the link. Root/deep-link navigation still requires a fresh external browser/device test.
+
+### Dedicated landscape social card — 6 November 2026
+
+- Added `artifacts/kaira-africa/public/kaira-social-preview.png`, a purpose-built 1200×630 PNG share card using the Kaira green/gold visual identity and a compact business-dashboard illustration. PNG is approximately 757 KB (indexed palette), avoiding the large 1.82 MB square logo and WebP crawler-compatibility concern.
+- Root HTML Open Graph secure/image and Twitter image metadata now point to `https://kaira-africa-frontend.onrender.com/kaira-social-preview.png`; `og:image:type` is `image/png`. The static SPA route generator copies the root HTML shell to supported route entries, so this metadata is present in generated route shells as build-source evidence.
+- The PNG dimensions and byte size are known from the generated asset. The deployed HTTP response, content type, crawler access, WhatsApp/Facebook/LinkedIn rendered preview, and recipient browser navigation remain NOT VERIFIED because the public Render URL could not be fetched by the available external browser checker. Do not claim a working preview or fixed destination navigation yet.
+
+### Referral sharing UX hardening — 6 November 2026
+
+- Updated `ReferralsPage.tsx` with progressive native Web Share (`navigator.share`) for supported mobile/desktop browsers, retaining a dedicated WhatsApp deep link for recipients who prefer WhatsApp.
+- Improved copy-link reliability: Clipboard API first, then a temporary selection-based `document.execCommand('copy')` fallback when the API is absent or permission is denied. Failure now gives clear manual-selection guidance; success is announced through an `aria-live` status region.
+- Native share cancellation (`AbortError`) is treated as an intentional dismissal rather than an error. Unsupported native sharing falls back to copying the link.
+- Latest share-UX commit: `da04af83f2036bef8275c2594ab366d57beb197a`. CI is running for this commit; do not infer its outcome until the latest jobs finish. Actual Android/iOS share-sheet, WhatsApp handoff and clipboard permission tests remain device acceptance work.
+- Follow-up hardening commits `b87a01663aa2c14d9a3188ddd7c6dc08661f9880` and `c38b52f255e7b437c720e1b833e060af7f6958d6` ensure the temporary clipboard textarea receives focus and is always removed, and clear stale copied-state before a new share attempt. CI for the latest source/docs head must be checked before release.
+- Referral-attribution edge case corrected in `b431ef2ad450e61f4ced36694f6042c9b87d853a`: opening a new valid referral URL in the same tab now replaces an abandoned/stale pending referral code. The latest explicit link is the one attributed to the next business onboarding; unrelated URLs do not change the stored code.
+- PWA shell-cache reliability follow-up (`66a2731a0d5fa5dc9b03bc10c724745331629553`): the service worker now awaits the refreshed root-shell cache write before completing navigation handling, reducing the chance that a browser terminates the worker before the offline fallback is updated. Offline/online behavior still requires device testing.
+
+### Pull-to-refresh form-safety follow-up — 7 November 2026
+
+- Source review of the current PR #196 head found that the pull gesture could begin from a form or editable control. Although refresh invalidates React Query data rather than reloading the document, a refetch could still interact with page-level form state.
+- Updated AppShell.tsx to ignore touch starts originating inside forms, inputs, textareas, selects, contenteditable regions, textbox roles, and elements explicitly marked data-no-pull-refresh. This makes the pull gesture unavailable while the user is actively interacting with an editable surface; the explicit header refresh button remains available.
+- This is a focused source-level safeguard. Re-run exact-head CI and test real touch behavior on devices; do not claim physical-device acceptance.
+### Dimensioned PWA icon follow-up — 7 November 2026
+
+- Added Kaira install icon assets derived from the existing SVG brand mark: 192×192 PNG for general use, 512×512 PNG for general use, and a separate padded 512×512 maskable SVG. The logo mark and Kaira colors are preserved; the maskable version scales the mark into the platform safe zone.
+- Updated manifest.webmanifest to declare the exact PNG dimensions and separate any/maskable purposes. Kept favicon.svg as a scalable general-purpose fallback.
+- Updated the service-worker shell cache to v5 and precache all manifest icon assets. This remains branch-only until latest-head CI, deployed HTTP checks and real-device install/icon-crop tests pass.
+### Automated PWA asset verification — 7 November 2026
+
+- Added scripts/verify-pwa-assets.mjs and wired it into the frontend package build after SPA route generation.
+- The build now checks that manifest JSON parses; 192×192 and 512×512 PNG icons exist, have valid PNG signatures and exact dimensions, and are declared with the correct purpose/MIME; the separate maskable SVG exists; the social card is 1200×630 and no larger than 1 MiB; and the service worker precaches the install icons under a versioned cache.
+- This converts asset integrity into a repeatable build gate. Latest-head GitHub CI is still required to prove the script passes in the repository workflow.
+### Latest-head CI result — 7 November 2026
+
+- Verified PR head: `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
+- Backend CI run `42357883459`: SUCCESS. Shared-library/API/frontend typechecks, frontend build (including `scripts/verify-pwa-assets.mjs`), backend build, fresh-database migrations, API unit and PostgreSQL-backed acceptance tests, built-server `/health`, and production Docker image build all passed. Docker build was verification-only and did not push an image.
+- Work Management Build Checks run `42357883434`: SUCCESS (`typecheck-and-build`).
+- This clears the latest-head automated CI gate. It does not prove public Render asset delivery, social crawler retrieval, real recipient link opening, or physical Android/iOS/desktop installation and refresh behaviour.

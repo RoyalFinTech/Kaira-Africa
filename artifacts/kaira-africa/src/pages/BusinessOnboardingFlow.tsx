@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Progress } from '@/components/ui/progress';
 import { KairaLogo } from '@/components/common/KairaLogo';
-import { GambiaFlag } from '@/components/common/GambiaFlag';
+import { CountryFlag } from '@/components/common/CountryFlag';
 import { apiRequestJson } from '@/lib/api-client';
 
 const businessTypeDescriptions: Record<string, string> = {
@@ -284,18 +284,27 @@ export default function BusinessOnboardingFlow() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField control={form1.control} name="country" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">Country {field.value === "The Gambia" && <GambiaFlag width={24} height={16} />}</FormLabel>
+                        <FormLabel>Country</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue>
+                                <span className="flex items-center gap-2">
+                                  <CountryFlag country={field.value} width={24} height={16} />
+                                  <span>{field.value}</span>
+                                </span>
+                              </SelectValue>
+                            </SelectTrigger>
+                          </FormControl>
                           <SelectContent>
-                            <SelectItem value="The Gambia">The Gambia</SelectItem>
-                            <SelectItem value="Senegal">Senegal</SelectItem>
-                            <SelectItem value="Sierra Leone">Sierra Leone</SelectItem>
-                            <SelectItem value="Ghana">Ghana</SelectItem>
-                            <SelectItem value="Nigeria">Nigeria</SelectItem>
-                            <SelectItem value="Kenya">Kenya</SelectItem>
-                            <SelectItem value="South Africa">South Africa</SelectItem>
-                            <SelectItem value="Egypt">Egypt</SelectItem>
+                            {['The Gambia', 'Senegal', 'Sierra Leone', 'Ghana', 'Nigeria', 'Kenya', 'South Africa', 'Egypt'].map((country) => (
+                              <SelectItem key={country} value={country}>
+                                <span className="flex items-center gap-2">
+                                  <CountryFlag country={country} width={24} height={16} />
+                                  <span>{country}</span>
+                                </span>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />

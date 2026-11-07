@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Search, Menu } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Bell, Search, Menu, RefreshCw } from 'lucide-react';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
 import { KairaLogo } from '@/components/common/KairaLogo';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import {
 import { useGetMe, useListNotifications, useLogout } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { Link, useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -26,6 +28,21 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
   const { data: user } = useGetMe();
   const { data: notifications } = useListNotifications({ unreadOnly: true });
   const [shouldShake, setShouldShake] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries(undefined, { throwOnError: true });
+    } catch {
+      toast({ title: 'Refresh failed', description: 'Check your connection and try again.', variant: 'destructive' });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const unreadCount = notifications?.length || 0;
 
@@ -107,8 +124,19 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
         {/* Route title belongs to each page. */}
       </div>
 
-      {/* Right: Search, Notifications, Avatar */}
+      {/* Right: Refresh, Search, Notifications, Avatar */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Refresh current page data"
+          aria-busy={isRefreshing}
+          title={isRefreshing ? "Refreshing data…" : "Refresh data"}
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
         <Button variant="ghost" size="icon" aria-label="Find customers" title="Find customers" onClick={() => setLocation("/customers")} className="max-[360px]:hidden">
           <Search className="h-5 w-5" />
         </Button>

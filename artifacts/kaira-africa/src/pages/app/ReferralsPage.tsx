@@ -25,15 +25,64 @@ export default function ReferralsPage() {
     ? `${window.location.origin}/?ref=${encodeURIComponent(referral.data.referralCode)}`
     : "";
 
+  const copyWithLegacyFallback = () => {
+    const textarea = document.createElement("textarea");
+    textarea.value = referralUrl;
+    textarea.setAttribute("readonly", "");
+    textarea.setAttribute("aria-hidden", "true");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    textarea.style.pointerEvents = "none";
+    document.body.appendChild(textarea);
+    try {
+      textarea.focus();
+      textarea.select();
+      if (!document.execCommand("copy")) throw new Error("Clipboard fallback was denied");
+    } finally {
+      textarea.remove();
+    }
+  };
+
   const copyReferralLink = async () => {
     if (!referralUrl) return;
     setCopyError(null);
+    setCopied(false);
     try {
-      await navigator.clipboard.writeText(referralUrl);
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(referralUrl);
+        } catch {
+          // Fall through to the selection-based fallback when permission is denied.
+          copyWithLegacyFallback();
+        }
+      } else {
+        copyWithLegacyFallback();
+      }
       setCopied(true);
     } catch {
+      setCopyError("Kaira Africa could not copy automatically. Tap the link above to select it, then copy.");
+    }
+  };
+
+  const shareReferralLink = async () => {
+    if (!referralUrl || !referral.data) return;
+    setCopyError(null);
+    setCopied(false);
+    if (typeof navigator.share !== "function") {
+      await copyReferralLink();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: "Kaira Africa",
+        text: "Create your own separate business workspace with Kaira Africa.",
+        url: referralUrl,
+      });
       setCopied(false);
-      setCopyError("Kaira Africa could not access the clipboard. Select the link and copy it manually.");
+    } catch (error) {
+      // Closing the native share sheet is an intentional user action.
+      if (error instanceof Error && error.name === "AbortError") return;
+      setCopyError("The share sheet could not be opened. You can still copy the link or use WhatsApp.");
     }
   };
 
@@ -84,7 +133,9 @@ export default function ReferralsPage() {
                 </Button>
               </div>
               {copyError && <p role="alert" className="text-sm text-destructive">{copyError}</p>}
+              <p aria-live="polite" className="text-xs text-muted-foreground">{copied ? "Referral link copied to your clipboard." : ""}</p>
               <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" onClick={() => void shareReferralLink()} className="gap-2"><Share2 className="h-4 w-4" /> Share link</Button>
                 <Button variant="outline" onClick={shareOnWhatsApp} className="gap-2"><Share2 className="h-4 w-4" /> Share through WhatsApp</Button>
                 <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
                   <span className="font-semibold text-foreground">Referral code</span>
