@@ -38,10 +38,15 @@ assert(maskableSvg.includes('<svg') && maskableSvg.includes('viewBox="0 0 180 18
   'maskable SVG must be a valid scalable Kaira mark');
 
 const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-assert(indexHtml.includes('property="og:image"') && indexHtml.includes('/kaira-social-preview.png'),
-  'Open Graph metadata must reference the dedicated social preview PNG');
-assert(indexHtml.includes('name="twitter:image"') && indexHtml.includes('/kaira-social-preview.png'),
-  'Twitter metadata must reference the dedicated social preview PNG');
+assert(indexHtml.includes('property="og:image"') && indexHtml.includes('/kaira-icon-512.png'),
+  'Open Graph metadata must reference the lightweight Kaira logo PNG');
+assert(indexHtml.includes('name="twitter:image"') && indexHtml.includes('/kaira-icon-512.png'),
+  'Twitter metadata must reference the lightweight Kaira logo PNG');
+const socialLogo = await readFile(publicFile('kaira-icon-512.png'));
+const socialLogoDimensions = readPngDimensions(socialLogo, 'kaira-icon-512.png');
+assert(socialLogoDimensions.width === 512 && socialLogoDimensions.height === 512,
+  'social preview logo must be 512x512');
+assert(socialLogo.length <= 600 * 1024, 'social preview logo must remain below 600 KiB');
 
 const shareCard = await readFile(publicFile('kaira-social-preview.png'));
 const shareDimensions = readPngDimensions(shareCard, 'kaira-social-preview.png');
@@ -55,4 +60,4 @@ for (const asset of ['kaira-icon-192.png', 'kaira-icon-512.png', 'kaira-maskable
 }
 assert(/kaira-africa-shell-v\d+/.test(worker), 'service worker must declare a versioned shell cache');
 
-console.log('PWA assets verified: manifest, 192/512 PNG icons, maskable SVG, social preview, and service-worker precache.');
+console.log('PWA assets verified: manifest, 192/512 PNG icons, lightweight social logo, maskable SVG, and service-worker precache.');
