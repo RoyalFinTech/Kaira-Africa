@@ -545,3 +545,6 @@ PR #196 now includes 192×192 and 512×512 PNG install icons with accurate sizes
 ## PWA asset build gate — 7 November 2026
 
 Added scripts/verify-pwa-assets.mjs to the frontend build. The script validates manifest JSON, exact 192×192/512×512 PNG dimensions and MIME/purpose declarations, the separate maskable SVG, the 1200×630 social card and size ceiling, and service-worker precache/version references. The package build now runs this verifier after static route generation. Treat this as a build-time regression guard; only the latest-head CI result can confirm it passes.
+## Latest-head CI verification — 7 November 2026
+
+PR #196 head `7f8aa484891feef21b9fefddb38b92eb1e1efdef` has now passed both required GitHub workflows: Backend CI run `42357883459` (including shared/API/frontend typechecks, frontend build and PWA asset verifier, backend build, fresh database migrations, API unit + PostgreSQL acceptance tests, server health check and Docker image build without push) and Work Management Build Checks run `42357883434`. Automated CI gate is GREEN. Public HTTP/crawler, recipient-device and physical PWA install/refresh acceptance remains open.
