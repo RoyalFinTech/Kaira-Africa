@@ -715,3 +715,9 @@ Working branch `feat/pwa-share-mobile-country-ux` now contains the first impleme
 - Follow-up hardening commits `b87a01663aa2c14d9a3188ddd7c6dc08661f9880` and `c38b52f255e7b437c720e1b833e060af7f6958d6` ensure the temporary clipboard textarea receives focus and is always removed, and clear stale copied-state before a new share attempt. CI for the latest source/docs head must be checked before release.
 - Referral-attribution edge case corrected in `b431ef2ad450e61f4ced36694f6042c9b87d853a`: opening a new valid referral URL in the same tab now replaces an abandoned/stale pending referral code. The latest explicit link is the one attributed to the next business onboarding; unrelated URLs do not change the stored code.
 - PWA shell-cache reliability follow-up (`66a2731a0d5fa5dc9b03bc10c724745331629553`): the service worker now awaits the refreshed root-shell cache write before completing navigation handling, reducing the chance that a browser terminates the worker before the offline fallback is updated. Offline/online behavior still requires device testing.
+
+### Pull-to-refresh form-safety follow-up — 7 November 2026
+
+- Source review of the current PR #196 head found that the pull gesture could begin from a form or editable control. Although refresh invalidates React Query data rather than reloading the document, a refetch could still interact with page-level form state.
+- Updated AppShell.tsx to ignore touch starts originating inside forms, inputs, textareas, selects, contenteditable regions, textbox roles, and elements explicitly marked data-no-pull-refresh. This makes the pull gesture unavailable while the user is actively interacting with an editable surface; the explicit header refresh button remains available.
+- This is a focused source-level safeguard. Re-run exact-head CI and test real touch behavior on devices; do not claim physical-device acceptance.
