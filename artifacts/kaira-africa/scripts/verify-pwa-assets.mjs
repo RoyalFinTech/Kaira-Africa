@@ -37,6 +37,12 @@ const maskableSvg = await readFile(publicFile('kaira-maskable.svg'), 'utf8');
 assert(maskableSvg.includes('<svg') && maskableSvg.includes('viewBox="0 0 180 180"'),
   'maskable SVG must be a valid scalable Kaira mark');
 
+const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+assert(indexHtml.includes('property="og:image"') && indexHtml.includes('/kaira-social-preview.png'),
+  'Open Graph metadata must reference the dedicated social preview PNG');
+assert(indexHtml.includes('name="twitter:image"') && indexHtml.includes('/kaira-social-preview.png'),
+  'Twitter metadata must reference the dedicated social preview PNG');
+
 const shareCard = await readFile(publicFile('kaira-social-preview.png'));
 const shareDimensions = readPngDimensions(shareCard, 'kaira-social-preview.png');
 assert(shareDimensions.width === 1200 && shareDimensions.height === 630,
