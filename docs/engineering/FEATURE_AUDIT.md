@@ -385,3 +385,17 @@ PR #196 remains draft pending external browser, crawler and physical-device acce
 Clipboard fallback follow-up commits `b87a01663aa2c14d9a3188ddd7c6dc08661f9880` and `c38b52f255e7b437c720e1b833e060af7f6958d6` add focus, guaranteed cleanup, and fresh status state. Latest-head CI and physical-device behavior remain release gates.
 Referral attribution edge case fixed in `b431ef2ad450e61f4ced36694f6042c9b87d853a`: the latest explicitly opened valid referral URL supersedes stale pending session attribution. Latest-head CI must pass before release.
 Service worker now awaits the root-shell cache update after a successful navigation (`66a2731a0d5fa5dc9b03bc10c724745331629553`). Verify online refresh, offline reload, and service-worker update behavior on Android/iOS/desktop.
+
+## QA follow-up — 7 November 2026: pull-to-refresh form guard
+
+| Area | Finding / change | Verification | Status |
+|---|---|---|---|
+| Pull-to-refresh and unsaved edits | Touch-starts inside forms, inputs, textareas, selects, contenteditable regions, textbox roles and data-no-pull-refresh opt-out elements are now excluded from the pull-to-refresh gesture in AppShell.tsx. This reduces accidental query invalidation while editing. | Latest-head CI must run; physical Android/iOS touch and form-retention tests remain outstanding. The explicit header refresh remains available. | SOURCE FIX COMMITTED TO PR BRANCH; CI/DEVICE ACCEPTANCE PENDING |
+
+## Verified repository checkpoint — 7 November 2026
+
+- PR #196 head at inspection: 9d40d67b8cdb92cd1261cfedd28232002fcf19d7; PR #196 is open, draft and unmerged. Its two latest workflow runs (42290610991 Backend CI and 42290610811 Work Management Build Checks) both completed successfully on that exact head. Backend CI included workspace/API/frontend typechecks, frontend build, fresh disposable-database migrations, API and PostgreSQL-backed tests, /health smoke, and Docker image build without push. Work Management typecheck/build/API test job also passed.
+- Production main remains 277d57d6819adc6f6d07259681b867e3ecab68e8. Render frontend and backend are configured to deploy from main and their latest listed deploys are Live on that SHA. PR #196 has not been deployed.
+- Public HTTP fetch of the frontend, social image and API readiness endpoint could not be completed by the available browser checker. External share preview, recipient navigation and physical-device PWA/refresh acceptance remain NOT VERIFIED.
+- Team invitation implementation PR #171 is merged. PRs #187 and #190 add database lifecycle and HTTP-route acceptance coverage; the invitation workflow is implemented and CI-covered, but real provider delivery and controlled external OTP/PIN recipient journeys remain NOT VERIFIED.
+- No production database writes, migrations, Render configuration changes or production test records were made during this checkpoint.
