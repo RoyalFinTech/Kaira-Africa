@@ -539,3 +539,6 @@ PWA shell-cache update (`66a2731a0d5fa5dc9b03bc10c724745331629553`): navigation 
 ## PR #196 follow-up — pull-to-refresh form safety (7 November 2026)
 
 Source review identified that a downward touch beginning inside a form/editable control could trigger the global pull-to-refresh gesture. The gesture now ignores touch starts inside forms, inputs, textareas, selects, contenteditable regions, textbox roles, and opt-out data-no-pull-refresh elements. This is intended to avoid refetching while a user is editing locally managed form state. The explicit header refresh remains an intentional user action. Exact-head CI and real-device gesture testing are required before release.
+## PWA install icon compatibility — 7 November 2026
+
+PR #196 now includes 192×192 and 512×512 PNG install icons with accurate sizes and image/png MIME types, plus a separate padded 512×512 maskable SVG and a scalable general SVG fallback. The service worker shell cache was versioned to v5 and precaches the icon assets. PNG header dimensions and manifest JSON were checked from the repository. Browser installability, actual OS icon selection/cropping, public HTTP delivery and Android/iOS/desktop installation remain NOT VERIFIED until deployed/device acceptance.
