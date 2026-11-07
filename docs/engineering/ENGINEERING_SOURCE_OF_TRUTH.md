@@ -542,3 +542,6 @@ Source review identified that a downward touch beginning inside a form/editable 
 ## PWA install icon compatibility — 7 November 2026
 
 PR #196 now includes 192×192 and 512×512 PNG install icons with accurate sizes and image/png MIME types, plus a separate padded 512×512 maskable SVG and a scalable general SVG fallback. The service worker shell cache was versioned to v5 and precaches the icon assets. PNG header dimensions and manifest JSON were checked from the repository. Browser installability, actual OS icon selection/cropping, public HTTP delivery and Android/iOS/desktop installation remain NOT VERIFIED until deployed/device acceptance.
+## PWA asset build gate — 7 November 2026
+
+Added scripts/verify-pwa-assets.mjs to the frontend build. The script validates manifest JSON, exact 192×192/512×512 PNG dimensions and MIME/purpose declarations, the separate maskable SVG, the 1200×630 social card and size ceiling, and service-worker precache/version references. The package build now runs this verifier after static route generation. Treat this as a build-time regression guard; only the latest-head CI result can confirm it passes.
