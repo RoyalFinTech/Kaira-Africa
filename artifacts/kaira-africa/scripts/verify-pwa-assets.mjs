@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 
 const publicFile = (name) => new URL(`../public/${name}`, import.meta.url);
 
