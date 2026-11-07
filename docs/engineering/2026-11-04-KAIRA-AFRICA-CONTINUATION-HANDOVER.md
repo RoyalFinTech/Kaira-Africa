@@ -721,3 +721,8 @@ Working branch `feat/pwa-share-mobile-country-ux` now contains the first impleme
 - Source review of the current PR #196 head found that the pull gesture could begin from a form or editable control. Although refresh invalidates React Query data rather than reloading the document, a refetch could still interact with page-level form state.
 - Updated AppShell.tsx to ignore touch starts originating inside forms, inputs, textareas, selects, contenteditable regions, textbox roles, and elements explicitly marked data-no-pull-refresh. This makes the pull gesture unavailable while the user is actively interacting with an editable surface; the explicit header refresh button remains available.
 - This is a focused source-level safeguard. Re-run exact-head CI and test real touch behavior on devices; do not claim physical-device acceptance.
+### Dimensioned PWA icon follow-up — 7 November 2026
+
+- Added Kaira install icon assets derived from the existing SVG brand mark: 192×192 PNG for general use, 512×512 PNG for general use, and a separate padded 512×512 maskable SVG. The logo mark and Kaira colors are preserved; the maskable version scales the mark into the platform safe zone.
+- Updated manifest.webmanifest to declare the exact PNG dimensions and separate any/maskable purposes. Kept favicon.svg as a scalable general-purpose fallback.
+- Updated the service-worker shell cache to v5 and precache all manifest icon assets. This remains branch-only until latest-head CI, deployed HTTP checks and real-device install/icon-crop tests pass.
