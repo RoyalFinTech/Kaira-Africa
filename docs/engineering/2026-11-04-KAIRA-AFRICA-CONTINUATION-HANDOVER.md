@@ -726,3 +726,8 @@ Working branch `feat/pwa-share-mobile-country-ux` now contains the first impleme
 - Added Kaira install icon assets derived from the existing SVG brand mark: 192×192 PNG for general use, 512×512 PNG for general use, and a separate padded 512×512 maskable SVG. The logo mark and Kaira colors are preserved; the maskable version scales the mark into the platform safe zone.
 - Updated manifest.webmanifest to declare the exact PNG dimensions and separate any/maskable purposes. Kept favicon.svg as a scalable general-purpose fallback.
 - Updated the service-worker shell cache to v5 and precache all manifest icon assets. This remains branch-only until latest-head CI, deployed HTTP checks and real-device install/icon-crop tests pass.
+### Automated PWA asset verification — 7 November 2026
+
+- Added scripts/verify-pwa-assets.mjs and wired it into the frontend package build after SPA route generation.
+- The build now checks that manifest JSON parses; 192×192 and 512×512 PNG icons exist, have valid PNG signatures and exact dimensions, and are declared with the correct purpose/MIME; the separate maskable SVG exists; the social card is 1200×630 and no larger than 1 MiB; and the service worker precaches the install icons under a versioned cache.
+- This converts asset integrity into a repeatable build gate. Latest-head GitHub CI is still required to prove the script passes in the repository workflow.
