@@ -39,6 +39,17 @@ export function AppShell({ children }: AppShellProps) {
 
   const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
     const touch = event.touches[0];
+    const target = event.target;
+    // Never start pull-to-refresh from an editable surface. This avoids a
+    // refetch being triggered by a swipe while a user is entering form data.
+    if (
+      target instanceof Element &&
+      target.closest('form, input, textarea, select, [contenteditable="true"], [role="textbox"], [data-no-pull-refresh]')
+    ) {
+      pullStart.current = null;
+      return;
+    }
+
     if (!touch || event.currentTarget.scrollTop > 0) {
       pullStart.current = null;
       return;
