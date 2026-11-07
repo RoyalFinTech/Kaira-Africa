@@ -415,3 +415,11 @@ Service worker now awaits the root-shell cache update after a successful navigat
 | Area | Implementation | Acceptance | Status |
 |---|---|---|---|
 | PWA/social asset build verification | Added scripts/verify-pwa-assets.mjs and wired it into the frontend package build. It validates manifest JSON, PNG signatures and dimensions, icon MIME/purpose declarations, maskable SVG presence, social-card dimensions/size and service-worker precache/version references. | Await latest-head CI to execute the verifier in the workspace build; device/browser install and deployed asset delivery remain separate acceptance gates. | IMPLEMENTED; CI PENDING |
+## Latest-head CI result — 7 November 2026
+
+| Check | Run | Result | Notes |
+|---|---:|---|---|
+| Backend CI | 42357883459 | PASS | Typechecks, frontend build/PWA verifier, backend build, fresh DB migration, API + PostgreSQL acceptance tests, built server health, Docker build (no push). |
+| Work Management Build Checks | 42357883434 | PASS | Typecheck and build. |
+
+CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`. Automated release gate is green. External HTTP/crawler, recipient link, and physical-device PWA checks remain NOT VERIFIED.
