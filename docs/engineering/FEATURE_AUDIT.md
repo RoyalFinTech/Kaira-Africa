@@ -410,3 +410,8 @@ Service worker now awaits the root-shell cache update after a successful navigat
 - Added a form/editable-surface guard to pull-to-refresh in AppShell.tsx.
 - Added dimensioned 192/512 PNG install icons, separate maskable SVG and service-worker precache/version update.
 - No production database, Render configuration or production user data changed. Await latest-head GitHub CI.
+## Automated PWA asset QA — 7 November 2026
+
+| Area | Implementation | Acceptance | Status |
+|---|---|---|---|
+| PWA/social asset build verification | Added scripts/verify-pwa-assets.mjs and wired it into the frontend package build. It validates manifest JSON, PNG signatures and dimensions, icon MIME/purpose declarations, maskable SVG presence, social-card dimensions/size and service-worker precache/version references. | Await latest-head CI to execute the verifier in the workspace build; device/browser install and deployed asset delivery remain separate acceptance gates. | IMPLEMENTED; CI PENDING |
