@@ -731,3 +731,9 @@ Working branch `feat/pwa-share-mobile-country-ux` now contains the first impleme
 - Added scripts/verify-pwa-assets.mjs and wired it into the frontend package build after SPA route generation.
 - The build now checks that manifest JSON parses; 192×192 and 512×512 PNG icons exist, have valid PNG signatures and exact dimensions, and are declared with the correct purpose/MIME; the separate maskable SVG exists; the social card is 1200×630 and no larger than 1 MiB; and the service worker precaches the install icons under a versioned cache.
 - This converts asset integrity into a repeatable build gate. Latest-head GitHub CI is still required to prove the script passes in the repository workflow.
+### Latest-head CI result — 7 November 2026
+
+- Verified PR head: `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
+- Backend CI run `42357883459`: SUCCESS. Shared-library/API/frontend typechecks, frontend build (including `scripts/verify-pwa-assets.mjs`), backend build, fresh-database migrations, API unit and PostgreSQL-backed acceptance tests, built-server `/health`, and production Docker image build all passed. Docker build was verification-only and did not push an image.
+- Work Management Build Checks run `42357883434`: SUCCESS (`typecheck-and-build`).
+- This clears the latest-head automated CI gate. It does not prove public Render asset delivery, social crawler retrieval, real recipient link opening, or physical Android/iOS/desktop installation and refresh behaviour.
