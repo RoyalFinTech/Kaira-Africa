@@ -535,3 +535,7 @@ Added `artifacts/kaira-africa/public/kaira-social-preview.png`, a 1200×630 appr
 Clipboard fallback cleanup was tightened in `b87a01663aa2c14d9a3188ddd7c6dc08661f9880` and `c38b52f255e7b437c720e1b833e060af7f6958d6`: focus before selection-copy, guaranteed temporary-element cleanup, and no stale success indicator after a new share attempt. Verify CI against the final PR head.
 Referral attribution now replaces a stale pending code when a new valid referral URL is explicitly opened (`b431ef2ad450e61f4ced36694f6042c9b87d853a`). This avoids attributing a later signup to an earlier abandoned referral link in the same tab.
 PWA shell-cache update (`66a2731a0d5fa5dc9b03bc10c724745331629553`): navigation handler now awaits the cached root-shell response write. This is source-level hardening; offline reload and update lifecycle still require physical-device verification.
+
+## PR #196 follow-up — pull-to-refresh form safety (7 November 2026)
+
+Source review identified that a downward touch beginning inside a form/editable control could trigger the global pull-to-refresh gesture. The gesture now ignores touch starts inside forms, inputs, textareas, selects, contenteditable regions, textbox roles, and opt-out data-no-pull-refresh elements. This is intended to avoid refetching while a user is editing locally managed form state. The explicit header refresh remains an intentional user action. Exact-head CI and real-device gesture testing are required before release.
