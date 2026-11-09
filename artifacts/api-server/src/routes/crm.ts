@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { and, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, crmInteractions, customers, transactions, users } from "@workspace/db";
 import { requireUser, requireBusiness, requireRole } from "../middlewares/auth";
@@ -249,7 +249,9 @@ router.get("/crm/overview", requireUser, async (req, res) => {
       .leftJoin(users, eq(users.id, crmInteractions.userId)).where(eq(crmInteractions.businessId, businessId))
       .orderBy(desc(crmInteractions.createdAt)).limit(25),
     db.select({ openFollowUps: count() }).from(crmInteractions).where(and(
-      eq(crmInteractions.businessId, businessId), isNull(crmInteractions.completedAt)
+      eq(crmInteractions.businessId, businessId),
+      isNull(crmInteractions.completedAt),
+      or(eq(crmInteractions.type, "follow_up"), isNotNull(crmInteractions.nextActionAt))
     )),
   ]);
   const spendByCustomer = new Map<string, Record<string, number>>();
