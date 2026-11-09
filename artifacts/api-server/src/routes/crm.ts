@@ -291,7 +291,11 @@ router.post("/crm/interactions", requireUser, requireRole("owner", "admin", "man
 router.patch("/crm/interactions/:id/complete", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
   const businessId = requireBusiness(req);
   const [updated] = await db.update(crmInteractions).set({ completedAt: new Date() })
-    .where(and(eq(crmInteractions.id, req.params.id as string), eq(crmInteractions.businessId, businessId))).returning();
+    .where(and(
+      eq(crmInteractions.id, req.params.id as string),
+      eq(crmInteractions.businessId, businessId),
+      or(eq(crmInteractions.type, "follow_up"), isNotNull(crmInteractions.nextActionAt)),
+    )).returning();
   if (!updated) throw new NotFoundError("CRM interaction not found");
   res.json({ id: updated.id, completedAt: updated.completedAt?.toISOString() || null });
 });
