@@ -89,7 +89,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [location]);
 
   return (
-    <div className="min-h-[100dvh] flex">
+    <div className="flex h-[100dvh] min-h-0 overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block shrink-0">
         <Sidebar collapsed={desktopSidebarCollapsed} onLogoClick={() => setDesktopSidebarCollapsed(value => !value)} onNavigate={() => setDesktopSidebarCollapsed(true)} />
@@ -105,10 +105,10 @@ export function AppShell({ children }: AppShellProps) {
       </Sheet>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header onMenuClick={() => setMobileMenuOpen(value => !value)} onDesktopMenuToggle={() => setDesktopSidebarCollapsed(value => !value)} />
         <main
-          className="relative min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-4 pb-24 sm:p-6 lg:pb-6"
+          className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-4 pb-24 sm:p-6 lg:pb-6"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={() => { pullStart.current = null; }}
