@@ -271,7 +271,7 @@ router.get("/crm/overview", requireUser, async (req, res) => {
   });
 });
 
-router.post("/crm/interactions", requireUser, requireRole("owner", "admin", "manager"), async (req, res) => {
+router.post("/crm/interactions", requireUser, requireRole("owner", "admin", "manager", "staff"), async (req, res) => {
   const input = interactionInput.parse(req.body);
   const businessId = requireBusiness(req);
   const [customer] = await db.select({ id: customers.id, firstName: customers.firstName, lastName: customers.lastName })
