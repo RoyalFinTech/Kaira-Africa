@@ -38,21 +38,18 @@ assert(maskableSvg.includes('<svg') && maskableSvg.includes('viewBox="0 0 180 18
   'maskable SVG must be a valid scalable Kaira mark');
 
 const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-assert(indexHtml.includes('property="og:image"') && indexHtml.includes('/kaira-icon-512.png'),
-  'Open Graph metadata must reference the lightweight Kaira logo PNG');
-assert(indexHtml.includes('name="twitter:image"') && indexHtml.includes('/kaira-icon-512.png'),
-  'Twitter metadata must reference the lightweight Kaira logo PNG');
-const socialLogo = await readFile(publicFile('kaira-icon-512.png'));
-const socialLogoDimensions = readPngDimensions(socialLogo, 'kaira-icon-512.png');
-assert(socialLogoDimensions.width === 512 && socialLogoDimensions.height === 512,
-  'social preview logo must be 512x512');
-assert(socialLogo.length <= 600 * 1024, 'social preview logo must remain below 600 KiB');
+assert(indexHtml.includes('property="og:image"') && indexHtml.includes('/kaira-social-preview.png'),
+  'Open Graph metadata must reference the branded landscape social preview');
+assert(indexHtml.includes('name="twitter:image"') && indexHtml.includes('/kaira-social-preview.png'),
+  'Twitter metadata must reference the branded landscape social preview');
+assert(indexHtml.includes('name="twitter:image:alt"') && indexHtml.includes('Kaira Africa business management platform'),
+  'Twitter preview must have descriptive image alt text');
 
 const shareCard = await readFile(publicFile('kaira-social-preview.png'));
 const shareDimensions = readPngDimensions(shareCard, 'kaira-social-preview.png');
 assert(shareDimensions.width === 1200 && shareDimensions.height === 630,
   'social preview must be 1200x630');
-assert(shareCard.length <= 1024 * 1024, 'social preview must remain at or below 1 MiB');
+assert(shareCard.length <= 800 * 1024, 'social preview must remain below 800 KiB for reliable crawler delivery');
 
 const worker = await readFile(publicFile('sw.js'), 'utf8');
 for (const asset of ['kaira-icon-192.png', 'kaira-icon-512.png', 'kaira-maskable.svg']) {
