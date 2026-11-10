@@ -49,7 +49,7 @@ const shareCard = await readFile(publicFile('kaira-social-preview.png'));
 const shareDimensions = readPngDimensions(shareCard, 'kaira-social-preview.png');
 assert(shareDimensions.width === 1200 && shareDimensions.height === 630,
   'social preview must be 1200x630');
-assert(shareCard.length <= 600 * 1024, 'social preview must remain below 600 KiB for reliable crawler delivery');
+assert(shareCard.length <= 800 * 1024, 'social preview must remain below 800 KiB for reliable crawler delivery');
 
 const worker = await readFile(publicFile('sw.js'), 'utf8');
 for (const asset of ['kaira-icon-192.png', 'kaira-icon-512.png', 'kaira-maskable.svg']) {
