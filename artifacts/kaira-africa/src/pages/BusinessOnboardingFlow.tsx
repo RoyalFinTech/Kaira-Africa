@@ -285,13 +285,13 @@ export default function BusinessOnboardingFlow() {
                     <FormField control={form1.control} name="country" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Country</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger aria-label="Business country">
                               <SelectValue>
-                                <span className="flex items-center gap-2">
+                                <span className="flex min-w-0 items-center gap-2">
                                   <CountryFlag country={field.value} width={24} height={16} />
-                                  <span>{field.value}</span>
+                                  <span className="truncate">{field.value}</span>
                                 </span>
                               </SelectValue>
                             </SelectTrigger>
