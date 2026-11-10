@@ -35,6 +35,13 @@ export default function DashboardPage() {
   const [revenuePeriod, setRevenuePeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const { data: revenueAnalytics, isLoading: revenueLoading } = useGetRevenueAnalytics({ period: revenuePeriod });
   const todayDate = new Date().toISOString().slice(0, 10);
+  const monthStart = todayDate.slice(0, 7) + '-01';
+  const { data: monthlyLedger } = useQuery({
+    queryKey: ['daily-ledger', monthStart, todayDate, 1, 'GMD'],
+    // The ledger endpoint returns complete period summaries independently
+    // of the entry page, so a one-row page keeps this dashboard request light.
+    queryFn: () => getDailyLedger(monthStart, todayDate, 1, 1, 'GMD'),
+  });
   const { data: todayLedger } = useQuery({
     queryKey: ['daily-ledger', todayDate, todayDate],
     queryFn: () => getDailyLedger(todayDate, todayDate),
@@ -131,12 +138,12 @@ export default function DashboardPage() {
         </section>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Revenue
+                  Completed Payments
                 </CardTitle>
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
@@ -155,6 +162,20 @@ export default function DashboardPage() {
             </Card>
           </motion.div>
 
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Daily Ledger Sales</CardTitle>
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="font-display text-3xl font-bold text-foreground">
+                  {formatCurrency(monthlyLedger?.summary.sales || 0, 'GMD')}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">Sales recorded in the daily ledger this month</p>
+              </CardContent>
+            </Card>
+          </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
