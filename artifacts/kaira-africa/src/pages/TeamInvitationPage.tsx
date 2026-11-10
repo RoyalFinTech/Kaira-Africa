@@ -213,9 +213,17 @@ export function TeamInvitationAcceptPage() {
 
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-[#f4f7f4] px-3 py-8">
-      <Card className="w-full max-w-md">
-        <CardHeader><CardTitle>Joining your team</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
+      <Card className="w-full max-w-md overflow-hidden border-[#e0e9e2] shadow-xl">
+        <CardHeader className="space-y-3 bg-[#0D2818] p-5 text-white">
+          <div className="inline-flex w-fit items-center rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-white/30">
+            <KairaLogo width={150} height={44} className="max-w-full" />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8B45A]">Kaira Africa · Team invitation</p>
+            <CardTitle className="mt-2 text-xl font-bold text-white">Joining your team</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 p-5">
           <p className="text-sm text-muted-foreground">{message}</p>
           {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
           <Button className="w-full" variant="outline" onClick={() => setLocation("/login")}>Return to sign in</Button>
