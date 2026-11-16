@@ -66,6 +66,14 @@ async function createSession(userId: string): Promise<string> {
 }
 
 async function startTestServer(): Promise<void> {
+  // Each test case owns one ephemeral server. Close the previous case's
+  // listener before replacing the shared reference so it cannot keep CI alive.
+  if (server) {
+    await new Promise<void>((resolve, reject) => {
+      server!.close((error) => error ? reject(error) : resolve());
+    });
+    server = null;
+  }
   const app = express();
   app.use(express.json());
   app.use("/api", crmRouter);
