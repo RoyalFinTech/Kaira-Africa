@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db, investmentPlans, investmentDailyRecords } from "@workspace/db";
+import { db, businesses, investmentPlans, investmentDailyRecords } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
 import { validateInvestmentPlanAmounts } from "../lib/investment-plan-validation";
+import { dateInBusinessTimeZone } from "../lib/business-date";
 
 const router: IRouter = Router();
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -126,14 +127,17 @@ router.get("/investment-plans/:id/daily", requireUser, async (req, res) => {
 router.post("/investment-plans/:id/daily", requireUser, async (req, res) => {
   const businessId = requireBusiness(req);
   const input = createDailyInput.parse(req.body);
-  if (input.recordDate && input.recordDate > new Date().toISOString().slice(0, 10)) {
+  const [business] = await db.select({ timeZone: businesses.timeZone }).from(businesses).where(eq(businesses.id,businessId)).limit(1);
+  if (!business) throw new NotFoundError("Business not found.");
+  const businessToday = dateInBusinessTimeZone(new Date(), business.timeZone);
+  if (input.recordDate && input.recordDate > businessToday) {
     throw new BadRequestError("Daily records cannot be dated in the future.");
   }
   const [plan] = await db.select().from(investmentPlans).where(and(eq(investmentPlans.id,z.string().uuid().parse(req.params.id)),eq(investmentPlans.businessId,businessId))).limit(1);
   if (!plan) throw new NotFoundError("Investment plan not found.");
   if (plan.status !== "active") throw new BadRequestError("Only active investment plans can receive daily records.");
   const [record] = await db.insert(investmentDailyRecords).values({
-    planId: plan.id, businessId, createdBy: req.user!.id, recordDate: input.recordDate || new Date().toISOString().slice(0,10),
+    planId: plan.id, businessId, createdBy: req.user!.id, recordDate: input.recordDate || businessToday,
     salesMinor: toMinorUnits(input.sales,plan.currency), expensesMinor: toMinorUnits(input.expenses,plan.currency), notes: input.notes || null,
   }).returning();
   res.status(201).json(serializeDaily(record,plan.currency));

@@ -423,3 +423,12 @@ Service worker now awaits the root-shell cache update after a successful navigat
 | Work Management Build Checks | 42357883434 | PASS | Typecheck and build. |
 
 CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`. Automated release gate is green. External HTTP/crawler, recipient link, and physical-device PWA checks remain NOT VERIFIED.
+
+## Financial date handling — business-local calendar fix in progress
+
+- Finding: Savings entry validation/default dates and Investment daily-record validation/default dates used UTC calendar dates, while businesses already have a configured IANA `time_zone` (default `Africa/Banjul`). Around UTC midnight this could reject a valid local-today entry or assign a record to the wrong business calendar day.
+- Branch: `fix/business-local-financial-dates`.
+- Change: API routes now read the authenticated business's configured timezone and use a shared API helper to calculate the local calendar date. Savings and Investment forms also read the same business preference and use it for date defaults/limits instead of the device calendar. Savings deposits/withdrawals and investment daily records retain their existing date-only storage format; no database schema or production data changes are included.
+- Tests added: deterministic helper boundary coverage for `Africa/Banjul`, `Africa/Lagos`, `America/Los_Angeles`, and `Pacific/Kiritimati`, plus invalid IANA timezone rejection. Added disposable-PostgreSQL route acceptance with a frozen instant at the next `23:30 UTC` boundary (Kiritimati is always on the following local calendar date) to prove Savings deposits, withdrawals and Investment daily-record defaults use the business calendar; also checks future business-local dates are rejected.
+- Route acceptance test: `artifacts/api-server/test/business-date-routes-db.test.ts`; runs only when `KAIRA_DB_INTEGRATION_TESTS=true` against the disposable CI database. It creates and cleans up its own user/business; no production data or schema changes.
+- Status: IMPLEMENTED ON BRANCH; LATEST-HEAD CI PENDING. Do not merge or claim release completion until backend tests, frontend checks, fresh migration validation and Docker build pass. Production behavior and business timezone editing still require authenticated end-to-end verification.
