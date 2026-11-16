@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { db, businesses, workProjects, workTasks, workTaskEvents, workMeetings, teamMembers } from "@workspace/db";
+import { db, businesses, workProjects, workTasks, workTaskEvents, workMeetings, teamMembers, notifications } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { createNotification } from "../repositories/notifications";
@@ -11,7 +11,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable();
 const projectInput = z.object({ name:z.string().trim().min(2).max(120), description:z.string().trim().max(2000).optional(), dueDate:date });
 const taskInput = z.object({ title:z.string().trim().min(2).max(160), description:z.string().trim().max(4000).optional(), projectId:z.string().uuid().optional().nullable(), assignedTo:z.string().uuid().optional().nullable(), priority:z.enum(["low","medium","high","urgent"]).default("medium"), dueDate:date });
 const taskPatch = z.object({ title:z.string().trim().min(2).max(160).optional(), description:z.string().trim().max(4000).nullable().optional(), projectId:z.string().uuid().nullable().optional(), assignedTo:z.string().uuid().nullable().optional(), priority:z.enum(["low","medium","high","urgent"]).optional(), status:z.enum(["todo","in_progress","done","cancelled"]).optional(), dueDate:date });
-const meetingInput = z.object({ title:z.string().trim().min(2).max(160), meetingType:z.enum(["team","client","planning","review","other"]).default("team"), startsAt:z.string().datetime().optional().nullable(), timeZone:z.string().trim().min(1).max(100).optional(), attendees:z.array(z.string().trim().min(1).max(120)).max(100).default([]), agenda:z.string().max(4000).optional(), minutes:z.string().max(20000).optional(), decisions:z.string().max(10000).optional(), status:z.enum(["scheduled","held","cancelled"]).optional() });
+const meetingInput = z.object({ attendeeUserIds:z.array(z.string().uuid()).max(100).default([]), title:z.string().trim().min(2).max(160), meetingType:z.enum(["team","client","planning","review","other"]).default("team"), startsAt:z.string().datetime().optional().nullable(), timeZone:z.string().trim().min(1).max(100).optional(), attendees:z.array(z.string().trim().min(1).max(120)).max(100).default([]), agenda:z.string().max(4000).optional(), minutes:z.string().max(20000).optional(), decisions:z.string().max(10000).optional(), status:z.enum(["scheduled","held","cancelled"]).optional() });
 
 async function verifyAssignee(businessId:string, userId:string|null|undefined) {
   if (!userId) return;
@@ -19,6 +19,21 @@ async function verifyAssignee(businessId:string, userId:string|null|undefined) {
     eq(teamMembers.businessId,businessId),eq(teamMembers.userId,userId),eq(teamMembers.status,"active")
   )).limit(1);
   if (!member) throw new BadRequestError("Choose an active team member who has linked their Kaira user account.");
+}
+async function verifyMeetingAttendees(businessId:string, userIds:string[]|undefined) {
+  const ids=[...new Set(userIds??[])];
+  if(ids.length!==(userIds??[]).length) throw new BadRequestError("Choose each meeting participant only once.");
+  if(!ids.length) return ids;
+  const members=await db.select({userId:teamMembers.userId}).from(teamMembers).where(and(
+    eq(teamMembers.businessId,businessId),eq(teamMembers.status,"active"),inArray(teamMembers.userId,ids)
+  ));
+  const valid=new Set(members.flatMap(member=>member.userId?[member.userId]:[]));
+  if(ids.some(id=>!valid.has(id))) throw new BadRequestError("Meeting notifications can only be sent to active team members who have linked their Kaira accounts.");
+  return ids;
+}
+function meetingTimeLabel(startsAt:Date|null,timeZone:string) {
+  if(!startsAt) return "Time to be confirmed";
+  return new Intl.DateTimeFormat("en",{timeZone,dateStyle:"medium",timeStyle:"short"}).format(startsAt);
 }
 async function verifyProject(businessId:string, projectId:string|null|undefined) {
   if (!projectId) return;
@@ -82,17 +97,53 @@ router.get("/work/meetings",requireUser,async(req,res)=>{
 });
 router.post("/work/meetings",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req),input=meetingInput.parse(req.body);
+ const attendeeUserIds=await verifyMeetingAttendees(businessId,input.attendeeUserIds);
  const [business]=await db.select({timeZone:businesses.timeZone}).from(businesses).where(eq(businesses.id,businessId)).limit(1);
  const timeZone=input.timeZone??business?.timeZone??"Africa/Banjul";
  try { new Intl.DateTimeFormat("en-US",{timeZone}).format(new Date()); } catch { throw new BadRequestError("Choose a valid IANA time zone for this meeting."); }
- const [meeting]=await db.insert(workMeetings).values({businessId,createdBy:req.user!.id,title:input.title,meetingType:input.meetingType,startsAt:input.startsAt?new Date(input.startsAt):null,timeZone,attendees:input.attendees,agenda:input.agenda||null,minutes:input.minutes||null,decisions:input.decisions||null,status:input.status||"scheduled"}).returning();
+ const startsAt=input.startsAt?new Date(input.startsAt):null;
+ const meeting=await db.transaction(async(tx)=>{
+   const [created]=await tx.insert(workMeetings).values({businessId,createdBy:req.user!.id,title:input.title,meetingType:input.meetingType,startsAt,timeZone,attendees:input.attendees,attendeeUserIds,agenda:input.agenda||null,minutes:input.minutes||null,decisions:input.decisions||null,status:input.status||"scheduled"}).returning();
+   const requested=attendeeUserIds.filter(id=>id!==req.user!.id);
+   if(requested.length){
+     const activeMembers=await tx.select({userId:teamMembers.userId}).from(teamMembers).where(and(eq(teamMembers.businessId,businessId),eq(teamMembers.status,"active"),inArray(teamMembers.userId,requested)));
+     const recipients=activeMembers.flatMap(member=>member.userId?[member.userId]:[]);
+     if(recipients.length) await tx.insert(notifications).values(recipients.map(recipientUserId=>({recipientUserId,title:"Meeting scheduled",message:`${created.title} is scheduled for ${meetingTimeLabel(startsAt,timeZone)}.`,type:"meeting" as const,actionUrl:"/work-management/meetings"})));
+   }
+   return created;
+ });
  res.status(201).json(meeting);
 });
 router.patch("/work/meetings/:id",requireUser,async(req,res)=>{
  const businessId=requireBusiness(req),id=z.string().uuid().parse(req.params.id),input=meetingInput.partial().parse(req.body);
- const {startsAt,timeZone,...meetingFields}=input;
+ const [before]=await db.select().from(workMeetings).where(and(eq(workMeetings.id,id),eq(workMeetings.businessId,businessId))).limit(1);
+ if(!before) throw new NotFoundError("Meeting not found.");
+ const {startsAt,timeZone,attendeeUserIds,...meetingFields}=input;
  if(timeZone!==undefined){try { new Intl.DateTimeFormat("en-US",{timeZone}).format(new Date()); } catch { throw new BadRequestError("Choose a valid IANA time zone for this meeting."); }}
- const [meeting]=await db.update(workMeetings).set({...meetingFields,...(startsAt!==undefined?{startsAt:startsAt?new Date(startsAt):null}:{}),...(timeZone!==undefined?{timeZone}:{}),updatedAt:new Date()}).where(and(eq(workMeetings.id,id),eq(workMeetings.businessId,businessId))).returning();
- if(!meeting) throw new NotFoundError("Meeting not found."); res.json(meeting);
+ const nextAttendeeUserIds=attendeeUserIds===undefined?before.attendeeUserIds:await verifyMeetingAttendees(businessId,attendeeUserIds);
+ const meeting=await db.transaction(async(tx)=>{
+   const [updated]=await tx.update(workMeetings).set({...meetingFields,...(startsAt!==undefined?{startsAt:startsAt?new Date(startsAt):null}:{}),...(timeZone!==undefined?{timeZone}:{}),...(attendeeUserIds!==undefined?{attendeeUserIds:nextAttendeeUserIds}:{}),updatedAt:new Date()}).where(and(eq(workMeetings.id,id),eq(workMeetings.businessId,businessId))).returning();
+   if(!updated) return undefined;
+   const effectiveTimeZone=updated.timeZone||"Africa/Banjul";
+   const timeChanged=startsAt!==undefined&&((before.startsAt?.toISOString()??null)!==(updated.startsAt?.toISOString()??null));
+   const titleChanged=updated.title!==before.title;
+   const statusChanged=updated.status!==before.status;
+   const timeZoneChanged=updated.timeZone!==before.timeZone;
+   const attendeesChanged=attendeeUserIds!==undefined&&JSON.stringify([...before.attendeeUserIds].sort())!==JSON.stringify([...updated.attendeeUserIds].sort());
+   if(timeChanged||timeZoneChanged||titleChanged||statusChanged||attendeesChanged){
+     const requested=[...new Set([...before.attendeeUserIds,...updated.attendeeUserIds])].filter(recipientUserId=>recipientUserId!==req.user!.id);
+     if(requested.length){
+       const activeMembers=await tx.select({userId:teamMembers.userId}).from(teamMembers).where(and(eq(teamMembers.businessId,businessId),eq(teamMembers.status,"active"),inArray(teamMembers.userId,requested)));
+       const recipients=activeMembers.flatMap(member=>member.userId?[member.userId]:[]);
+       const message=updated.status==="cancelled"
+         ? `${updated.title} has been cancelled.`
+         : `${updated.title} has been updated. New time: ${meetingTimeLabel(updated.startsAt,effectiveTimeZone)}.`;
+       if(recipients.length) await tx.insert(notifications).values(recipients.map(recipientUserId=>({recipientUserId,title:updated.status==="cancelled"?"Meeting cancelled":"Meeting updated",message,type:"meeting" as const,actionUrl:"/work-management/meetings"})));
+     }
+   }
+   return updated;
+ });
+ if(!meeting) throw new NotFoundError("Meeting not found.");
+ res.json(meeting);
 });
 export default router;

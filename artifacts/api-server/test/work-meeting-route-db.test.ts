@@ -4,7 +4,7 @@ import type { Server } from "node:http";
 import { after, test } from "node:test";
 import express from "express";
 import { eq } from "drizzle-orm";
-import { businesses, db, pool, users, workMeetings } from "@workspace/db";
+import { businesses, db, notifications, pool, teamMembers, users, workMeetings } from "@workspace/db";
 import workManagementRouter from "../src/routes/work-management";
 import { errorHandler } from "../src/middlewares/error-handler";
 import { generateSessionToken, hashToken } from "../src/lib/tokens";
@@ -114,6 +114,16 @@ test("meeting routes authenticate, validate time zones and isolate business reco
 }, async () => {
   const owner = await createTestUser();
   const business = await createBusinessForUser(owner.id, businessInput("owner"));
+  const attendeeUser = await createTestUser();
+  await db.insert(teamMembers).values({
+    businessId: business.id,
+    userId: attendeeUser.id,
+    firstName: "CI",
+    lastName: "Attendee",
+    role: "staff",
+    accessRole: "staff",
+    status: "active",
+  });
   const outsiderOwner = await createTestUser();
   const outsiderBusiness = await createBusinessForUser(
     outsiderOwner.id,
@@ -133,7 +143,8 @@ test("meeting routes authenticate, validate time zones and isolate business reco
     meetingType: "planning",
     startsAt,
     timeZone: "Africa/Banjul",
-    attendees: ["CI Owner", "CI Participant"],
+    attendees: ["CI Owner", "External Participant"],
+    attendeeUserIds: [attendeeUser.id],
     agenda: "Review the release plan",
   });
   assert.equal(createResponse.status, 201);
@@ -144,18 +155,34 @@ test("meeting routes authenticate, validate time zones and isolate business reco
     startsAt: string;
     timeZone: string;
     attendees: string[];
+    attendeeUserIds: string[];
   };
   assert.equal(created.businessId, business.id);
   assert.equal(created.title, "CI planning meeting");
   assert.equal(new Date(created.startsAt).toISOString(), startsAt);
   assert.equal(created.timeZone, "Africa/Banjul");
-  assert.deepEqual(created.attendees, ["CI Owner", "CI Participant"]);
+  assert.deepEqual(created.attendees, ["CI Owner", "External Participant"]);
+  assert.deepEqual(created.attendeeUserIds, [attendeeUser.id]);
+  const delivered = await db.select({recipientUserId:notifications.recipientUserId,title:notifications.title})
+    .from(notifications).where(eq(notifications.recipientUserId,attendeeUser.id));
+  assert.equal(delivered.length, 1);
+  assert.equal(delivered[0]?.title, "Meeting scheduled");
+  const creatorNotifications = await db.select({id:notifications.id}).from(notifications)
+    .where(eq(notifications.recipientUserId,owner.id));
+  assert.equal(creatorNotifications.length, 0);
 
   const listResponse = await request("GET", "/api/work/meetings", ownerToken);
   assert.equal(listResponse.status, 200);
   const listed = await listResponse.json() as Array<{ id: string; businessId: string }>;
   assert.ok(listed.some((meeting) => meeting.id === created.id));
   assert.ok(listed.every((meeting) => meeting.businessId === business.id));
+
+  const invalidAttendeeResponse = await request("POST", "/api/work/meetings", ownerToken, {
+    title: "Invalid attendee test",
+    attendeeUserIds: [outsiderOwner.id],
+  });
+  assert.equal(invalidAttendeeResponse.status, 400);
+  await invalidAttendeeResponse.body?.cancel();
 
   const invalidTimeZoneResponse = await request(
     "PATCH",
@@ -182,9 +209,14 @@ test("meeting routes authenticate, validate time zones and isolate business reco
     { title: "Updated planning meeting", status: "held" },
   );
   assert.equal(updateResponse.status, 200);
-  const updated = await updateResponse.json() as { title: string; status: string };
+  const updated = await updateResponse.json() as { title: string; status: string; attendeeUserIds: string[] };
   assert.equal(updated.title, "Updated planning meeting");
   assert.equal(updated.status, "held");
+  assert.deepEqual(updated.attendeeUserIds, [attendeeUser.id]);
+  const updateNotifications = await db.select({title:notifications.title}).from(notifications)
+    .where(eq(notifications.recipientUserId,attendeeUser.id));
+  assert.equal(updateNotifications.length, 2);
+  assert.ok(updateNotifications.some((notification) => notification.title === "Meeting updated"));
 
   const [persisted] = await db.select({
     businessId: workMeetings.businessId,
@@ -194,6 +226,32 @@ test("meeting routes authenticate, validate time zones and isolate business reco
   assert.equal(persisted?.businessId, business.id);
   assert.equal(persisted?.title, "Updated planning meeting");
   assert.equal(persisted?.status, "held");
+
+  const timeZoneUpdateResponse = await request(
+    "PATCH",
+    `/api/work/meetings/${created.id}`,
+    ownerToken,
+    { timeZone: "Europe/London" },
+  );
+  assert.equal(timeZoneUpdateResponse.status, 200);
+  const timeZoneUpdated = await timeZoneUpdateResponse.json() as { timeZone: string };
+  assert.equal(timeZoneUpdated.timeZone, "Europe/London");
+  const timeZoneNotifications = await db.select({title:notifications.title}).from(notifications)
+    .where(eq(notifications.recipientUserId,attendeeUser.id));
+  assert.equal(timeZoneNotifications.length, 3);
+  assert.ok(timeZoneNotifications.some((notification) => notification.title === "Meeting updated"));
+
+  const cancelResponse = await request(
+    "PATCH",
+    `/api/work/meetings/${created.id}`,
+    ownerToken,
+    { status: "cancelled" },
+  );
+  assert.equal(cancelResponse.status, 200);
+  const cancelledNotifications = await db.select({title:notifications.title}).from(notifications)
+    .where(eq(notifications.recipientUserId,attendeeUser.id));
+  assert.equal(cancelledNotifications.length, 4);
+  assert.ok(cancelledNotifications.some((notification) => notification.title === "Meeting cancelled"));
 
   // An unrelated business cannot enumerate another business's meeting records.
   const outsiderListResponse = await request("GET", "/api/work/meetings", outsiderToken);

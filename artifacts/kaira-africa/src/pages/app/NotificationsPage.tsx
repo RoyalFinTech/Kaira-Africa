@@ -1,21 +1,21 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, DollarSign, Users, Shield, Settings,
-  FileText, CheckCheck, X
+  FileText, CheckCheck, X, CalendarDays, ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageTransition } from '@/components/common/PageTransition';
 import { EmptyState } from '@/components/common/EmptyState';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  useListNotifications,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
   getListNotificationsQueryKey,
 } from '@workspace/api-client-react';
 import { formatRelativeTime } from '@/lib/utils';
+import { apiRequestJson } from '@/lib/api-client';
 import type { Notification } from '@workspace/api-client-react';
 
 const typeIcon: Record<string, typeof Bell> = {
@@ -25,6 +25,8 @@ const typeIcon: Record<string, typeof Bell> = {
   system: Settings,
   report: FileText,
   customer: Users,
+  task: ClipboardList,
+  meeting: CalendarDays,
 };
 
 const typeBg: Record<string, string> = {
@@ -34,6 +36,8 @@ const typeBg: Record<string, string> = {
   system: 'bg-slate-100 dark:bg-slate-800 text-slate-600',
   report: 'bg-purple-100 dark:bg-purple-950/30 text-purple-600',
   customer: 'bg-amber-100 dark:bg-amber-950/30 text-amber-600',
+  task: 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700',
+  meeting: 'bg-indigo-100 dark:bg-indigo-950/30 text-indigo-700',
 };
 
 function groupByDate(notifications: Notification[]) {
@@ -118,7 +122,12 @@ function NotificationItem({
 }
 
 export default function NotificationsPage() {
-  const { data: notifications = [], isLoading } = useListNotifications();
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: getListNotificationsQueryKey(),
+    queryFn: () => apiRequestJson<Notification[]>('/notifications'),
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+  });
   const queryClient = useQueryClient();
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });
@@ -149,7 +158,7 @@ export default function NotificationsPage() {
             <p className="text-muted-foreground text-sm">
               {unreadCount > 0
                 ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
-                : 'All caught up'}
+                : 'All caught up'} · Updates check every 15 seconds while this page is open
             </p>
           </div>
           {unreadCount > 0 && (
