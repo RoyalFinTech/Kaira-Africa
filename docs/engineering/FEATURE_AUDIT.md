@@ -433,13 +433,13 @@ CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
 - Route acceptance test: `artifacts/api-server/test/business-date-routes-db.test.ts`; runs only when `KAIRA_DB_INTEGRATION_TESTS=true` against the disposable CI database. It creates and cleans up its own user/business; no production data or schema changes.
 - Status: IMPLEMENTED ON BRANCH; LATEST-HEAD CI PENDING. Do not merge or claim release completion until backend tests, frontend checks, fresh migration validation and Docker build pass. Production behavior and business timezone editing still require authenticated end-to-end verification.
 
-## Transaction revenue confirmation workflow — in progress
+## Transaction revenue confirmation workflow — merged and live
 
 - Finding: new transactions were always created as `pending`, even when a user was entering a payment already received and confirmed. Dashboard revenue and the revenue chart intentionally count only `completed` `payment` records, so a newly entered sale could appear as zero revenue until the user separately opened the record and changed its status.
 - Branch / PR: `fix/transaction-revenue-currency-safe` / [PR #217](https://github.com/RoyalFinTech/Kaira-Africa/pull/217).
 - Change: allow the transaction form to explicitly choose Pending or Completed; Pending remains the default. The API records `completedAt` when a new transaction is explicitly created as completed. The UI explains that completed payments contribute to dashboard revenue, while pending payments do not. GMD revenue and transaction-volume chart aggregates are now GMD-only, and a separate dashboard endpoint and summary show completed payment totals for NGN/USD/other currencies without mixing unlike units. Transaction counts and status/type breakdowns still include every currency.
 - Acceptance: disposable-PostgreSQL route test verifies completed payments contribute to `/analytics/revenue` and `/businesses/me/stats`, pending payments and completed deposits do not, currencies remain separate, and one business cannot see another business's revenue. No schema migration or production data changes.
-- Status: MERGED TO MAIN as `f6aa971dc57435e183bbf2719a44c441721bb385`. Backend CI and Work Management Build Checks passed; Render frontend deployment `dep-dbtfqbp5efls73fr1s30` and API deployment `dep-dbtfqbp5efls73fr1rp0` are both LIVE on that exact commit. Authenticated production CRM CRUD with a real customer remains NOT VERIFIED.
+- Status: MERGED TO MAIN as `dfbb1ec5f25ea596f188ab66a0c7591472b93bc5`. Backend CI and Work Management Build Checks passed; Render frontend deployment `dep-dbtfojm7bikc7385g2mg` and API deployment `dep-dbtfojm7bikc7385g2bg` are both LIVE on that exact commit. Authenticated production transaction CRUD remains NOT VERIFIED.
 ## CRM customer profile partial-update safety — merged and live
 
 - Finding: the customer update endpoint accepts a partial profile patch, but previously replaced the entire JSON profile object whenever `profileData` was supplied. A client updating one optional field could unintentionally erase omitted date-of-birth, contact-preference, or other profile fields.
