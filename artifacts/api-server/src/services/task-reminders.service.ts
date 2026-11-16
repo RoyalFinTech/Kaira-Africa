@@ -18,11 +18,12 @@ export function reminderKindForDueDate(dueDate: string, today: string): "due_tod
 }
 
 /**
- * Create in-app due-date reminders only. The unique delivery key and a
- * PostgreSQL advisory lock make repeated runs/restarts safe and prevent
- * duplicate notifications for the same task, recipient, kind and date.
- * Reminder dates are evaluated in each business's configured IANA time zone.
- * Delivery is in-app only; email/web-push are separate integrations.
+ * Queue due-date reminders for the independently opted-in in-app and email
+ * channels. Unique delivery keys and a PostgreSQL advisory lock make repeated
+ * runs/restarts safe and prevent duplicate notifications for the same task,
+ * recipient, kind and date. Reminder dates use the business's IANA time zone.
+ * Email is delivered by the separate retryable outbox worker; web-push is not
+ * implemented in this service.
  */
 export async function runTaskDueReminders(now = new Date(), onlyBusinessId?: string): Promise<number> {
   const utcDate = now.toISOString().slice(0, 10);
