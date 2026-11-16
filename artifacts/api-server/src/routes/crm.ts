@@ -135,7 +135,7 @@ router.put("/crm/customers/:id", requireUser, requireRole("owner", "admin", "man
   const { profileData, ...basic } = input;
   const [updated] = await db.update(customers).set({
     ...basic,
-    ...(profileData !== undefined ? { profileData: cleanProfileData(profileData) } : {}),
+    ...(profileData !== undefined ? { profileData: cleanProfileData({ ...(existing.profileData ?? {}), ...profileData }) } : {}),
     email: basic.email === undefined ? undefined : basic.email === "" ? null : basic.email,
     phone: basic.phone === undefined ? undefined : basic.phone === "" ? null : basic.phone,
     company: basic.company === undefined ? undefined : basic.company === "" ? null : basic.company,
