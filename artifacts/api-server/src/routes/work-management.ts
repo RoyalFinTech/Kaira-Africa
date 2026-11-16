@@ -35,8 +35,16 @@ function meetingTimeLabel(startsAt:Date|null,timeZone:string) {
   if(!startsAt) return "Time to be confirmed";
   return new Intl.DateTimeFormat("en",{timeZone,dateStyle:"medium",timeStyle:"short"}).format(startsAt);
 }
-async function notifyMeetingParticipants(userIds:string[],actorId:string,title:string,message:string) {
-  await Promise.all([...new Set(userIds)].filter(id=>id!==actorId).map(recipientUserId=>
+async function notifyMeetingParticipants(businessId:string,userIds:string[],actorId:string,title:string,message:string) {
+  const requested=[...new Set(userIds)].filter(id=>id!==actorId);
+  if(!requested.length) return;
+  // Membership may be revoked or an account deleted after the meeting was created.
+  // Re-check the live business membership before writing recipient notifications.
+  const activeMembers=await db.select({userId:teamMembers.userId}).from(teamMembers).where(and(
+    eq(teamMembers.businessId,businessId),eq(teamMembers.status,"active"),inArray(teamMembers.userId,requested)
+  ));
+  const recipients=activeMembers.flatMap(member=>member.userId?[member.userId]:[]);
+  await Promise.all(recipients.map(recipientUserId=>
     createNotification({recipientUserId,title,message,type:"meeting",actionUrl:"/work-management/meetings"})
   ));
 }
@@ -108,7 +116,7 @@ router.post("/work/meetings",requireUser,async(req,res)=>{
  try { new Intl.DateTimeFormat("en-US",{timeZone}).format(new Date()); } catch { throw new BadRequestError("Choose a valid IANA time zone for this meeting."); }
  const startsAt=input.startsAt?new Date(input.startsAt):null;
  const [meeting]=await db.insert(workMeetings).values({businessId,createdBy:req.user!.id,title:input.title,meetingType:input.meetingType,startsAt,timeZone,attendees:input.attendees,attendeeUserIds,agenda:input.agenda||null,minutes:input.minutes||null,decisions:input.decisions||null,status:input.status||"scheduled"}).returning();
- await notifyMeetingParticipants(attendeeUserIds,req.user!.id,"Meeting scheduled",`${meeting.title} is scheduled for ${meetingTimeLabel(startsAt,timeZone)}.`);
+ await notifyMeetingParticipants(businessId,attendeeUserIds,req.user!.id,"Meeting scheduled",`${meeting.title} is scheduled for ${meetingTimeLabel(startsAt,timeZone)}.`);
  res.status(201).json(meeting);
 });
 router.patch("/work/meetings/:id",requireUser,async(req,res)=>{
@@ -131,7 +139,7 @@ router.patch("/work/meetings/:id",requireUser,async(req,res)=>{
    const message=meeting.status==="cancelled"
      ? `${meeting.title} has been cancelled.`
      : `${meeting.title} has been updated. New time: ${meetingTimeLabel(meeting.startsAt,effectiveTimeZone)}.`;
-   await notifyMeetingParticipants(recipients,req.user!.id,meeting.status==="cancelled"?"Meeting cancelled":"Meeting updated",message);
+   await notifyMeetingParticipants(businessId,recipients,req.user!.id,meeting.status==="cancelled"?"Meeting cancelled":"Meeting updated",message);
  }
  res.json(meeting);
 });
