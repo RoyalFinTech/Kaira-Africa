@@ -1,4 +1,4 @@
-import { and, inArray, lte, notInArray, sql } from "drizzle-orm";
+import { and, eq, inArray, lte, notInArray, sql } from "drizzle-orm";
 import {
   db,
   businesses,
@@ -18,13 +18,14 @@ export function reminderKindForDueDate(dueDate: string, today: string): "due_tod
 }
 
 /**
- * Create in-app due-date reminders only. The unique delivery key and a
- * PostgreSQL advisory lock make repeated runs/restarts safe and prevent
- * duplicate notifications for the same task, recipient, kind and date.
- * Reminder dates are evaluated in each business's configured IANA time zone.
- * Delivery is in-app only; email/web-push are separate integrations.
+ * Queue due-date reminders for the independently opted-in in-app and email
+ * channels. Unique delivery keys and a PostgreSQL advisory lock make repeated
+ * runs/restarts safe and prevent duplicate notifications for the same task,
+ * recipient, kind and date. Reminder dates use the business's IANA time zone.
+ * Email is delivered by the separate retryable outbox worker; web-push is not
+ * implemented in this service.
  */
-export async function runTaskDueReminders(now = new Date()): Promise<number> {
+export async function runTaskDueReminders(now = new Date(), onlyBusinessId?: string): Promise<number> {
   const utcDate = now.toISOString().slice(0, 10);
   const upperBound = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   return db.transaction(async (tx) => {
@@ -37,10 +38,18 @@ export async function runTaskDueReminders(now = new Date()): Promise<number> {
       dueDate: workTasks.dueDate,
       assignedTo: workTasks.assignedTo,
       createdBy: workTasks.createdBy,
-    }).from(workTasks).innerJoin(businesses, sql`${businesses.id} = ${workTasks.businessId}`).where(and(
-      lte(workTasks.dueDate, upperBound),
-      notInArray(workTasks.status, ["done", "cancelled"]),
-    ));
+    }).from(workTasks).innerJoin(businesses, sql`${businesses.id} = ${workTasks.businessId}`).where(
+      onlyBusinessId
+        ? and(
+            eq(workTasks.businessId, onlyBusinessId),
+            lte(workTasks.dueDate, upperBound),
+            notInArray(workTasks.status, ["done", "cancelled"]),
+          )
+        : and(
+            lte(workTasks.dueDate, upperBound),
+            notInArray(workTasks.status, ["done", "cancelled"]),
+          ),
+    );
     const recipientIds = [...new Set(tasks.map(task => task.assignedTo ?? task.createdBy))];
     const recipientRows = recipientIds.length
       ? await tx.select({ id: users.id, email: users.email, preferences: users.notificationPreferences })
