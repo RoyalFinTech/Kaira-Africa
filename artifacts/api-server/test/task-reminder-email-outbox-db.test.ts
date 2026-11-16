@@ -105,13 +105,13 @@ test("task reminder email outbox respects channel opt-ins and is idempotent", {
     title: "CI in-app-only reminder",
     status: "todo",
     priority: "medium",
-    dueDate: "2026-11-16",
+    dueDate: "2026-11-17",
   }).returning({ id: workTasks.id });
 
   // At 23:30 UTC, Kiritimati is already on Nov 17 while UTC is still Nov 16.
   const fixedNow = new Date("2026-11-16T23:30:00.000Z");
   assert.equal(await runTaskDueReminders(fixedNow, business.id), 1);
-  assert.equal(await runTaskDueReminders(fixedNow), 0);
+  assert.equal(await runTaskDueReminders(fixedNow, business.id), 0);
 
   const emailRows = await db.select().from(workTaskReminderEmailOutbox)
     .where(eq(workTaskReminderEmailOutbox.recipientUserId, owner.id));
