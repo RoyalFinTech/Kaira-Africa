@@ -81,7 +81,7 @@ async function startTestServer(): Promise<void> {
 }
 
 async function request(
-  method: "POST" | "PATCH",
+  method: "GET" | "POST" | "PATCH" | "PUT",
   path: string,
   token?: string,
   body?: unknown,
@@ -236,4 +236,88 @@ test("CRM staff can create interactions only for their business and only follow-
   );
   assert.equal(crossBusinessCompleteResponse.status, 404);
   await crossBusinessCompleteResponse.body?.cancel();
+});
+
+
+test("CRM customer profiles support optional fields, DOB search, updates, and tenant isolation", {
+  skip: !databaseAcceptanceEnabled,
+}, async () => {
+  const owner = await createTestUser();
+  const business = await createBusinessForUser(owner.id, businessInput("customer-profile"));
+  const staff = await createTestUser("staff", business.id);
+  const outsiderOwner = await createTestUser();
+  const outsiderBusiness = await createBusinessForUser(
+    outsiderOwner.id,
+    businessInput("customer-profile-outsider"),
+  );
+  const staffToken = await createSession(staff.id);
+  const outsiderToken = await createSession(outsiderOwner.id);
+  await startTestServer();
+
+  const createdResponse = await request("POST", "/api/crm/customers", staffToken, {
+    firstName: "Amina",
+    lastName: "Jallow",
+    profileData: { dateOfBirth: "1992-04-17", maritalStatus: "single", preferences: "Call before delivery" },
+  });
+  assert.equal(createdResponse.status, 201);
+  const created = await createdResponse.json() as {
+    id: string; businessId: string; firstName: string; lastName: string;
+    email: string | null; phone: string | null; profileData: Record<string, unknown>;
+  };
+  assert.equal(created.businessId, business.id);
+  assert.equal(created.firstName, "Amina");
+  assert.equal(created.lastName, "Jallow");
+  assert.equal(created.email, null);
+  assert.equal(created.phone, null);
+  assert.equal(created.profileData.dateOfBirth, "1992-04-17");
+
+  const dobSearchResponse = await request(
+    "GET",
+    "/api/crm/customers?search=1992-04-17",
+    staffToken,
+  );
+  assert.equal(dobSearchResponse.status, 200);
+  const dobSearch = await dobSearchResponse.json() as {
+    customers: Array<{ id: string; profileData: Record<string, unknown> }>;
+    total: number;
+  };
+  assert.equal(dobSearch.total, 1);
+  assert.equal(dobSearch.customers[0]?.id, created.id);
+
+  const updateResponse = await request("PUT", `/api/crm/customers/${created.id}`, staffToken, {
+    profileData: { dateOfBirth: "1992-04-17", maritalStatus: "married", occupation: "Teacher" },
+    city: "Brikama",
+  });
+  assert.equal(updateResponse.status, 200);
+  const updated = await updateResponse.json() as {
+    city: string | null; profileData: Record<string, unknown>;
+  };
+  assert.equal(updated.city, "Brikama");
+  assert.equal(updated.profileData.maritalStatus, "married");
+  assert.equal(updated.profileData.occupation, "Teacher");
+
+  const crossBusinessUpdate = await request(
+    "PUT",
+    `/api/crm/customers/${created.id}`,
+    outsiderToken,
+    { city: "Unauthorized change" },
+  );
+  assert.equal(crossBusinessUpdate.status, 404);
+  await crossBusinessUpdate.body?.cancel();
+
+  const invalidCreate = await request("POST", "/api/crm/customers", staffToken, {
+    firstName: "",
+    lastName: "Missing first name",
+  });
+  assert.equal(invalidCreate.status, 400);
+  await invalidCreate.body?.cancel();
+
+  const [persisted] = await db.select({
+    city: customers.city,
+    profileData: customers.profileData,
+    businessId: customers.businessId,
+  }).from(customers).where(eq(customers.id, created.id)).limit(1);
+  assert.equal(persisted?.businessId, business.id);
+  assert.equal(persisted?.city, "Brikama");
+  assert.equal((persisted?.profileData as Record<string, unknown>)?.maritalStatus, "married");
 });
