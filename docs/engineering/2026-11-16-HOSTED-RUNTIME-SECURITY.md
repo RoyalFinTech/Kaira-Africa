@@ -8,6 +8,7 @@ Render's API startup log reported `env: development`. The application derives it
 
 - Treat Render-hosted services as production-like for authentication and delivery safeguards even if `NODE_ENV` was accidentally left unset.
 - Never expose development OTP or password-reset tokens from a hosted runtime.
+- Keep the admin password-reset response indistinguishable when email delivery fails: consume the unsent reset token and record the failure server-side rather than returning a different HTTP status.
 - Refuse to log mock SMS OTP content in a hosted runtime; OTP requests fail closed until a real SMS provider is configured.
 - Fail outbound email requests explicitly when SMTP is unavailable, without crashing the API process at startup.
 - Log only presence booleans for required secrets and delivery configuration; never log secret values, OTPs, reset tokens, or email links.
