@@ -122,6 +122,7 @@ export async function createTransaction(
     description?: string;
     paymentMethod?: string;
     notes?: string;
+    status?: Transaction["status"];
   },
 ): Promise<TransactionWithCustomer> {
   const [row] = await db
@@ -136,7 +137,8 @@ export async function createTransaction(
       description: data.description,
       paymentMethod: data.paymentMethod ?? "manual_entry",
       notes: data.notes,
-      status: "pending",
+      status: data.status ?? "pending",
+      completedAt: data.status === "completed" ? new Date() : null,
     })
     .returning();
   const [withName] = await attachCustomerNames([row]);

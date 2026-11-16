@@ -26,7 +26,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { useGetMe, useGetMyBusiness, useGetBusinessStats, useGetRevenueAnalytics } from '@workspace/api-client-react';
 import { formatCurrency, formatDate, formatRelativeTime, getGreeting, getInitials, cn } from '@/lib/utils';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { getDailyLedger } from '@/lib/platform-api';
+import { getDailyLedger, getRevenueByCurrency } from '@/lib/platform-api';
 
 export default function DashboardPage() {
   const { data: user } = useGetMe();
@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useGetBusinessStats();
   const [revenuePeriod, setRevenuePeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const { data: revenueAnalytics, isLoading: revenueLoading } = useGetRevenueAnalytics({ period: revenuePeriod });
+  const { data: revenueByCurrency = [] } = useQuery({ queryKey: ['revenue-by-currency'], queryFn: getRevenueByCurrency });
   const todayDate = new Date().toISOString().slice(0, 10);
   const monthStart = todayDate.slice(0, 7) + '-01';
   const { data: monthlyLedger } = useQuery({
@@ -143,13 +144,13 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Completed Payments
+                  Completed Payments · GMD
                 </CardTitle>
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="font-display text-3xl font-bold text-foreground">
-                  {formatCurrency(stats?.totalRevenue || 0)}
+                  {formatCurrency(stats?.totalRevenue || 0, 'GMD')}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
@@ -157,6 +158,14 @@ export default function DashboardPage() {
                     {stats?.revenueChange}%
                   </Badge>
                   <span className="text-xs text-muted-foreground">vs last month</span>
+                </div>
+                <div className="mt-2 space-y-1">
+                  <p className="text-[11px] text-muted-foreground">Other confirmed payment currencies:</p>
+                  {revenueByCurrency.filter((item) => item.currency !== 'GMD').length === 0
+                    ? <p className="text-[11px] text-muted-foreground">No other completed payment currencies yet.</p>
+                    : revenueByCurrency.filter((item) => item.currency !== 'GMD').sort((a, b) => a.currency.localeCompare(b.currency)).map((item) => (
+                      <p key={item.currency} className="text-xs font-medium">{item.currency} {formatCurrency(item.total, item.currency)}</p>
+                    ))}
                 </div>
               </CardContent>
             </Card>
@@ -267,7 +276,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Revenue Overview</CardTitle>
+              <CardTitle>GMD Revenue Overview</CardTitle>
               <div className="flex flex-wrap gap-1" role="group" aria-label="Revenue chart period">
                 {[
                   { label: 'Week', value: 'week' },
