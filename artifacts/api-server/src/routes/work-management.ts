@@ -124,8 +124,9 @@ router.patch("/work/meetings/:id",requireUser,async(req,res)=>{
  const timeChanged=startsAt!==undefined&&((before.startsAt?.toISOString()??null)!==(meeting.startsAt?.toISOString()??null));
  const titleChanged=meeting.title!==before.title;
  const statusChanged=meeting.status!==before.status;
+ const timeZoneChanged=meeting.timeZone!==before.timeZone;
  const attendeesChanged=attendeeUserIds!==undefined&&JSON.stringify([...before.attendeeUserIds].sort())!==JSON.stringify([...meeting.attendeeUserIds].sort());
- if(timeChanged||titleChanged||statusChanged||attendeesChanged){
+ if(timeChanged||timeZoneChanged||titleChanged||statusChanged||attendeesChanged){
    const recipients=[...new Set([...before.attendeeUserIds,...meeting.attendeeUserIds])];
    const message=meeting.status==="cancelled"
      ? `${meeting.title} has been cancelled.`
