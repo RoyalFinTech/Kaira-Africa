@@ -16,6 +16,9 @@ export interface SmsProvider {
 class MockSmsProvider implements SmsProvider {
   name = "mock";
   async send(input: { to: string; message: string }): Promise<void> {
+    if (isProd) {
+      throw new Error("SMS_PROVIDER=mock cannot deliver OTPs in a hosted/production runtime; configure a real SMS provider.");
+    }
     logger.info({ to: input.to }, `[MOCK SMS] ${input.message}`);
   }
 }
