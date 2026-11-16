@@ -103,6 +103,7 @@ function NewTransactionDialog({
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<TransactionCurrency>("GMD");
   const [type, setType] = useState<typeof TRANSACTION_TYPES[number]>("payment");
+  const [status, setStatus] = useState<ManagedTransactionStatus>("pending");
   const [paymentMethod, setPaymentMethod] = useState<TransactionPaymentMethod>("manual_entry");
   const [customerId, setCustomerId] = useState("none");
   const [description, setDescription] = useState("");
@@ -115,7 +116,7 @@ function NewTransactionDialog({
   const { data: customersData } = useListCustomers({ limit: 100 });
 
   const clearForm = () => {
-    setAmount(""); setCurrency("GMD"); setType("payment"); setPaymentMethod("manual_entry");
+    setAmount(""); setCurrency("GMD"); setType("payment"); setStatus("pending"); setPaymentMethod("manual_entry");
     setCustomerId("none"); setDescription(""); setNotes(""); setReceipt(null); setError(null);
   };
   const selectReceipt = (file: File | null) => {
@@ -139,7 +140,7 @@ function NewTransactionDialog({
     setSaving(true);
     try {
       const created = await createManagedTransaction({
-        amount: numericAmount, currency, type, paymentMethod,
+        amount: numericAmount, currency, type, paymentMethod, status,
         customerId: customerId === "none" ? undefined : customerId,
         description: description.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -156,7 +157,7 @@ function NewTransactionDialog({
       onCreated(
         receiptError
           ? "Transaction " + created.reference + " was saved, but its receipt failed to upload: " + receiptError
-          : "Transaction " + created.reference + " was saved as pending. Review the details and update its status when appropriate.",
+          : "Transaction " + created.reference + (created.status === "completed" ? " was saved as completed." : " was saved as pending. Update its status after confirming the outcome."),
         Boolean(receiptError),
       );
     } catch (saveError) {
@@ -172,7 +173,7 @@ function NewTransactionDialog({
         <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Record a transaction</DialogTitle>
-            <DialogDescription>Record the movement, currency and payment method. New records start as pending until you confirm the outcome.</DialogDescription>
+            <DialogDescription>Record the movement and choose its outcome. Mark a payment completed only after the money has been received or independently confirmed.</DialogDescription>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -197,6 +198,16 @@ function NewTransactionDialog({
                   <SelectContent>{PAYMENT_METHODS.map((method) => <SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>)}</SelectContent>
                 </Select>
                 <span className="block text-xs font-normal text-muted-foreground">This records how it was paid or how it was entered, not a live payment gateway charge.</span>
+              </label>
+              <label className="space-y-1.5 text-sm font-medium">Transaction outcome
+                <Select value={status} onValueChange={(value) => setStatus(value as ManagedTransactionStatus)}>
+                  <SelectTrigger aria-label="Initial transaction status"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending — awaiting confirmation</SelectItem>
+                    <SelectItem value="completed">Completed — money received / confirmed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="block text-xs font-normal text-muted-foreground">Completed customer payments are included in dashboard revenue. Pending payments are not counted until confirmed.</span>
               </label>
             </div>
             <label className="block space-y-1.5 text-sm font-medium">Customer (optional)
@@ -403,6 +414,7 @@ export default function TransactionsPage() {
       queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetRevenueAnalyticsQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetTransactionAnalyticsQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: ["revenue-by-currency"] }),
     ]);
   };
   const handleCreated = (message: string, error = false) => {
