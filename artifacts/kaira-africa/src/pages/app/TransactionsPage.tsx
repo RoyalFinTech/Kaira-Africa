@@ -414,6 +414,7 @@ export default function TransactionsPage() {
       queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetRevenueAnalyticsQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetTransactionAnalyticsQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: ["revenue-by-currency"] }),
     ]);
   };
   const handleCreated = (message: string, error = false) => {
