@@ -373,15 +373,13 @@ test("team invitation preview, phone-verified acceptance and role denial work th
   assert.equal(manualShare.emailDeliveryStatus, "not_configured");
   const inviteUrl = new URL(manualShare.inviteUrl);
   assert.equal(inviteUrl.pathname, "/invite");
-  assert.ok(inviteUrl.searchParams.get("token"));
+  const manualShareToken = inviteUrl.searchParams.get("token");
+  assert.ok(manualShareToken);
 
   const [storedManualShare] = await db.select({
     emailDeliveryStatus: teamInvitations.emailDeliveryStatus,
   }).from(teamInvitations)
-    .where(eq(teamInvitations.id, (await db.select({ id: teamInvitations.id })
-      .from(teamInvitations)
-      .where(eq(teamInvitations.tokenHash, hashTeamInvitationToken(inviteUrl.searchParams.get("token")!)))
-      .limit(1))[0].id))
+    .where(eq(teamInvitations.tokenHash, hashTeamInvitationToken(manualShareToken)))
     .limit(1);
   assert.equal(storedManualShare?.emailDeliveryStatus, "not_configured");
 });
