@@ -115,7 +115,7 @@ function buildProvider(): SmsProvider {
     default:
       if (isProd) {
         logger.warn(
-          "SMS_PROVIDER=mock in production — OTPs will be logged, not actually sent. This is only appropriate for staging.",
+          "SMS_PROVIDER=mock in a hosted/production runtime — OTP requests will fail closed until a real SMS provider is configured.",
         );
       }
       return new MockSmsProvider();
