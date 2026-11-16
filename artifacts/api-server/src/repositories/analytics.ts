@@ -234,6 +234,8 @@ export async function getTransactionAnalytics(
 ) {
   const range = resolveRange(period);
   const base = eq(transactions.businessId, businessId);
+  // Amount aggregates are denominated in GMD; keep non-GMD amounts out of them.
+  const gmdBase = and(base, eq(transactions.currency, "GMD"));
 
   const [
     [currentAgg],
@@ -248,16 +250,16 @@ export async function getTransactionAnalytics(
         total: count(),
       })
       .from(transactions)
-      .where(and(base, gte(transactions.createdAt, range.start))),
+      .where(and(gmdBase, gte(transactions.createdAt, range.start))),
     db
       .select({
         volume: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
         total: count(),
       })
       .from(transactions)
-      .where(
+       .where(
         and(
-          base,
+          gmdBase,
           gte(transactions.createdAt, range.previousStart),
           lt(transactions.createdAt, range.previousEnd),
         ),
@@ -268,7 +270,7 @@ export async function getTransactionAnalytics(
         value: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
       })
       .from(transactions)
-      .where(and(base, gte(transactions.createdAt, range.start)))
+      .where(and(gmdBase, gte(transactions.createdAt, range.start)))
       .groupBy(bucketExpr(range.bucket, transactions.createdAt))
       .orderBy(bucketExpr(range.bucket, transactions.createdAt)),
     db
