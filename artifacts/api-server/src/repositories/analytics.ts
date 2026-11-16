@@ -254,7 +254,6 @@ export async function getTransactionAnalytics(
     db
       .select({
         volume: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
-        total: count(),
       })
       .from(transactions)
       .where(
