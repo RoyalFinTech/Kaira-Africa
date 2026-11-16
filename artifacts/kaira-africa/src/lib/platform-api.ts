@@ -345,6 +345,7 @@ export interface CreateManagedTransactionInput {
   amount: number; currency: TransactionCurrency;
   type: ManagedTransaction["type"]; customerId?: string; description?: string;
   paymentMethod?: TransactionPaymentMethod; notes?: string;
+  status?: ManagedTransactionStatus;
 }
 export const createManagedTransaction = (input: CreateManagedTransactionInput) =>
   request<ManagedTransaction>("/api/transactions", { method: "POST", body: JSON.stringify(input) });
