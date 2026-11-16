@@ -205,6 +205,7 @@ test("team invitation preview, phone-verified acceptance and role denial work th
 
   const wrongToken = await createSession(wrongPhoneUser.id);
   const inviteeToken = await createSession(intendedInvitee.id);
+  const ownerToken = await createSession(owner.id);
   const managerToken = await createSession(manager.id);
   const staffToken = await createSession(staff.id);
 
@@ -350,4 +351,37 @@ test("team invitation preview, phone-verified acceptance and role denial work th
   );
   assert.equal(duplicateAcceptResponse.status, 409);
   await duplicateAcceptResponse.body?.cancel();
+
+  // A missing recipient email must not block invitation creation or manual link sharing.
+  const manualShareInvitee = await createTestUser();
+  const manualShareResponse = await postJson(
+    "/api/team/invitations",
+    {
+      firstName: "Manual",
+      lastName: "Share",
+      phone: `+220${manualShareInvitee.phoneNumber}`,
+      jobTitle: "Operations assistant",
+      accessRole: "staff",
+    },
+    ownerToken,
+  );
+  assert.equal(manualShareResponse.status, 201);
+  const manualShare = await manualShareResponse.json() as {
+    inviteUrl: string;
+    emailDeliveryStatus: string;
+  };
+  assert.equal(manualShare.emailDeliveryStatus, "not_configured");
+  const inviteUrl = new URL(manualShare.inviteUrl);
+  assert.equal(inviteUrl.pathname, "/invite");
+  assert.ok(inviteUrl.searchParams.get("token"));
+
+  const [storedManualShare] = await db.select({
+    emailDeliveryStatus: teamInvitations.emailDeliveryStatus,
+  }).from(teamInvitations)
+    .where(eq(teamInvitations.id, (await db.select({ id: teamInvitations.id })
+      .from(teamInvitations)
+      .where(eq(teamInvitations.tokenHash, hashTeamInvitationToken(inviteUrl.searchParams.get("token")!)))
+      .limit(1))[0].id))
+    .limit(1);
+  assert.equal(storedManualShare?.emailDeliveryStatus, "not_configured");
 });
