@@ -73,10 +73,10 @@ function pctChange(current: number, previous: number): number {
 }
 
 /**
- * Revenue is defined as completed `payment` transactions in this
- * version of the product (refunds, transfers, withdrawals and deposits
- * are excluded from "revenue" specifically, though they're all still
- * visible in the raw transaction ledger/analytics elsewhere).
+ * The legacy revenue chart and dashboard KPI are denominated in GMD:
+ * only completed GMD `payment` transactions contribute to this aggregate.
+ * Other currencies are exposed separately by getRevenueByCurrency().
+ * Refunds, transfers, withdrawals and deposits are excluded from revenue.
  */
 export async function getRevenueAnalytics(businessId: string, period: Period) {
   const range = resolveRange(period);
