@@ -191,6 +191,15 @@ test("confirmed payment transactions contribute to dashboard revenue while pendi
   assert.equal(totalsByCurrency.NGN, 50);
   assert.equal(totalsByCurrency.USD, 20);
 
+  const transactionAnalyticsResponse = await request("GET", "/api/analytics/transactions?period=month", token);
+  assert.equal(transactionAnalyticsResponse.status, 200);
+  const transactionAnalytics = await transactionAnalyticsResponse.json() as {
+    total: number;
+    volume: number;
+  };
+  assert.equal(transactionAnalytics.total, 5);
+  assert.equal(transactionAnalytics.volume, 265);
+
   const dashboardStatsResponse = await request("GET", "/api/businesses/me/stats", token);
   assert.equal(dashboardStatsResponse.status, 200);
   const dashboardStats = await dashboardStatsResponse.json() as {
