@@ -163,6 +163,17 @@ test("Savings and Investment routes use the configured business-local date for d
   const savedEntry = await savingsDeposit.json() as { savedDate: string };
   assert.equal(savedEntry.savedDate, expectedLocalToday);
 
+  const savingsWithdrawal = await request("POST", "/api/savings/entries", token, {
+    entryType: "withdrawal",
+    amount: 1,
+    currency: "GMD",
+    destinationType: "cash",
+    provider: "CI local date withdrawal",
+  });
+  assert.equal(savingsWithdrawal.status, 201);
+  const savedWithdrawal = await savingsWithdrawal.json() as { savedDate: string };
+  assert.equal(savedWithdrawal.savedDate, expectedLocalToday);
+
   const futureSavingsDeposit = await request("POST", "/api/savings/entries", token, {
     entryType: "deposit",
     amount: 1,
