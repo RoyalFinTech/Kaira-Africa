@@ -221,9 +221,9 @@ test("Savings and investment routes enforce business scope and preserve complete
   assert.equal(overview.entries.length, 500);
   assert.equal(overview.goals.find((item) => item.id === goal.id)?.savedAmount, 100);
   const gmdTotals = overview.totals.find((item) => item.currency === "GMD");
-  assert.equal(gmdTotals?.deposits, 105.05);
+  assert.equal(gmdTotals?.deposits, 605);
   assert.equal(gmdTotals?.withdrawals, 0);
-  assert.equal(gmdTotals?.balance, 105.05);
+  assert.equal(gmdTotals?.balance, 605);
 
   const planResponse = await request("POST", "/api/investment-plans", token, {
     name: "CI vegetable stall",
