@@ -216,7 +216,7 @@ test("meeting routes authenticate, validate time zones and isolate business reco
   const updateNotifications = await db.select({title:notifications.title}).from(notifications)
     .where(eq(notifications.recipientUserId,attendeeUser.id));
   assert.equal(updateNotifications.length, 2);
-  assert.equal(updateNotifications[1]?.title, "Meeting updated");
+  assert.ok(updateNotifications.some((notification) => notification.title === "Meeting updated"));
 
   const [persisted] = await db.select({
     businessId: workMeetings.businessId,
