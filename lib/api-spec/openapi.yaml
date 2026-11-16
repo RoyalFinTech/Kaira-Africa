@@ -1776,7 +1776,7 @@ components:
           type: string
         type:
           type: string
-          enum: [transaction, team, customer, system, security, report]
+          enum: [transaction, team, customer, system, security, report, task, meeting]
         isRead:
           type: boolean
         actionUrl:
