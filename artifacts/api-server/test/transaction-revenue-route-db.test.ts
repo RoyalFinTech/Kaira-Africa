@@ -115,7 +115,25 @@ test("confirmed payment transactions contribute to dashboard revenue while pendi
     city: "Banjul",
   });
   const token = await createSession(owner.id);
+  const outsider = await createTestUser();
+  await createBusinessForUser(outsider.id, {
+    name: `CI outsider revenue ${randomInt(100_000, 999_999)}`,
+    type: "small_business",
+    industry: "retail",
+    country: "The Gambia",
+    city: "Banjul",
+  });
+  const outsiderToken = await createSession(outsider.id);
   await startTestServer();
+
+  const outsiderPaymentResponse = await request("POST", "/api/transactions", outsiderToken, {
+    amount: 999,
+    currency: "GMD",
+    type: "payment",
+    status: "completed",
+    description: "CI isolated outsider sale",
+  });
+  assert.equal(outsiderPaymentResponse.status, 201);
 
   const completedPaymentResponse = await request("POST", "/api/transactions", token, {
     amount: 125,
@@ -208,4 +226,9 @@ test("confirmed payment transactions contribute to dashboard revenue while pendi
   };
   assert.equal(dashboardStats.totalRevenue, 125);
   assert.equal(dashboardStats.totalTransactions, 5);
+
+  const outsiderRevenueResponse = await request("GET", "/api/analytics/revenue-by-currency", outsiderToken);
+  assert.equal(outsiderRevenueResponse.status, 200);
+  const outsiderRevenue = await outsiderRevenueResponse.json() as { currency: string; total: number }[];
+  assert.deepEqual(outsiderRevenue, [{ currency: "GMD", total: 999 }]);
 });
