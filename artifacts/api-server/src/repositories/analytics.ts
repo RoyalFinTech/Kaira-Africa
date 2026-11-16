@@ -73,17 +73,20 @@ function pctChange(current: number, previous: number): number {
 }
 
 /**
- * Revenue is defined as completed `payment` transactions in this
- * version of the product (refunds, transfers, withdrawals and deposits
- * are excluded from "revenue" specifically, though they're all still
- * visible in the raw transaction ledger/analytics elsewhere).
+ * The legacy revenue chart and dashboard KPI are denominated in GMD:
+ * only completed GMD `payment` transactions contribute to this aggregate.
+ * Other currencies are exposed separately by getRevenueByCurrency().
+ * Refunds, transfers, withdrawals and deposits are excluded from revenue.
  */
 export async function getRevenueAnalytics(businessId: string, period: Period) {
   const range = resolveRange(period);
+  // The legacy dashboard chart is explicitly denominated in GMD. Keep
+  // currencies separate rather than adding unlike minor-unit values together.
   const revenueCondition = and(
     eq(transactions.businessId, businessId),
     eq(transactions.status, "completed"),
     eq(transactions.type, "payment"),
+    eq(transactions.currency, "GMD"),
   );
 
   const [[currentTotal], [previousTotal], buckets, topCustomerRows] =
@@ -231,6 +234,8 @@ export async function getTransactionAnalytics(
 ) {
   const range = resolveRange(period);
   const base = eq(transactions.businessId, businessId);
+  // Amount aggregates are denominated in GMD; keep non-GMD amounts out of them.
+  const gmdBase = and(base, eq(transactions.currency, "GMD"));
 
   const [
     [currentAgg],
@@ -238,23 +243,22 @@ export async function getTransactionAnalytics(
     buckets,
     byStatusRows,
     byTypeRows,
+    [currentCount],
   ] = await Promise.all([
     db
       .select({
         volume: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
-        total: count(),
       })
       .from(transactions)
-      .where(and(base, gte(transactions.createdAt, range.start))),
+      .where(and(gmdBase, gte(transactions.createdAt, range.start))),
     db
       .select({
         volume: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
-        total: count(),
       })
       .from(transactions)
       .where(
         and(
-          base,
+          gmdBase,
           gte(transactions.createdAt, range.previousStart),
           lt(transactions.createdAt, range.previousEnd),
         ),
@@ -265,7 +269,7 @@ export async function getTransactionAnalytics(
         value: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
       })
       .from(transactions)
-      .where(and(base, gte(transactions.createdAt, range.start)))
+      .where(and(gmdBase, gte(transactions.createdAt, range.start)))
       .groupBy(bucketExpr(range.bucket, transactions.createdAt))
       .orderBy(bucketExpr(range.bucket, transactions.createdAt)),
     db
@@ -278,13 +282,17 @@ export async function getTransactionAnalytics(
       .from(transactions)
       .where(and(base, gte(transactions.createdAt, range.start)))
       .groupBy(transactions.type),
+    db
+      .select({ total: count() })
+      .from(transactions)
+      .where(and(base, gte(transactions.createdAt, range.start))),
   ]);
 
   const volume = fromMinorUnits(Number(currentAgg.volume), "GMD");
   const previousVolume = fromMinorUnits(Number(previousAgg.volume), "GMD");
 
   return {
-    total: currentAgg.total,
+    total: currentCount.total,
     volume,
     change: Number((volume - previousVolume).toFixed(2)),
     changePercent: pctChange(volume, previousVolume),
@@ -304,4 +312,26 @@ export async function getTransactionAnalytics(
       previousValue: null,
     })),
   };
+}
+
+
+/** Completed payment totals grouped by their original currency. */
+export async function getRevenueByCurrency(businessId: string) {
+  const rows = await db
+    .select({
+      currency: transactions.currency,
+      totalMinor: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
+    })
+    .from(transactions)
+    .where(and(
+      eq(transactions.businessId, businessId),
+      eq(transactions.status, "completed"),
+      eq(transactions.type, "payment"),
+    ))
+    .groupBy(transactions.currency);
+
+  return rows.map((row) => ({
+    currency: row.currency,
+    total: fromMinorUnits(Number(row.totalMinor), row.currency),
+  }));
 }
