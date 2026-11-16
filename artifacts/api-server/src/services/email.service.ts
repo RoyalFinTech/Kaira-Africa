@@ -66,13 +66,14 @@ export async function sendPasswordResetEmail(input: {
   resetUrl: string;
   expiresInMinutes: number;
 }): Promise<void> {
+  const safeResetUrl = escapeHtml(input.resetUrl);
   await sendEmail({
     to: input.to,
     subject: "Reset your Kaira Africa admin password",
     text: `Reset your password: ${input.resetUrl}\nThis link expires in ${input.expiresInMinutes} minutes. If you didn't request this, you can ignore this email.`,
     html: `
       <p>Someone requested a password reset for your Kaira Africa admin account.</p>
-      <p><a href="${input.resetUrl}">Reset your password</a></p>
+      <p><a href="${safeResetUrl}">Reset your password</a></p>
       <p>This link expires in ${input.expiresInMinutes} minutes. If you didn't request this, you can safely ignore this email.</p>
     `,
   });
@@ -83,11 +84,12 @@ export async function sendAdminNotificationEmail(input: {
   subject: string;
   message: string;
 }): Promise<void> {
+  const safeMessage = escapeHtml(input.message);
   await sendEmail({
     to: input.to,
     subject: input.subject,
     text: input.message,
-    html: `<p>${input.message}</p>`,
+    html: `<p>${safeMessage}</p>`,
   });
 }
 
@@ -137,7 +139,7 @@ export async function verifyEmailTransport(): Promise<boolean> {
   }
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\x27/g, "&#39;");
 }
 
