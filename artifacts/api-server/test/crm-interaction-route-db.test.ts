@@ -81,7 +81,7 @@ async function startTestServer(): Promise<void> {
 }
 
 async function request(
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   path: string,
   token?: string,
   body?: unknown,
@@ -236,4 +236,56 @@ test("CRM staff can create interactions only for their business and only follow-
   );
   assert.equal(crossBusinessCompleteResponse.status, 404);
   await crossBusinessCompleteResponse.body?.cancel();
+});
+
+
+test("CRM customer partial profile updates preserve omitted fields and clear explicitly blank fields", {
+  skip: !databaseAcceptanceEnabled,
+}, async () => {
+  const owner = await createTestUser();
+  const business = await createBusinessForUser(owner.id, businessInput("profile-merge"));
+  const [customer] = await db.insert(customers).values({
+    businessId: business.id,
+    firstName: "CI",
+    lastName: "Profile",
+    status: "active",
+    profileData: {
+      dateOfBirth: "1992-04-17",
+      maritalStatus: "single",
+      occupation: "Teacher",
+      preferences: "Call before delivery",
+    },
+  }).returning({ id: customers.id });
+  const token = await createSession(owner.id);
+  await startTestServer();
+
+  const partialUpdate = await request("PUT", `/api/crm/customers/${customer.id}`, token, {
+    profileData: { maritalStatus: "married" },
+  });
+  assert.equal(partialUpdate.status, 200);
+  const partiallyUpdated = await partialUpdate.json() as {
+    profileData: Record<string, unknown>;
+  };
+  assert.equal(partiallyUpdated.profileData.dateOfBirth, "1992-04-17");
+  assert.equal(partiallyUpdated.profileData.maritalStatus, "married");
+  assert.equal(partiallyUpdated.profileData.occupation, "Teacher");
+  assert.equal(partiallyUpdated.profileData.preferences, "Call before delivery");
+
+  const clearField = await request("PUT", `/api/crm/customers/${customer.id}`, token, {
+    profileData: { occupation: "" },
+  });
+  assert.equal(clearField.status, 200);
+  const cleared = await clearField.json() as {
+    profileData: Record<string, unknown>;
+  };
+  assert.equal(cleared.profileData.dateOfBirth, "1992-04-17");
+  assert.equal(cleared.profileData.maritalStatus, "married");
+  assert.equal("occupation" in cleared.profileData, false);
+
+  const [persisted] = await db.select({ profileData: customers.profileData })
+    .from(customers).where(eq(customers.id, customer.id)).limit(1);
+  const stored = persisted?.profileData as Record<string, unknown>;
+  assert.equal(stored.dateOfBirth, "1992-04-17");
+  assert.equal(stored.maritalStatus, "married");
+  assert.equal("occupation" in stored, false);
 });
