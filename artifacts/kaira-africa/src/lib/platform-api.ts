@@ -349,6 +349,13 @@ export interface CreateManagedTransactionInput {
 }
 export const createManagedTransaction = (input: CreateManagedTransactionInput) =>
   request<ManagedTransaction>("/api/transactions", { method: "POST", body: JSON.stringify(input) });
+
+export interface RevenueByCurrency {
+  currency: TransactionCurrency;
+  total: number;
+}
+export const getRevenueByCurrency = () =>
+  request<RevenueByCurrency[]>("/api/analytics/revenue-by-currency");
 export const updateManagedTransaction = (id: string, input: {
   status?: ManagedTransactionStatus; description?: string | null; paymentMethod?: TransactionPaymentMethod | null; notes?: string | null;
 }) => request<ManagedTransaction>("/api/transactions/" + encodeURIComponent(id), { method: "PATCH", body: JSON.stringify(input) });
