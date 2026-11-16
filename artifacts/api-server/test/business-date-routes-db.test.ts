@@ -54,7 +54,7 @@ async function createSession(userId: string): Promise<string> {
   await createUserSession({
     userId,
     tokenHash: hashToken(token),
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
     userAgent: "kaira-business-date-route-ci",
     ipAddress: "127.0.0.1",
   });
@@ -136,17 +136,20 @@ test("Savings and Investment routes use the configured business-local date for d
   const token = await createSession(owner.id);
   await startTestServer();
 
-  // Freeze at 23:30 UTC: Kiritimati is already on Nov 17 while UTC is still Nov 16.
-  // This makes a regression to UTC-based route dates fail on every CI run.
-  t.mock.timers.enable({
-    apis: ["Date"],
-    now: new Date("2026-11-16T23:30:00.000Z"),
-  });
-  const expectedLocalToday = "2026-11-17";
-  assert.equal(
-    dateInBusinessTimeZone(new Date(), "Pacific/Kiritimati"),
-    expectedLocalToday,
+  // Freeze at the next 23:30 UTC boundary. Kiritimati is already on the
+  // following local calendar date, so a UTC-based route regression always fails.
+  const fixedNow = new Date();
+  fixedNow.setUTCHours(23, 30, 0, 0);
+  if (fixedNow.getTime() <= Date.now()) {
+    fixedNow.setUTCDate(fixedNow.getUTCDate() + 1);
+  }
+  const utcDate = fixedNow.toISOString().slice(0, 10);
+  const expectedLocalToday = dateInBusinessTimeZone(
+    fixedNow,
+    "Pacific/Kiritimati",
   );
+  assert.notEqual(expectedLocalToday, utcDate);
+  t.mock.timers.enable({ apis: ["Date"], now: fixedNow });
   const futureLocalDate = addCalendarDays(expectedLocalToday, 1);
 
   const savingsDeposit = await request("POST", "/api/savings/entries", token, {
