@@ -80,10 +80,13 @@ function pctChange(current: number, previous: number): number {
  */
 export async function getRevenueAnalytics(businessId: string, period: Period) {
   const range = resolveRange(period);
+  // The legacy dashboard chart is explicitly denominated in GMD. Keep
+  // currencies separate rather than adding unlike minor-unit values together.
   const revenueCondition = and(
     eq(transactions.businessId, businessId),
     eq(transactions.status, "completed"),
     eq(transactions.type, "payment"),
+    eq(transactions.currency, "GMD"),
   );
 
   const [[currentTotal], [previousTotal], buckets, topCustomerRows] =
@@ -304,4 +307,26 @@ export async function getTransactionAnalytics(
       previousValue: null,
     })),
   };
+}
+
+
+/** Completed payment totals grouped by their original currency. */
+export async function getRevenueByCurrency(businessId: string) {
+  const rows = await db
+    .select({
+      currency: transactions.currency,
+      totalMinor: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
+    })
+    .from(transactions)
+    .where(and(
+      eq(transactions.businessId, businessId),
+      eq(transactions.status, "completed"),
+      eq(transactions.type, "payment"),
+    ))
+    .groupBy(transactions.currency);
+
+  return rows.map((row) => ({
+    currency: row.currency,
+    total: fromMinorUnits(Number(row.totalMinor), row.currency),
+  }));
 }
