@@ -163,7 +163,7 @@ export default function DashboardPage() {
                   <p className="text-[11px] text-muted-foreground">Other confirmed payment currencies:</p>
                   {revenueByCurrency.filter((item) => item.currency !== 'GMD').length === 0
                     ? <p className="text-[11px] text-muted-foreground">No other completed payment currencies yet.</p>
-                    : revenueByCurrency.filter((item) => item.currency !== 'GMD').map((item) => (
+                    : revenueByCurrency.filter((item) => item.currency !== 'GMD').sort((a, b) => a.currency.localeCompare(b.currency)).map((item) => (
                       <p key={item.currency} className="text-xs font-medium">{item.currency} {formatCurrency(item.total, item.currency)}</p>
                     ))}
                 </div>
