@@ -432,3 +432,11 @@ CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
 - Tests added: deterministic helper boundary coverage for `Africa/Banjul`, `Africa/Lagos`, `America/Los_Angeles`, and `Pacific/Kiritimati`, plus invalid IANA timezone rejection. Added disposable-PostgreSQL route acceptance with a frozen instant at the next `23:30 UTC` boundary (Kiritimati is always on the following local calendar date) to prove Savings deposits, withdrawals and Investment daily-record defaults use the business calendar; also checks future business-local dates are rejected.
 - Route acceptance test: `artifacts/api-server/test/business-date-routes-db.test.ts`; runs only when `KAIRA_DB_INTEGRATION_TESTS=true` against the disposable CI database. It creates and cleans up its own user/business; no production data or schema changes.
 - Status: IMPLEMENTED ON BRANCH; LATEST-HEAD CI PENDING. Do not merge or claim release completion until backend tests, frontend checks, fresh migration validation and Docker build pass. Production behavior and business timezone editing still require authenticated end-to-end verification.
+
+## CRM customer profile partial-update safety — in progress
+
+- Finding: the customer update endpoint accepts a partial profile patch, but previously replaced the entire JSON profile object whenever `profileData` was supplied. A client updating one optional field could unintentionally erase omitted date-of-birth, contact-preference, or other profile fields.
+- Branch / PR: `fix/crm-profile-data-merge` / [PR #215](https://github.com/RoyalFinTech/Kaira-Africa/pull/215).
+- Change: merge supplied profile keys into the existing profile object; explicitly blank values still clear the corresponding optional field.
+- Acceptance: disposable-PostgreSQL route test verifies omitted fields persist, explicit blank clears a field, and the merged object is persisted. No schema migration or production data changes.
+- Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
