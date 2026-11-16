@@ -36,6 +36,7 @@ const transactionInput = CreateTransactionBody.extend({
   currency: z.enum(CURRENCIES),
   paymentMethod: z.enum(PAYMENT_METHODS).default("manual_entry"),
   notes: z.string().trim().max(4000).optional(),
+  status: z.enum(["pending", "completed", "failed", "cancelled"]).default("pending"),
 });
 const transactionUpdateInput = z.object({
   status: z.enum(["completed", "pending", "failed", "cancelled"]).optional(),
@@ -145,6 +146,7 @@ router.post(
       description: input.description,
       paymentMethod: input.paymentMethod,
       notes: input.notes,
+      status: input.status,
     });
     await recordActivity({
       businessId, userId: req.user!.id, userName: displayName(req.user!),
