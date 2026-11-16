@@ -424,10 +424,10 @@ Service worker now awaits the root-shell cache update after a successful navigat
 
 CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`. Automated release gate is green. External HTTP/crawler, recipient link, and physical-device PWA checks remain NOT VERIFIED.
 
-## Financial date handling — business-local calendar fix in progress
+## Financial date handling — business-local calendar fix merged and live
 
 - Finding: Savings entry validation/default dates and Investment daily-record validation/default dates used UTC calendar dates, while businesses already have a configured IANA `time_zone` (default `Africa/Banjul`). Around UTC midnight this could reject a valid local-today entry or assign a record to the wrong business calendar day.
-- Branch: `fix/business-local-financial-dates`.
+- Branch / PR: `fix/business-local-financial-dates` / [PR #214](https://github.com/RoyalFinTech/Kaira-Africa/pull/214).
 - Change: API routes now read the authenticated business's configured timezone and use a shared API helper to calculate the local calendar date. Savings and Investment forms also read the same business preference and use it for date defaults/limits instead of the device calendar. Savings deposits/withdrawals and investment daily records retain their existing date-only storage format; no database schema or production data changes are included.
 - Tests added: deterministic helper boundary coverage for `Africa/Banjul`, `Africa/Lagos`, `America/Los_Angeles`, and `Pacific/Kiritimati`, plus invalid IANA timezone rejection. Added disposable-PostgreSQL route acceptance with a frozen instant at the next `23:30 UTC` boundary (Kiritimati is always on the following local calendar date) to prove Savings deposits, withdrawals and Investment daily-record defaults use the business calendar; also checks future business-local dates are rejected.
 - Route acceptance test: `artifacts/api-server/test/business-date-routes-db.test.ts`; runs only when `KAIRA_DB_INTEGRATION_TESTS=true` against the disposable CI database. It creates and cleans up its own user/business; no production data or schema changes.
@@ -436,7 +436,7 @@ CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
 ## Transaction revenue confirmation workflow — in progress
 
 - Finding: new transactions were always created as `pending`, even when a user was entering a payment already received and confirmed. Dashboard revenue and the revenue chart intentionally count only `completed` `payment` records, so a newly entered sale could appear as zero revenue until the user separately opened the record and changed its status.
-- Branch: `fix/transaction-revenue-completion-status`.
+- Branch / PR: `fix/transaction-revenue-currency-safe` / [PR #217](https://github.com/RoyalFinTech/Kaira-Africa/pull/217).
 - Change: allow the transaction form to explicitly choose Pending or Completed; Pending remains the default. The API records `completedAt` when a new transaction is explicitly created as completed. The UI explains that completed payments contribute to dashboard revenue, while pending payments do not. GMD revenue and transaction-volume chart aggregates are now GMD-only, and a separate dashboard endpoint and summary show completed payment totals for NGN/USD/other currencies without mixing unlike units. Transaction counts and status/type breakdowns still include every currency.
 - Acceptance: disposable-PostgreSQL route test verifies completed payments contribute to `/analytics/revenue` and `/businesses/me/stats`, pending payments and completed deposits do not, currencies remain separate, and one business cannot see another business's revenue. No schema migration or production data changes.
 - Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
