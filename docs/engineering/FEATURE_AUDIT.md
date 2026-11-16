@@ -423,3 +423,10 @@ Service worker now awaits the root-shell cache update after a successful navigat
 | Work Management Build Checks | 42357883434 | PASS | Typecheck and build. |
 
 CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`. Automated release gate is green. External HTTP/crawler, recipient link, and physical-device PWA checks remain NOT VERIFIED.
+## Transaction revenue confirmation workflow — in progress
+
+- Finding: new transactions were always created as `pending`, even when a user was entering a payment already received and confirmed. Dashboard revenue and the revenue chart intentionally count only `completed` `payment` records, so a newly entered sale could appear as zero revenue until the user separately opened the record and changed its status.
+- Branch: `fix/transaction-revenue-completion-status`.
+- Change: allow the transaction form to explicitly choose Pending or Completed; Pending remains the default. The API records `completedAt` when a new transaction is explicitly created as completed. The UI explains that completed payments contribute to dashboard revenue, while pending payments do not.
+- Acceptance: disposable-PostgreSQL route test verifies completed payments contribute to `/analytics/revenue` and `/businesses/me/stats`, while pending payments and completed deposits do not. No schema migration or production data changes.
+- Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
