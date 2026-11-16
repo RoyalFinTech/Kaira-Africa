@@ -49,6 +49,7 @@ export const workMeetings = pgTable("work_meetings", {
   startsAt: timestamp("starts_at", { withTimezone: true }),
   timeZone: text("time_zone").notNull().default("Africa/Banjul"),
   attendees: jsonb("attendees").notNull().default([]),
+  attendeeUserIds: uuid("attendee_user_ids").array().notNull().default([]),
   agenda: text("agenda"),
   minutes: text("minutes"),
   decisions: text("decisions"),
