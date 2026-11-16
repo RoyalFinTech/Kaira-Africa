@@ -243,11 +243,11 @@ export async function getTransactionAnalytics(
     buckets,
     byStatusRows,
     byTypeRows,
+    [currentCount],
   ] = await Promise.all([
     db
       .select({
         volume: sql<number>`coalesce(sum(${transactions.amountMinor}), 0)`,
-        total: count(),
       })
       .from(transactions)
       .where(and(gmdBase, gte(transactions.createdAt, range.start))),
@@ -257,7 +257,7 @@ export async function getTransactionAnalytics(
         total: count(),
       })
       .from(transactions)
-       .where(
+      .where(
         and(
           gmdBase,
           gte(transactions.createdAt, range.previousStart),
@@ -283,13 +283,17 @@ export async function getTransactionAnalytics(
       .from(transactions)
       .where(and(base, gte(transactions.createdAt, range.start)))
       .groupBy(transactions.type),
+    db
+      .select({ total: count() })
+      .from(transactions)
+      .where(and(base, gte(transactions.createdAt, range.start))),
   ]);
 
   const volume = fromMinorUnits(Number(currentAgg.volume), "GMD");
   const previousVolume = fromMinorUnits(Number(previousAgg.volume), "GMD");
 
   return {
-    total: currentAgg.total,
+    total: currentCount.total,
     volume,
     change: Number((volume - previousVolume).toFixed(2)),
     changePercent: pctChange(volume, previousVolume),
