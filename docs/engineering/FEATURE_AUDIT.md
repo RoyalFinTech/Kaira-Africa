@@ -423,3 +423,11 @@ Service worker now awaits the root-shell cache update after a successful navigat
 | Work Management Build Checks | 42357883434 | PASS | Typecheck and build. |
 
 CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`. Automated release gate is green. External HTTP/crawler, recipient link, and physical-device PWA checks remain NOT VERIFIED.
+
+## Financial date handling — business-local calendar fix in progress
+
+- Finding: Savings entry validation/default dates and Investment daily-record validation/default dates used UTC calendar dates, while businesses already have a configured IANA `time_zone` (default `Africa/Banjul`). Around UTC midnight this could reject a valid local-today entry or assign a record to the wrong business calendar day.
+- Branch: `fix/business-local-financial-dates`.
+- Change: API routes now read the authenticated business's configured timezone and use a shared API helper to calculate the local calendar date. Savings deposits/withdrawals and investment daily records retain their existing date-only storage format; no database schema or production data changes are included.
+- Tests added: deterministic boundary coverage for `Africa/Banjul`, `Africa/Lagos`, `America/Los_Angeles`, and `Pacific/Kiritimati`, plus invalid IANA timezone rejection.
+- Status: IMPLEMENTED ON BRANCH; CI AND ROUTE ACCEPTANCE PENDING. Do not merge or claim release completion until latest-head backend tests, frontend checks, fresh migration validation and Docker build pass. Production behavior and business timezone editing still require authenticated end-to-end verification.
