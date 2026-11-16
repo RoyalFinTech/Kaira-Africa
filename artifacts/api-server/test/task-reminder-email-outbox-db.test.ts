@@ -107,7 +107,7 @@ test("task reminder email outbox respects channel opt-ins and is idempotent", {
   }).returning({ id: workTasks.id });
 
   const fixedNow = new Date("2026-11-16T12:00:00.000Z");
-  assert.equal(await runTaskDueReminders(fixedNow), 1);
+  assert.equal(await runTaskDueReminders(fixedNow, business.id), 1);
   assert.equal(await runTaskDueReminders(fixedNow), 0);
 
   const emailRows = await db.select().from(workTaskReminderEmailOutbox)
