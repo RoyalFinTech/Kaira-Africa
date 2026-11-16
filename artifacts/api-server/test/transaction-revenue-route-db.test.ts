@@ -155,10 +155,39 @@ test("confirmed payment transactions contribute to dashboard revenue while pendi
   });
   assert.equal(completedDepositResponse.status, 201);
 
+  const completedNgnPaymentResponse = await request("POST", "/api/transactions", token, {
+    amount: 50,
+    currency: "NGN",
+    type: "payment",
+    status: "completed",
+    description: "CI confirmed NGN sale",
+  });
+  assert.equal(completedNgnPaymentResponse.status, 201);
+
+  const completedUsdPaymentResponse = await request("POST", "/api/transactions", token, {
+    amount: 20,
+    currency: "USD",
+    type: "payment",
+    status: "completed",
+    description: "CI confirmed USD sale",
+  });
+  assert.equal(completedUsdPaymentResponse.status, 201);
+
   const revenueResponse = await request("GET", "/api/analytics/revenue?period=month", token);
   assert.equal(revenueResponse.status, 200);
   const revenue = await revenueResponse.json() as { total: number };
   assert.equal(revenue.total, 125);
+
+  const currencyRevenueResponse = await request("GET", "/api/analytics/revenue-by-currency", token);
+  assert.equal(currencyRevenueResponse.status, 200);
+  const currencyRevenue = await currencyRevenueResponse.json() as {
+    currency: string;
+    total: number;
+  }[];
+  const totalsByCurrency = Object.fromEntries(
+    currencyRevenue.map((item) => [item.currency, item.total]),
+  );
+  assert.deepEqual(totalsByCurrency, { GMD: 125, NGN: 50, USD: 20 });
 
   const dashboardStatsResponse = await request("GET", "/api/businesses/me/stats", token);
   assert.equal(dashboardStatsResponse.status, 200);
@@ -167,5 +196,5 @@ test("confirmed payment transactions contribute to dashboard revenue while pendi
     totalTransactions: number;
   };
   assert.equal(dashboardStats.totalRevenue, 125);
-  assert.equal(dashboardStats.totalTransactions, 3);
+  assert.equal(dashboardStats.totalTransactions, 5);
 });
