@@ -440,3 +440,10 @@ CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
 - Change: allow the transaction form to explicitly choose Pending or Completed; Pending remains the default. The API records `completedAt` when a new transaction is explicitly created as completed. The UI explains that completed payments contribute to dashboard revenue, while pending payments do not. GMD revenue and transaction-volume chart aggregates are now GMD-only, and a separate dashboard endpoint and summary show completed payment totals for NGN/USD/other currencies without mixing unlike units. Transaction counts and status/type breakdowns still include every currency.
 - Acceptance: disposable-PostgreSQL route test verifies completed payments contribute to `/analytics/revenue` and `/businesses/me/stats`, pending payments and completed deposits do not, currencies remain separate, and one business cannot see another business's revenue. No schema migration or production data changes.
 - Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
+## CRM customer profile partial-update safety — in progress
+
+- Finding: the customer update endpoint accepts a partial profile patch, but previously replaced the entire JSON profile object whenever `profileData` was supplied. A client updating one optional field could unintentionally erase omitted date-of-birth, contact-preference, or other profile fields.
+- Branch / PR: `fix/crm-profile-data-merge` / [PR #215](https://github.com/RoyalFinTech/Kaira-Africa/pull/215).
+- Change: merge supplied profile keys into the existing profile object; explicitly blank values still clear the corresponding optional field.
+- Acceptance: disposable-PostgreSQL route test verifies omitted fields persist, explicit blank clears a field, and the merged object is persisted. No schema migration or production data changes.
+- Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
