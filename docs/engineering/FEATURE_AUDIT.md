@@ -443,10 +443,10 @@ CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
 ## CRM customer profile partial-update safety — merged and live
 
 - Finding: the customer update endpoint accepts a partial profile patch, but previously replaced the entire JSON profile object whenever `profileData` was supplied. A client updating one optional field could unintentionally erase omitted date-of-birth, contact-preference, or other profile fields.
-- Branch / PR: `fix/crm-profile-data-merge` / [PR #215](https://github.com/RoyalFinTech/Kaira-Africa/pull/215).
+- Branch / PR: `fix/crm-profile-data-merge-v3` / [PR #219](https://github.com/RoyalFinTech/Kaira-Africa/pull/219).
 - Change: merge supplied profile keys into the existing profile object; explicitly blank values still clear the corresponding optional field.
-- Acceptance: disposable-PostgreSQL route test verifies omitted fields persist, explicit blank clears a field, and the merged object is persisted. No schema migration or production data changes.
-- Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
+- Acceptance: disposable-PostgreSQL route tests cover optional profile fields, DOB search, customer updates, tenant isolation, partial-field preservation, explicit blank-field clearing, and persisted JSONB values. No schema migration or production data changes.
+- Status: MERGED TO MAIN as `f6aa971dc57435e183bbf2719a44c441721bb385`. Backend CI and Work Management Build Checks passed; Render frontend deployment `dep-dbtfqbp5efls73fr1s30` and API deployment `dep-dbtfqbp5efls73fr1rp0` are both LIVE on that exact commit. Full CRM profile route acceptance is being added in [PR #221](https://github.com/RoyalFinTech/Kaira-Africa/pull/221); exact-head CI pending.
 ## Email delivery safety and observability — in progress
 
 - Existing channels: team invitation emails, admin password-reset emails, and opt-in task-reminder emails through a durable retryable outbox. Manual invitation-link sharing remains available when email is not configured.
