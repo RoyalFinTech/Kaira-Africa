@@ -13,10 +13,17 @@ import {
   getRevenueAnalytics,
   getCustomerAnalytics,
   getTransactionAnalytics,
+  getRevenueByCurrency,
   type Period,
 } from "../repositories/analytics";
 
 const router: IRouter = Router();
+
+router.get("/analytics/revenue-by-currency", requireUser, async (req, res) => {
+  const businessId = requireBusiness(req);
+  res.json(await getRevenueByCurrency(businessId));
+});
+
 
 router.get(
   "/analytics/revenue",
