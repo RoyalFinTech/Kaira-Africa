@@ -86,6 +86,8 @@ test("task reminder email outbox respects channel opt-ins and is idempotent", {
       taskReminderEmail: false,
     },
   });
+  await db.update(businesses).set({ timeZone: "Pacific/Kiritimati" })
+    .where(eq(businesses.id, business.id));
 
   const [emailOnlyTask] = await db.insert(workTasks).values({
     businessId: business.id,
@@ -94,7 +96,7 @@ test("task reminder email outbox respects channel opt-ins and is idempotent", {
     title: "CI email-only reminder",
     status: "todo",
     priority: "medium",
-    dueDate: "2026-11-16",
+    dueDate: "2026-11-17",
   }).returning({ id: workTasks.id });
   const [inAppOnlyTask] = await db.insert(workTasks).values({
     businessId: business.id,
@@ -106,7 +108,8 @@ test("task reminder email outbox respects channel opt-ins and is idempotent", {
     dueDate: "2026-11-16",
   }).returning({ id: workTasks.id });
 
-  const fixedNow = new Date("2026-11-16T12:00:00.000Z");
+  // At 23:30 UTC, Kiritimati is already on Nov 17 while UTC is still Nov 16.
+  const fixedNow = new Date("2026-11-16T23:30:00.000Z");
   assert.equal(await runTaskDueReminders(fixedNow, business.id), 1);
   assert.equal(await runTaskDueReminders(fixedNow), 0);
 
