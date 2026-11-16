@@ -26,6 +26,12 @@ app.listen(env.PORT, (err) => {
     hasSessionSecret: Boolean(env.SESSION_SECRET),
     hasOtpSecret: Boolean(env.OTP_SECRET),
     hasPasswordResetSecret: Boolean(env.PASSWORD_RESET_SECRET),
+    hasRedisUrl: Boolean(env.REDIS_URL),
+    hasSmtpFrom: Boolean(env.SMTP_FROM),
+    hasSmsApiKey: Boolean(env.SMS_API_KEY),
+    hasSmsSenderId: Boolean(env.SMS_SENDER_ID),
+    hasAdminSeedEmail: Boolean(env.ADMIN_SEED_EMAIL),
+    hasAdminSeedPassword: Boolean(env.ADMIN_SEED_PASSWORD),
   }, "Server listening");
   if (isHostedRuntime && env.NODE_ENV !== "production") {
     logger.warn("Hosted runtime is not setting NODE_ENV=production; production environment validation is bypassed.");
