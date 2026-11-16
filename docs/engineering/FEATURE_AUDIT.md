@@ -447,3 +447,10 @@ CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
 - Change: merge supplied profile keys into the existing profile object; explicitly blank values still clear the corresponding optional field.
 - Acceptance: disposable-PostgreSQL route test verifies omitted fields persist, explicit blank clears a field, and the merged object is persisted. No schema migration or production data changes.
 - Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
+## Email delivery safety and observability — in progress
+
+- Existing channels: team invitation emails, admin password-reset emails, and opt-in task-reminder emails through a durable retryable outbox. Manual invitation-link sharing remains available when email is not configured.
+- Finding: production validates required SMTP environment variables, but the API did not verify the SMTP transport at startup. Password-reset URLs and admin notification messages were also inserted into HTML without escaping. Task-reminder email queue opt-ins/idempotency and the invitation manual-share fallback lacked database acceptance coverage.
+- Change: escape HTML values in all email templates, verify SMTP connectivity at API startup without taking the API offline on a transient mail-provider failure, and add acceptance/unit tests for the email fallback, per-channel task reminder preferences, outbox idempotency, and manual invite-link sharing.
+- Verification boundary: CI can prove safe queueing/fallback behavior, but cannot prove delivery to real recipient mailboxes. A successful startup transport verification will be logged; actual recipient delivery still needs a controlled mailbox test.
+- Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. No production mail has been sent by CI.
