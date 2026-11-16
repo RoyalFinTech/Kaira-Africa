@@ -787,19 +787,30 @@ router.post(
     let devResetToken: string | null = null;
     if (admin) {
       const rawToken = generateSessionToken("adm").replace("adm_", "reset_");
-      await createPasswordReset(admin.id, hashResetToken(rawToken));
-      // Actually goes through the email service now — in development
-      // (no SMTP_* configured) this logs instead of sending; in
-      // production it sends a real email via the configured SMTP
-      // transport. Not swallowed: a real delivery failure should
-      // surface as an error, not a false "sent: true".
+      const reset = await createPasswordReset(admin.id, hashResetToken(rawToken));
       const resetUrl = `${env.WEB_BASE_URL}/admin/reset-password?token=${rawToken}`;
-      await sendPasswordResetEmail({
-        to: admin.email,
-        resetUrl,
-        expiresInMinutes: 30,
-      });
-      devResetToken = IS_PRODUCTION ? null : rawToken;
+      let deliveryFailed = false;
+      try {
+        await sendPasswordResetEmail({
+          to: admin.email,
+          resetUrl,
+          expiresInMinutes: 30,
+        });
+      } catch (error) {
+        deliveryFailed = true;
+        // Never expose account existence through a different HTTP status.
+        // Consume the unsent token and record the provider failure server-side.
+        await consumePasswordReset(reset.id);
+        logger.error({ adminId: admin.id, err: error }, "Admin password reset email delivery failed");
+        await recordAuthEvent({
+          actorType: "admin",
+          actorId: admin.id,
+          event: "admin_password_reset_email_failed",
+          success: false,
+          ipAddress: req.ip,
+        });
+      }
+      devResetToken = IS_PRODUCTION || deliveryFailed ? null : rawToken;
 
       await recordAuthEvent({
         actorType: "admin",
