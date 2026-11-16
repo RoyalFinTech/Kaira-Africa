@@ -35,13 +35,13 @@ export default function WorkManagementPage(){
  const projectsQ=useQuery({queryKey:["work-projects"],queryFn:()=>apiRequestJson<Project[]>("/work/projects")});
  const meetingsQ=useQuery({queryKey:["work-meetings"],queryFn:()=>apiRequestJson<Meeting[]>("/work/meetings")});
  const assigneesQ=useQuery({queryKey:["work-assignees"],queryFn:()=>apiRequestJson<Assignee[]>("/work/assignees")});
- const tasks=tasksQ.data??[],projects=projectsQ.data??[],meetings=meetingsQ.data??[];
+ const tasks=tasksQ.data??[],projects=projectsQ.data??[],meetings=meetingsQ.data??[],assignees=assigneesQ.data??[];
  const activeTasks=useMemo(()=>tasks.filter(t=>t.status!=="done"&&t.status!=="cancelled"),[tasks]);
  const workload=useMemo(()=>{
   const open=tasks.filter(t=>t.status!=="done"&&t.status!=="cancelled");
   const today=dateInTimeZone(new Date(),businessTimeZone);
   const overdue=open.filter(t=>t.dueDate&&t.dueDate<today);
-  const rows=assigneesQ.data??[];
+  const rows=assignees;
   return {
    overdue,
    unassigned:open.filter(t=>!t.assignedTo),
