@@ -119,7 +119,7 @@ after(async () => {
 
 test("Savings and Investment routes use the configured business-local date for defaults and future-date guards", {
   skip: !databaseAcceptanceEnabled,
-}, async () => {
+}, async (t) => {
   const owner = await createTestUser();
   const business = await createBusinessForUser(owner.id, {
     name: `CI business date ${randomInt(100_000, 999_999)}`,
@@ -136,9 +136,16 @@ test("Savings and Investment routes use the configured business-local date for d
   const token = await createSession(owner.id);
   await startTestServer();
 
-  const expectedLocalToday = dateInBusinessTimeZone(
-    new Date(),
-    "Pacific/Kiritimati",
+  // Freeze at 23:30 UTC: Kiritimati is already on Nov 17 while UTC is still Nov 16.
+  // This makes a regression to UTC-based route dates fail on every CI run.
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: new Date("2026-11-16T23:30:00.000Z"),
+  });
+  const expectedLocalToday = "2026-11-17";
+  assert.equal(
+    dateInBusinessTimeZone(new Date(), "Pacific/Kiritimati"),
+    expectedLocalToday,
   );
   const futureLocalDate = addCalendarDays(expectedLocalToday, 1);
 
