@@ -423,3 +423,13 @@ Service worker now awaits the root-shell cache update after a successful navigat
 | Work Management Build Checks | 42357883434 | PASS | Typecheck and build. |
 
 CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`. Automated release gate is green. External HTTP/crawler, recipient link, and physical-device PWA checks remain NOT VERIFIED.
+
+## Finance route acceptance coverage — 16 November 2026
+
+| Area | New automated coverage | Status |
+|---|---|---|
+| Savings | Disposable-PostgreSQL route test covers authenticated goal creation, deposits, overdraw rejection, goal-currency matching, cross-business goal update rejection, tenant-separated overview, and full-ledger totals beyond the 500-entry response cap. | TEST ADDED ON PR #213; EXACT-HEAD CI PENDING |
+| Investments | Disposable-PostgreSQL route test covers plan creation with a custom “Other” category, daily actuals, cross-business daily-history rejection, complete actual totals beyond the 200-row history cap, and the capped daily-history response. | TEST ADDED ON PR #213; EXACT-HEAD CI PENDING |
+| Test safety | Uses the Backend CI disposable PostgreSQL database only when `KAIRA_DB_INTEGRATION_TESTS=true`; cleanup removes test-owned users/businesses. | NO PRODUCTION DATA OR SCHEMA CHANGES |
+
+PR #213: https://github.com/RoyalFinTech/Kaira-Africa/pull/213. This is test coverage, not a claim that the finance modules have passed full signed-in production UI acceptance. Business timezone handling is a separate audit item: the savings and investment routes currently derive default/today dates from UTC despite the business schema carrying a `timeZone` field. Do not change date semantics until a shared, tested timezone policy is agreed and covered around midnight boundaries.
