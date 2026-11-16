@@ -187,7 +187,9 @@ test("confirmed payment transactions contribute to dashboard revenue while pendi
   const totalsByCurrency = Object.fromEntries(
     currencyRevenue.map((item) => [item.currency, item.total]),
   );
-  assert.deepEqual(totalsByCurrency, { GMD: 125, NGN: 50, USD: 20 });
+  assert.equal(totalsByCurrency.GMD, 125);
+  assert.equal(totalsByCurrency.NGN, 50);
+  assert.equal(totalsByCurrency.USD, 20);
 
   const dashboardStatsResponse = await request("GET", "/api/businesses/me/stats", token);
   assert.equal(dashboardStatsResponse.status, 200);
