@@ -227,6 +227,32 @@ test("meeting routes authenticate, validate time zones and isolate business reco
   assert.equal(persisted?.title, "Updated planning meeting");
   assert.equal(persisted?.status, "held");
 
+  const timeZoneUpdateResponse = await request(
+    "PATCH",
+    `/api/work/meetings/${created.id}`,
+    ownerToken,
+    { timeZone: "Europe/London" },
+  );
+  assert.equal(timeZoneUpdateResponse.status, 200);
+  const timeZoneUpdated = await timeZoneUpdateResponse.json() as { timeZone: string };
+  assert.equal(timeZoneUpdated.timeZone, "Europe/London");
+  const timeZoneNotifications = await db.select({title:notifications.title}).from(notifications)
+    .where(eq(notifications.recipientUserId,attendeeUser.id));
+  assert.equal(timeZoneNotifications.length, 3);
+  assert.ok(timeZoneNotifications.some((notification) => notification.title === "Meeting updated"));
+
+  const cancelResponse = await request(
+    "PATCH",
+    `/api/work/meetings/${created.id}`,
+    ownerToken,
+    { status: "cancelled" },
+  );
+  assert.equal(cancelResponse.status, 200);
+  const cancelledNotifications = await db.select({title:notifications.title}).from(notifications)
+    .where(eq(notifications.recipientUserId,attendeeUser.id));
+  assert.equal(cancelledNotifications.length, 4);
+  assert.ok(cancelledNotifications.some((notification) => notification.title === "Meeting cancelled"));
+
   // An unrelated business cannot enumerate another business's meeting records.
   const outsiderListResponse = await request("GET", "/api/work/meetings", outsiderToken);
   assert.equal(outsiderListResponse.status, 200);
