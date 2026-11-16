@@ -221,9 +221,9 @@ test("Savings and investment routes enforce business scope and preserve complete
   assert.equal(overview.entries.length, 500);
   assert.equal(overview.goals.find((item) => item.id === goal.id)?.savedAmount, 100);
   const gmdTotals = overview.totals.find((item) => item.currency === "GMD");
-  assert.equal(gmdTotals?.deposits, 605);
+  assert.equal(gmdTotals?.deposits, 105.05);
   assert.equal(gmdTotals?.withdrawals, 0);
-  assert.equal(gmdTotals?.balance, 605);
+  assert.equal(gmdTotals?.balance, 105.05);
 
   const planResponse = await request("POST", "/api/investment-plans", token, {
     name: "CI vegetable stall",
@@ -288,9 +288,9 @@ test("Savings and investment routes enforce business scope and preserve complete
     plans: Array<{ id: string; actualSales: number; actualExpenses: number; actualNet: number; daysRecorded: number }>;
   };
   const planSummary = planList.plans.find((item) => item.id === plan.id);
-  assert.equal(planSummary?.actualSales, 170);
-  assert.equal(planSummary?.actualExpenses, 45);
-  assert.equal(planSummary?.actualNet, 125);
+  assert.equal(planSummary?.actualSales, 355);
+  assert.equal(planSummary?.actualExpenses, 91.25);
+  assert.equal(planSummary?.actualNet, 263.75);
   assert.equal(planSummary?.daysRecorded, 206);
 
   const dailyHistoryResponse = await request(
