@@ -423,3 +423,10 @@ Service worker now awaits the root-shell cache update after a successful navigat
 | Work Management Build Checks | 42357883434 | PASS | Typecheck and build. |
 
 CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`. Automated release gate is green. External HTTP/crawler, recipient link, and physical-device PWA checks remain NOT VERIFIED.
+## CRM customer profile partial-update safety — in progress
+
+- Finding: the customer update endpoint accepts a partial profile patch, but previously replaced the entire JSON profile object whenever `profileData` was supplied. A client updating one optional field could unintentionally erase omitted date-of-birth, contact-preference, or other profile fields.
+- Branch / PR: `fix/crm-profile-data-merge` / [PR #215](https://github.com/RoyalFinTech/Kaira-Africa/pull/215).
+- Change: merge supplied profile keys into the existing profile object; explicitly blank values still clear the corresponding optional field.
+- Acceptance: disposable-PostgreSQL route test verifies omitted fields persist, explicit blank clears a field, and the merged object is persisted. No schema migration or production data changes.
+- Status: IMPLEMENTED ON BRANCH; exact-head Backend CI and Work Management Build Checks pending. Do not merge until all checks pass.
