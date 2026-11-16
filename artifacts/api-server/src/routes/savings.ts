@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db, savingsGoals, savingsEntries } from "@workspace/db";
+import { db, businesses, savingsGoals, savingsEntries } from "@workspace/db";
 import { requireUser, requireBusiness } from "../middlewares/auth";
 import { BadRequestError, NotFoundError } from "../lib/http-errors";
 import { fromMinorUnits, toMinorUnits } from "../lib/money";
 import { calculateSavingsBalanceMinor, canWithdrawFromSavingsPool } from "../lib/savings-ledger";
+import { dateInBusinessTimeZone } from "../lib/business-date";
 
 const router: IRouter = Router();
 const currencies = ["GMD", "NGN", "USD"] as const;
@@ -36,7 +37,6 @@ const entryInput = z.object({
   reference: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(500).optional(),
 });
-function today() { return new Date().toISOString().slice(0,10); }
 function serializeGoal(g: typeof savingsGoals.$inferSelect) {
   return { id:g.id, name:g.name, purpose:g.purpose, currency:g.currency,
     targetAmount:fromMinorUnits(Number(g.targetMinor),g.currency), targetDate:g.targetDate,
@@ -91,7 +91,10 @@ router.patch("/savings/goals/:id/status", requireUser, async(req,res)=>{
 });
 router.post("/savings/entries", requireUser, async(req,res)=>{
   const businessId=requireBusiness(req), input=entryInput.parse(req.body);
-  if(input.savedDate && input.savedDate>today()) throw new BadRequestError("Savings entries cannot be dated in the future.");
+  const [business] = await db.select({ timeZone: businesses.timeZone }).from(businesses).where(eq(businesses.id,businessId)).limit(1);
+  if (!business) throw new NotFoundError("Business not found.");
+  const businessToday = dateInBusinessTimeZone(new Date(), business.timeZone);
+  if(input.savedDate && input.savedDate>businessToday) throw new BadRequestError("Savings entries cannot be dated in the future.");
   if(input.goalId){
     const [goal]=await db.select().from(savingsGoals).where(and(eq(savingsGoals.id,input.goalId),eq(savingsGoals.businessId,businessId)));
     if(!goal) throw new NotFoundError("Savings goal not found for this business.");
@@ -118,13 +121,13 @@ router.post("/savings/entries", requireUser, async(req,res)=>{
         ? "This withdrawal is greater than the recorded savings for the selected goal."
         : `This withdrawal is greater than the unassigned recorded savings balance in ${input.currency}. Choose a savings goal or record a deposit first.`);
       const [created] = await tx.insert(savingsEntries).values({businessId,goalId:input.goalId||null,createdBy:req.user!.id,entryType:input.entryType,
-        amountMinor,currency:input.currency,savedDate:input.savedDate||today(),
+        amountMinor,currency:input.currency,savedDate:input.savedDate||businessToday,
         destinationType:input.destinationType,provider:input.provider,reference:input.reference||null,notes:input.notes||null}).returning();
       return created;
     });
   } else {
     const [created] = await db.insert(savingsEntries).values({businessId,goalId:input.goalId||null,createdBy:req.user!.id,entryType:input.entryType,
-      amountMinor,currency:input.currency,savedDate:input.savedDate||today(),
+      amountMinor,currency:input.currency,savedDate:input.savedDate||businessToday,
       destinationType:input.destinationType,provider:input.provider,reference:input.reference||null,notes:input.notes||null}).returning();
     e = created;
   }
