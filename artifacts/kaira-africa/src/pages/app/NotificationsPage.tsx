@@ -75,7 +75,7 @@ function NotificationItem({
   const openNotification = () => {
     onRead(notification.id);
     const target = notification.actionUrl;
-    if (target && target.startsWith('/') && !target.startsWith('//') && !target.includes('\\\\')) {
+    if (target && target.startsWith('/') && !target.startsWith('//') && !target.includes(String.fromCharCode(92))) {
       setLocation(target);
     }
   };
