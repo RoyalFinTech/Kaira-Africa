@@ -17,6 +17,7 @@ import {
 import { formatRelativeTime } from '@/lib/utils';
 import { apiRequestJson } from '@/lib/api-client';
 import type { Notification } from '@workspace/api-client-react';
+import { useLocation } from 'wouter';
 
 const typeIcon: Record<string, typeof Bell> = {
   transaction: DollarSign,
@@ -70,6 +71,14 @@ function NotificationItem({
   onRead: (id: string) => void;
 }) {
   const Icon = typeIcon[notification.type] || Bell;
+  const [, setLocation] = useLocation();
+  const openNotification = () => {
+    onRead(notification.id);
+    const target = notification.actionUrl;
+    if (target && target.startsWith('/') && !target.startsWith('//') && !target.includes('\\\\')) {
+      setLocation(target);
+    }
+  };
 
   return (
     <motion.div
@@ -81,7 +90,7 @@ function NotificationItem({
         'flex items-start gap-4 px-5 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer group',
         !notification.isRead ? 'bg-primary/[0.02]' : '',
       ].join(' ')}
-      onClick={() => onRead(notification.id)}
+      onClick={openNotification}
     >
       {/* Unread dot */}
       <div className="mt-1 flex-shrink-0 w-2">
