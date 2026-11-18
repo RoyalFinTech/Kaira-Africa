@@ -7,16 +7,13 @@ export interface SmsProvider {
 }
 
 /**
- * Logs instead of sending — this is what SMS_PROVIDER=mock (the
- * default) uses. Appropriate for development and staging smoke tests;
- * never for production (env.ts's production schema still allows
- * SMS_PROVIDER=mock to boot, since that's a valid staging config, but
- * a real deployment should set SMS_PROVIDER to a real provider).
+ * Simulates delivery in development. Keep the development OTP response
+ * available to the dashboard, but never include the OTP/message in logs.
  */
 class MockSmsProvider implements SmsProvider {
   name = "mock";
   async send(input: { to: string; message: string }): Promise<void> {
-    logger.info({ to: input.to }, `[MOCK SMS] ${input.message}`);
+    logger.info({ to: input.to }, "[MOCK SMS] delivery simulated; message content withheld");
   }
 }
 
