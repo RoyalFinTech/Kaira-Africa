@@ -1,5 +1,5 @@
 import { createHmac, randomInt } from "node:crypto";
-import { env } from "../config/env";
+import { env, isProd } from "../config/env";
 
 export const OTP_LENGTH = 6;
 export const OTP_TTL_MINUTES = 5;
@@ -7,9 +7,13 @@ export const MAX_OTP_ATTEMPTS = 5;
 // Minimum time between OTP requests for the same phone number.
 export const OTP_RESEND_COOLDOWN_SECONDS = 30;
 
-// In production, env.ts refuses to boot without OTP_SECRET, so this
-// fallback only ever runs in development/test.
-const OTP_PEPPER = env.OTP_SECRET ?? "dev-insecure-otp-pepper";
+function getOtpPepper(): string {
+  if (env.OTP_SECRET) return env.OTP_SECRET;
+  if (isProd) {
+    throw new Error("OTP_SECRET is required before OTP verification can run in a hosted/production runtime.");
+  }
+  return "dev-insecure-otp-pepper";
+}
 
 export function generateOtp(): string {
   // randomInt is cryptographically secure (unlike Math.random).
@@ -25,5 +29,5 @@ export function generateOtp(): string {
  * that infeasible without also compromising OTP_SECRET.
  */
 export function hashOtp(code: string, phoneKey: string): string {
-  return createHmac("sha256", OTP_PEPPER).update(`${phoneKey}:${code}`).digest("hex");
+  return createHmac("sha256", getOtpPepper()).update(`${phoneKey}:${code}`).digest("hex");
 }
