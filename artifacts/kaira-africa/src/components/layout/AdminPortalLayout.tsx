@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  Activity,
   BookOpen,
   Building2,
   ChevronRight,
@@ -49,21 +48,21 @@ function AdminNav({
           (item.href !== "/admin/dashboard" && currentPath.startsWith(item.href + "/"));
         const Icon = item.icon;
         return (
-          <Link href={item.href} key={item.href}>
-            <a
-              onClick={onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={[
-                "group flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all",
-                active
-                  ? "border border-emerald-400/20 bg-emerald-400/10 text-emerald-200 shadow-inner shadow-emerald-950/10"
-                  : "text-slate-300 hover:bg-white/[0.07] hover:text-white",
-              ].join(" ")}
-            >
-              <Icon className={["h-[18px] w-[18px] shrink-0", active ? "text-amber-300" : "text-slate-400 group-hover:text-slate-200"].join(" ")} />
-              <span className="min-w-0 flex-1">{item.label}</span>
-              {active && <span className="h-1.5 w-1.5 rounded-full bg-amber-300" aria-hidden="true" />}
-            </a>
+          <Link
+            href={item.href}
+            key={item.href}
+            onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
+            className={[
+              "group flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all",
+              active
+                ? "border border-emerald-400/20 bg-emerald-400/10 text-emerald-200 shadow-inner shadow-emerald-950/10"
+                : "text-slate-300 hover:bg-white/[0.07] hover:text-white",
+            ].join(" ")}
+          >
+            <Icon className={["h-[18px] w-[18px] shrink-0", active ? "text-amber-300" : "text-slate-400 group-hover:text-slate-200"].join(" ")} />
+            <span className="min-w-0 flex-1">{item.label}</span>
+            {active && <span className="h-1.5 w-1.5 rounded-full bg-amber-300" aria-hidden="true" />}
           </Link>
         );
       })}
