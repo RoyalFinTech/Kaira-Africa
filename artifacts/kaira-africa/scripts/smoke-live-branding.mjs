@@ -166,10 +166,10 @@ assert.equal(manifest.name, 'Kaira Africa', 'PWA manifest must use the Kaira Afr
 assert.equal(manifest.display, 'standalone', 'PWA must request standalone app display');
 assert.equal(manifest.start_url, '/', 'PWA must launch at the Kaira splash route');
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.some((icon) => icon.src === '/favicon.svg'), 'PWA manifest must include the Kaira vector brand icon');
-assert.ok(manifest.icons.some((icon) => icon.src === '/kaira-logo.png'), 'PWA manifest must include the official Kaira logo for installed app identity');
-const installedLogoResponse = await fetch(`${baseUrl}/kaira-logo.png?pwa-icon-smoke=${Date.now()}`, { cache: 'no-store' });
-assert.equal(installedLogoResponse.status, 200, 'Installed-app Kaira logo must return HTTP 200');
-assert.match(installedLogoResponse.headers.get('content-type') || '', /image\/png/i, 'Installed-app Kaira logo must be PNG');
+assert.ok(manifest.icons.some((icon) => icon.src === '/kaira-icon-512.png'), 'PWA manifest must include the optimized 512px Kaira installed-app icon');
+const installedIconResponse = await fetch(`${baseUrl}/kaira-icon-512.png?pwa-icon-smoke=${Date.now()}`, { cache: 'no-store' });
+assert.equal(installedIconResponse.status, 200, 'Installed-app Kaira icon must return HTTP 200');
+assert.match(installedIconResponse.headers.get('content-type') || '', /image\/png/i, 'Installed-app Kaira icon must be PNG');
 const pwaIconResponse = await fetch(`${baseUrl}/favicon.svg?pwa-smoke=${Date.now()}`, { cache: 'no-store' });
 assert.equal(pwaIconResponse.status, 200, 'PWA Kaira icon must return HTTP 200');
 assert.match(pwaIconResponse.headers.get('content-type') || '', /image\/svg\+xml/i, 'PWA Kaira icon must be served as SVG');
@@ -178,7 +178,7 @@ assert.equal(workerResponse.status, 200, 'PWA service worker must return HTTP 20
 const workerSource = await workerResponse.text();
 assert.ok(workerSource.includes("url.pathname.includes('/api/')"), 'PWA worker must explicitly exclude API data from caching');
 assert.ok(workerSource.includes("request.mode === 'navigate'"), 'PWA worker must provide the offline navigation shell');
-console.log('PWA MANIFEST, BRAND ICON AND SERVICE WORKER VERIFIED:', JSON.stringify({ name: manifest.name, display: manifest.display, icon: manifest.icons[0].src }));
+console.log('PWA MANIFEST, BRAND ICON AND SERVICE WORKER VERIFIED:', JSON.stringify({ name: manifest.name, display: manifest.display, icon: manifest.icons.find((entry) => entry.src === '/kaira-icon-512.png')?.src }));
 
 
 // Verify the newly generated local hero assets are published with the app build.
