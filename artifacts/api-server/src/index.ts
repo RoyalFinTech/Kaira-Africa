@@ -8,6 +8,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startTaskReminderScheduler } from "./services/task-reminders.service";
 import { startTaskReminderEmailOutboxWorker } from "./services/task-reminder-email-outbox.service";
+import { startMeetingReminderScheduler } from "./services/work-meeting-reminders.service";
 import { isEmailDeliveryConfigured, verifyEmailTransport } from "./services/email.service";
 
 app.listen(env.PORT, (err) => {
@@ -18,6 +19,7 @@ app.listen(env.PORT, (err) => {
 
   logger.info({ port: env.PORT, env: env.NODE_ENV }, "Server listening");
   startTaskReminderScheduler();
+  startMeetingReminderScheduler();
   startTaskReminderEmailOutboxWorker();
   if (isEmailDeliveryConfigured()) {
     void verifyEmailTransport().then((verified) => {
