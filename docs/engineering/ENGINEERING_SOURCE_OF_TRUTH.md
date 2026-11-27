@@ -548,3 +548,10 @@ Added scripts/verify-pwa-assets.mjs to the frontend build. The script validates 
 ## Latest-head CI verification — 7 November 2026
 
 PR #196 head `7f8aa484891feef21b9fefddb38b92eb1e1efdef` has now passed both required GitHub workflows: Backend CI run `42357883459` (including shared/API/frontend typechecks, frontend build and PWA asset verifier, backend build, fresh database migrations, API unit + PostgreSQL acceptance tests, server health check and Docker image build without push) and Work Management Build Checks run `42357883434`. Automated CI gate is GREEN. Public HTTP/crawler, recipient-device and physical PWA install/refresh acceptance remains open.
+
+## Continuation record — notification badge freshness (2026-11-27)
+
+- The app header now polls unread notifications every 15 seconds while active and refetches on tab focus, rather than relying only on incidental query invalidation. Its link includes the unread count in the accessible name.
+- Removed the previous delayed bell-shake effect that simulated a new notification on mount despite no new event.
+- Scope is limited to the in-app unread badge. Push, SMS/email, top banners, urgent popups and admin broadcasts remain separate capabilities and are NOT VERIFIED/NOT IMPLEMENTED until implemented and tested.
+- Branch: fix/live-notification-badge-refresh-20261127; typecheck/build and browser/device acceptance pending.
