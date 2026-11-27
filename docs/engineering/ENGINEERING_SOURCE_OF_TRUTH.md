@@ -548,3 +548,13 @@ Added scripts/verify-pwa-assets.mjs to the frontend build. The script validates 
 ## Latest-head CI verification — 7 November 2026
 
 PR #196 head `7f8aa484891feef21b9fefddb38b92eb1e1efdef` has now passed both required GitHub workflows: Backend CI run `42357883459` (including shared/API/frontend typechecks, frontend build and PWA asset verifier, backend build, fresh database migrations, API unit + PostgreSQL acceptance tests, server health check and Docker image build without push) and Work Management Build Checks run `42357883434`. Automated CI gate is GREEN. Public HTTP/crawler, recipient-device and physical PWA install/refresh acceptance remains open.
+
+## Dedicated admin portal routing and navigation — 27 November 2026 (branch-only)
+
+The Render static site kaira-africa-admin was incorrectly configured to publish the customer frontend output (artifacts/kaira-africa/dist/public built with the default router), so the admin hostname showed the customer experience. The branch feat/dedicated-admin-portal-shell-20261127 introduces an admin-only router selected by the build-time flag VITE_KAIRA_ADMIN_PORTAL=true; at the admin host root it redirects to the administrator login, or to /admin/dashboard for an existing admin token. The normal customer frontend build leaves the flag unset and retains the customer routes.
+
+A shared responsive admin layout now wraps Overview, Platform Records, Analytics, CRM/Customers, Inventory and Daily Ledger. It includes a premium desktop sidebar and mobile hamburger drawer, route selection, Escape/backdrop closing, scroll lock, admin identity and logout. The admin login's return link points to the customer app origin.
+
+**Authentication must remain separate:** the admin system currently authenticates using email/password against admin_users, returning adm_ sessions in admin_sessions. The customer's phone/PIN belongs to customer authentication and is not a valid admin credential. Do not add frontend self-elevation, copy a PIN into an admin password, or issue super_admin access merely from a browser-held customer token. Provision the first admin through a controlled operations/bootstrap procedure with a dedicated admin credential and audit trail.
+
+Release requirement after review/merge: configure VITE_KAIRA_ADMIN_PORTAL=true on Render static service srv-dbg86rmk1f9s73bkkev0 (kaira-africa-admin) only; keep it unset on srv-db257gjbc2fs73f9nsj0 (kaira-africa-frontend). Then deploy and verify both origins and direct-route refreshes. No production environment, DB, or live service changes are included in the branch; PR CI and production browser acceptance remain pending.

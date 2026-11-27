@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
 import { AppShell } from '@/components/layout/AppShell';
+const AdminPortalRouter = lazy(() => import('@/components/layout/AdminPortalRouter'));
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { InstallAppPrompt } from '@/components/common/InstallAppPrompt';
 import { KairaFeedbackCard } from '@/components/common/KairaFeedbackCard';
@@ -298,6 +299,14 @@ function ReturningUserLoginGate() {
 }
 
 function Router() {
+  if (import.meta.env.VITE_KAIRA_ADMIN_PORTAL === 'true') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AdminPortalRouter />
+      </Suspense>
+    );
+  }
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
@@ -448,6 +457,7 @@ function Router() {
 }
 
 function App() {
+  const isAdminPortalBuild = import.meta.env.VITE_KAIRA_ADMIN_PORTAL === 'true';
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -455,7 +465,7 @@ function App() {
           <Router />
         </WouterRouter>
         <KairaFeedbackHost />
-        <InstallAppPrompt />
+        {!isAdminPortalBuild && <InstallAppPrompt />}
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
