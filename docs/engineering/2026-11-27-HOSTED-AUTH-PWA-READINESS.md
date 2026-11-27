@@ -14,10 +14,10 @@
 - Consume unsent password-reset tokens and keep the reset response anti-enumerating after a delivery failure.
 - Log configuration-presence booleans and provider mode only; never log secret values or message tokens.
 
-## PWA changes in this branch
-- Add the existing official `/kaira-logo.png` (1254×1254 PNG) to the install manifest as a general-purpose icon.
-- Extend the local PWA build verifier to validate its type, declared dimensions, PNG signature and actual dimensions.
-- Precache the official logo in the service worker and bump the shell cache from v5 to v6.
+## PWA correction in this branch
+- The installed-app identity already has the optimized `/kaira-icon-512.png` declared in the manifest and precached by the service worker; the existing build verifier checks its PNG signature and exact 512×512 dimensions.
+- The historical browser smoke test incorrectly required the 1254×1254 `/kaira-logo.png` website logo to be a manifest icon. This branch changes the smoke test to validate the existing optimized 512×512 app icon instead.
+- No production manifest, icon asset or service-worker change is required for this correction.
 
 ## Rollout blockers — do not merge/deploy until resolved
 - Verify `SMS_PROVIDER`, `SMS_API_KEY` and `SMS_SENDER_ID` are configured for the selected Twilio provider in Render. Do not print or expose secret values.
