@@ -16,6 +16,7 @@ const manifest = JSON.parse(await readFile(publicFile('manifest.webmanifest'), '
 const icons = Array.isArray(manifest.icons) ? manifest.icons : [];
 
 for (const expected of [
+  { src: '/kaira-logo.png', sizes: '1254x1254', width: 1254, height: 1254 },
   { src: '/kaira-icon-192.png', sizes: '192x192', width: 192, height: 192 },
   { src: '/kaira-icon-512.png', sizes: '512x512', width: 512, height: 512 },
 ]) {
