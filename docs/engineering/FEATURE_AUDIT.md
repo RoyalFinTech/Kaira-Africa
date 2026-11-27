@@ -464,4 +464,4 @@ CI was checked against exact PR head `7f8aa484891feef21b9fefddb38b92eb1e1efdef`.
 - Branch: fix/live-notification-badge-refresh-20261127, based on main 8185d64b0cfbcb2547846d3ab8907880d1217d4c.
 - Change: poll unread notification counts every 15 seconds while the app tab is active; refetch when the browser tab regains focus; announce the unread count in the bell link's accessible label; remove the simulated bell-shake animation.
 - Scope: this improves freshness of the in-app unread badge. It is not real-time push, SMS/email delivery, a top banner, an urgent popup, or an admin broadcast.
-- Status: IMPLEMENTED ON BRANCH; latest-head typecheck/build pending. Browser session and mobile/desktop interactive acceptance remain NOT VERIFIED.
+- Status: IMPLEMENTED ON BRANCH; automated CI PASS on code head d262941645e5fb8c8064ccfebe06436ef0211114 (Work Management Build Checks run 45953594142; Backend CI run 45953594162, including Docker build). Browser session and mobile/desktop interactive acceptance remain NOT VERIFIED.
