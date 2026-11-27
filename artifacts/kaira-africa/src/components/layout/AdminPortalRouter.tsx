@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Redirect, Route, Switch } from "wouter";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AdminPortalLayout } from "@/components/layout/AdminPortalLayout";
@@ -24,7 +24,7 @@ function AdminPortalRoot() {
   return <Redirect to={isAdminToken() ? "/admin/dashboard" : "/admin"} />;
 }
 
-function ProtectedAdminPage({ component: Component }: { component: React.ComponentType }) {
+function ProtectedAdminPage({ component: Component }: { component: ComponentType }) {
   if (!isAdminToken()) return <Redirect to="/admin" />;
   return (
     <AdminPortalLayout>
