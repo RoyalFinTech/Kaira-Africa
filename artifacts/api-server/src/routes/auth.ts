@@ -525,19 +525,21 @@ router.post(
 
     const code = generateOtp();
     const codeHash = hashOtp(code, `${countryCode}${number}`);
-    await createOtp({
+    const otpRecord = await createOtp({
       phoneCountryCode: countryCode,
       phoneNumber: number,
       codeHash,
       purpose: "login",
     });
 
-    // Actually goes through the SMS provider abstraction now — in
-    // development/staging (SMS_PROVIDER=mock) this logs instead of
-    // sending; in production it calls the configured real provider.
-    // Not swallowed: if a real provider genuinely fails to deliver,
-    // the request should fail rather than falsely report success.
-    await sendOtpSms({ to: `${countryCode}${number}`, code });
+    // If delivery fails, invalidate the unsent code so it cannot be used
+    // later and the user can safely request a fresh code after cooldown.
+    try {
+      await sendOtpSms({ to: `${countryCode}${number}`, code });
+    } catch (error) {
+      await consumeOtp(otpRecord.id);
+      throw error;
+    }
 
     await recordAuthEvent({
       actorType: "unknown",
@@ -815,7 +817,7 @@ router.post(
         actorType: "admin",
         actorId: admin.id,
         event: "admin_password_reset_requested",
-        success: true,
+        success: !deliveryFailed,
         ipAddress: req.ip,
       });
     }
