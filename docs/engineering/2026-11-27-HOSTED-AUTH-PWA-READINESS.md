@@ -20,7 +20,7 @@
 - No production manifest, icon asset or service-worker change is required for this correction.
 
 ## Rollout blockers — do not merge/deploy until resolved
-- Verify `SMS_PROVIDER`, `SMS_API_KEY` and `SMS_SENDER_ID` are configured for the selected Twilio provider in Render. Do not print or expose secret values.
+- Verify `OTP_SECRET` is present (minimum 16 characters) and `SMS_PROVIDER`, `SMS_API_KEY` and `SMS_SENDER_ID` are configured for the selected Twilio provider in Render. Do not print or expose secret values.
 - Verify SMTP host, port, user, password and sender configuration. Provider delivery must be tested only with approved test destinations.
 - Verify required auth secrets are present before setting `NODE_ENV=production`; do not change Render environment variables as part of this PR.
 - A hosted mock-SMS configuration will fail closed after this change by design. OTP login recovery therefore requires the real SMS provider before release.
