@@ -3,7 +3,7 @@
 // does, before touching the database, Redis, or Express, so
 // misconfiguration fails fast with a clear message instead of a
 // confusing downstream error.
-import { env } from "./config/env";
+import { env, isHostedRuntime, isProd } from "./config/env";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startTaskReminderScheduler } from "./services/task-reminders.service";
@@ -16,7 +16,32 @@ app.listen(env.PORT, (err) => {
     process.exit(1);
   }
 
-  logger.info({ port: env.PORT, env: env.NODE_ENV }, "Server listening");
+  logger.info({
+    port: env.PORT,
+    env: env.NODE_ENV,
+    hostedRuntime: isHostedRuntime,
+    productionGuardsEnabled: isProd,
+    smsProvider: env.SMS_PROVIDER,
+    smtpConfigured: isEmailDeliveryConfigured(),
+    hasSessionSecret: Boolean(env.SESSION_SECRET),
+    hasOtpSecret: Boolean(env.OTP_SECRET),
+    hasPasswordResetSecret: Boolean(env.PASSWORD_RESET_SECRET),
+    hasRedisUrl: Boolean(env.REDIS_URL),
+    hasSmtpFrom: Boolean(env.SMTP_FROM),
+    hasSmsApiKey: Boolean(env.SMS_API_KEY),
+    hasSmsSenderId: Boolean(env.SMS_SENDER_ID),
+    hasAdminSeedEmail: Boolean(env.ADMIN_SEED_EMAIL),
+    hasAdminSeedPassword: Boolean(env.ADMIN_SEED_PASSWORD),
+  }, "Server listening");
+  if (isHostedRuntime && env.NODE_ENV !== "production") {
+    logger.warn("Hosted runtime is not setting NODE_ENV=production; production environment validation is bypassed.");
+  }
+  if (isHostedRuntime && !isEmailDeliveryConfigured()) {
+    logger.warn("SMTP is not configured; outbound email will fail closed in this hosted runtime.");
+  }
+  if (isHostedRuntime && env.SMS_PROVIDER === "mock") {
+    logger.warn("SMS_PROVIDER=mock cannot deliver OTPs in a hosted runtime; configure a real SMS provider.");
+  }
   startTaskReminderScheduler();
   startTaskReminderEmailOutboxWorker();
   if (isEmailDeliveryConfigured()) {
