@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Bell, Search, Menu, RefreshCw } from 'lucide-react';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
@@ -26,8 +26,10 @@ interface HeaderProps {
 export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
   const [location, setLocation] = useLocation();
   const { data: user } = useGetMe();
-  const { data: notifications } = useListNotifications({ unreadOnly: true });
-  const [shouldShake, setShouldShake] = useState(false);
+  const { data: notifications } = useListNotifications(
+    { unreadOnly: true },
+    { query: { refetchInterval: 15_000, refetchIntervalInBackground: false, refetchOnWindowFocus: true } },
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -58,17 +60,6 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
     if (location !== '/dashboard' && location !== '/') setLocation('/dashboard');
   };
 
-  // Trigger bell shake animation 3s after mount (simulating new notification)
-  useEffect(() => {
-    if (unreadCount > 0) {
-      const timer = setTimeout(() => {
-        setShouldShake(true);
-        setTimeout(() => setShouldShake(false), 500);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [unreadCount]);
 
   const logout = useLogout();
 
@@ -143,11 +134,11 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
 
         <Link
           href="/notifications"
-          aria-label="Notifications"
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
           title="Notifications"
           className="relative inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Bell className={`h-5 w-5 ${shouldShake ? 'animate-bell-shake' : ''}`} />
+          <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
               variant="secondary"
