@@ -6,4 +6,4 @@ The previous bell effect triggered a shake three seconds after mount whenever un
 
 This change improves in-app badge freshness only. It does not provide web-push, SMS/email, a scrolling top banner, an urgent dashboard popup or admin broadcast messaging. Those remain separate roadmap items and are not verified by this change.
 
-Branch: fix/live-notification-badge-refresh-20261127. Automated typecheck/build and browser/device acceptance are pending.
+Branch: fix/live-notification-badge-refresh-20261127. Automated CI PASS on code head d262941645e5fb8c8064ccfebe06436ef0211114: Work Management Build Checks run 45953594142 and Backend CI run 45953594162 both passed, including Docker image build without push. Browser/device acceptance remains pending.
