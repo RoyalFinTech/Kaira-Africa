@@ -138,13 +138,13 @@ export default function AdminLoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 lg:p-16 bg-slate-50 dark:bg-background">
         <div className="w-full max-w-sm">
           {/* Back to user login */}
-          <button
-            onClick={() => setLocation('/login')}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8 group"
+          <a
+            href="https://kaira-africa-frontend.onrender.com/login"
+            className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground mb-8 group"
           >
-            <ChevronLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-            Back to user login
-          </button>
+            <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            Back to customer login
+          </a>
 
           {/* Mobile logo */}
           <div className="mb-6 lg:hidden">
