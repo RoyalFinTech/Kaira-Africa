@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useGetMe, useListNotifications, useLogout } from '@workspace/api-client-react';
+import { getListNotificationsQueryKey, useGetMe, useListNotifications, useLogout } from '@workspace/api-client-react';
 import { clearToken } from '@/lib/api-client';
 import { Link, useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +28,7 @@ export function Header({ onMenuClick, onDesktopMenuToggle }: HeaderProps) {
   const { data: user } = useGetMe();
   const { data: notifications } = useListNotifications(
     { unreadOnly: true },
-    { query: { refetchInterval: 15_000, refetchIntervalInBackground: false, refetchOnWindowFocus: true } },
+    { query: { queryKey: getListNotificationsQueryKey({ unreadOnly: true }), refetchInterval: 15_000, refetchIntervalInBackground: false, refetchOnWindowFocus: true } },
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
