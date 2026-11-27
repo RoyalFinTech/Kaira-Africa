@@ -112,19 +112,21 @@ export default function AdminPortalOverviewPage() {
             {quickLinks.map((item) => {
               const Icon = item.icon;
               return (
-                <Link href={item.href} key={item.href}>
-                  <a className="group flex min-h-[118px] items-start gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-900/[0.02] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:p-5">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 transition group-hover:bg-emerald-800 group-hover:text-white">
-                      <Icon className="h-5 w-5" />
+                <Link
+                  href={item.href}
+                  key={item.href}
+                  className="group flex min-h-[118px] items-start gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-900/[0.02] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:p-5"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 transition group-hover:bg-emerald-800 group-hover:text-white">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-slate-900">{item.label}</span>
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-emerald-700" />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-slate-900">{item.label}</span>
-                        <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-emerald-700" />
-                      </span>
-                      <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
-                    </span>
-                  </a>
+                    <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
+                  </span>
                 </Link>
               );
             })}
