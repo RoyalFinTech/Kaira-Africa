@@ -27,3 +27,5 @@ export * from "./work-time";
 
 export * from "./work-task-reminders";
 export * from "./task-reminder-email-outbox";
+
+export * from "./work-meeting-reminders";

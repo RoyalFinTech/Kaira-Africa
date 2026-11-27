@@ -548,3 +548,11 @@ Added scripts/verify-pwa-assets.mjs to the frontend build. The script validates 
 ## Latest-head CI verification — 7 November 2026
 
 PR #196 head `7f8aa484891feef21b9fefddb38b92eb1e1efdef` has now passed both required GitHub workflows: Backend CI run `42357883459` (including shared/API/frontend typechecks, frontend build and PWA asset verifier, backend build, fresh database migrations, API unit + PostgreSQL acceptance tests, server health check and Docker image build without push) and Work Management Build Checks run `42357883434`. Automated CI gate is GREEN. Public HTTP/crawler, recipient-device and physical PWA install/refresh acceptance remains open.
+
+## Continuation record — scheduled meeting reminders (2026-11-27)
+
+- The Work Management API already sent immediate in-app notifications when a meeting was scheduled or materially updated. A separate pre-start reminder worker was missing.
+- Branch `feat/scheduled-meeting-reminders-20261127` adds a 15-minute in-app reminder scheduler, an RLS-enabled idempotency ledger, a database migration and a disposable-PostgreSQL acceptance test.
+- Only selected active team members receive reminders; the meeting creator, inactive members, non-members and cancelled meetings are excluded. A changed start time creates a new reminder key. Repeated worker runs cannot duplicate a reminder for the same recipient and schedule.
+- This is not SMS, email, web-push or dashboard urgent-popup delivery. Those channels remain separate scope and must not be described as active from this change.
+- Status: branch implementation complete; automated CI PASS on head 7b26c3a692e83f0acd2b83c884e90bf1bc3be29d (Backend CI run 45953346302 and Work Management Build Checks run 45953346306). This covered migration 0027 on disposable PostgreSQL, the reminder acceptance test, API health, and Docker image build without push. No production data, migration, secrets or Render deployment changed. Production/browser-device acceptance and review remain pending.
