@@ -525,19 +525,21 @@ router.post(
 
     const code = generateOtp();
     const codeHash = hashOtp(code, `${countryCode}${number}`);
-    await createOtp({
+    const otpRecord = await createOtp({
       phoneCountryCode: countryCode,
       phoneNumber: number,
       codeHash,
       purpose: "login",
     });
 
-    // Actually goes through the SMS provider abstraction now — in
-    // development/staging (SMS_PROVIDER=mock) this logs instead of
-    // sending; in production it calls the configured real provider.
-    // Not swallowed: if a real provider genuinely fails to deliver,
-    // the request should fail rather than falsely report success.
-    await sendOtpSms({ to: `${countryCode}${number}`, code });
+    // If delivery fails, invalidate the unsent code so it cannot be used
+    // later and the user can safely request a fresh code after cooldown.
+    try {
+      await sendOtpSms({ to: `${countryCode}${number}`, code });
+    } catch (error) {
+      await consumeOtp(otpRecord.id);
+      throw error;
+    }
 
     await recordAuthEvent({
       actorType: "unknown",
@@ -787,25 +789,35 @@ router.post(
     let devResetToken: string | null = null;
     if (admin) {
       const rawToken = generateSessionToken("adm").replace("adm_", "reset_");
-      await createPasswordReset(admin.id, hashResetToken(rawToken));
-      // Actually goes through the email service now — in development
-      // (no SMTP_* configured) this logs instead of sending; in
-      // production it sends a real email via the configured SMTP
-      // transport. Not swallowed: a real delivery failure should
-      // surface as an error, not a false "sent: true".
+      const reset = await createPasswordReset(admin.id, hashResetToken(rawToken));
       const resetUrl = `${env.WEB_BASE_URL}/admin/reset-password?token=${rawToken}`;
-      await sendPasswordResetEmail({
-        to: admin.email,
-        resetUrl,
-        expiresInMinutes: 30,
-      });
-      devResetToken = IS_PRODUCTION ? null : rawToken;
+      let deliveryFailed = false;
+      try {
+        await sendPasswordResetEmail({
+          to: admin.email,
+          resetUrl,
+          expiresInMinutes: 30,
+        });
+      } catch (error) {
+        deliveryFailed = true;
+        // Consume an unsent reset token and keep the response anti-enumerating.
+        await consumePasswordReset(reset.id);
+        logger.error({ adminId: admin.id, err: error }, "Admin password reset email delivery failed");
+        await recordAuthEvent({
+          actorType: "admin",
+          actorId: admin.id,
+          event: "admin_password_reset_email_failed",
+          success: false,
+          ipAddress: req.ip,
+        });
+      }
+      devResetToken = IS_PRODUCTION || deliveryFailed ? null : rawToken;
 
       await recordAuthEvent({
         actorType: "admin",
         actorId: admin.id,
         event: "admin_password_reset_requested",
-        success: true,
+        success: !deliveryFailed,
         ipAddress: req.ip,
       });
     }

@@ -10,11 +10,8 @@ const hasSmtpConfig = !!(
 );
 
 /**
- * If SMTP isn't configured (typical in development), emails are
- * logged instead of sent — mirroring the dev OTP pattern in
- * routes/auth.ts (devOtp / devResetToken). In production, env.ts
- * refuses to boot without SMTP_* set, so this path is unreachable
- * there.
+ * SMTP is optional for local development. Hosted/production sends fail
+ * explicitly when SMTP is unavailable, while the API remains online.
  */
 const transporter: Transporter | null = hasSmtpConfig
   ? nodemailer.createTransport({
@@ -24,13 +21,6 @@ const transporter: Transporter | null = hasSmtpConfig
       auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD },
     })
   : null;
-
-if (!transporter && isProd) {
-  // Should be unreachable — env.ts's production schema requires all
-  // SMTP_* vars — but fail loudly rather than silently no-op-ing mail
-  // in production if that invariant is ever weakened.
-  throw new Error("SMTP is not configured but NODE_ENV=production");
-}
 
 interface SendEmailInput {
   to: string;
@@ -42,6 +32,9 @@ interface SendEmailInput {
 
 async function sendEmail(input: SendEmailInput): Promise<boolean> {
   if (!transporter) {
+    if (isProd) {
+      throw new Error("SMTP is not configured; outbound email is unavailable in this hosted/production runtime.");
+    }
     // Never write one-time tokens or invitation links into logs.
     logger.info(
       { to: input.to, subject: input.subject },

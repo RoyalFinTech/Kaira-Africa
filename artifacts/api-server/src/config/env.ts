@@ -128,4 +128,25 @@ export const migrationDatabaseUrl = env.DIRECT_URL ?? env.DATABASE_URL;
 
 export const isDev = env.NODE_ENV === "development";
 export const isTest = env.NODE_ENV === "test";
-export const isProd = env.NODE_ENV === "production";
+/**
+ * Render-hosted processes must use production auth/delivery safeguards
+ * even if NODE_ENV was accidentally left at its development default.
+ */
+export function isProductionRuntime(runtimeEnv: {
+  NODE_ENV?: string;
+  RENDER_SERVICE_ID?: string;
+  RENDER?: string;
+} = process.env): boolean {
+  return runtimeEnv.NODE_ENV === "production"
+    || Boolean(runtimeEnv.RENDER_SERVICE_ID)
+    || runtimeEnv.RENDER === "true";
+}
+
+export const isHostedRuntime = Boolean(
+  process.env.RENDER_SERVICE_ID || process.env.RENDER === "true",
+);
+export const isProd = isProductionRuntime({
+  NODE_ENV: env.NODE_ENV,
+  RENDER_SERVICE_ID: process.env.RENDER_SERVICE_ID,
+  RENDER: process.env.RENDER,
+});

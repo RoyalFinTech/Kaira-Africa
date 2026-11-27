@@ -13,6 +13,9 @@ export interface SmsProvider {
 class MockSmsProvider implements SmsProvider {
   name = "mock";
   async send(input: { to: string; message: string }): Promise<void> {
+    if (isProd) {
+      throw new Error("SMS_PROVIDER=mock cannot deliver OTPs in a hosted/production runtime; configure a real SMS provider.");
+    }
     logger.info({ to: input.to }, "[MOCK SMS] delivery simulated; message content withheld");
   }
 }
@@ -109,7 +112,7 @@ function buildProvider(): SmsProvider {
     default:
       if (isProd) {
         logger.warn(
-          "SMS_PROVIDER=mock in production — OTPs will be logged, not actually sent. This is only appropriate for staging.",
+          "SMS_PROVIDER=mock in a hosted/production runtime — OTP requests will fail closed until a real SMS provider is configured.",
         );
       }
       return new MockSmsProvider();
